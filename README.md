@@ -50,25 +50,25 @@ TypeScript a produkční build; `test:regional` ověřuje prostorové přiřazen
 
 ## Todo
 
-- [ ] Pridat datasety
-- [ ] Výpočet sázecí vzdálenost
+- [X] Pridat datasety
+- [ ] Ideální rozložení stromů
 - [ ] Základní info o starání
 - [ ] Regulace
-- [ ] Půda/Lokalita
+- [X] Půda/Lokalita
 - [ ] Nadmořská výška
 - [ ] Kolik bude starání se o stromy cca stát
 - [ ] Dotace
 - [ ] Kolik bude cca výnos (burza) možnosti nejhůř/nejlíp
-- [ ] Různé stromy
+- [X] Různé stromy
 - [ ]
-- [ ] Přidávání pozemků do vlastnictví přes katastr
+- [X] Přidávání pozemků do vlastnictví přes katastr
 - [ ] Rozdělování pozemků na části
-- [ ] Propojování pozemků
+- [x] Propojování pozemků
 - [ ] Info o pozemku (základní info, odkaz na katastr)
 - [ ] Info o vedlejších pozemcích pro případnou koupy
-- [ ] Jména pozemků
+- [x] Jména pozemků
 - [ ] Odstraňování parcel
-- [ ] Mapa a vrstvy
+- [X] Mapa a vrstvy
 - [ ] 
 - [ ] Onboarding stránkou
 - [ ] Vyndat z dema
