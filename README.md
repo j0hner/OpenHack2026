@@ -41,3 +41,30 @@ Mapové podklady a živé API potřebují internet. Připravené soubory nejsou 
 ## Ověření
 
 TypeScript a produkční build; `data:verify` ověřuje úplnost klimatu, platnost geometrií, unikátní parcely, rozpočet souborů, null hodnoty a SHA-256. V Chrome byl ověřen popup, přidání a obnovení parcely, živý REST / CORS, hledání podle názvu katastru, převzetí ceny ČSÚ i všechny mapové podklady.
+
+## Todo
+
+- [ ] Pridat datasety
+- [ ] Výpočet sázecí vzdálenost
+- [ ] Základní info o starání
+- [ ] Regulace
+- [ ] Půda/Lokalita
+- [ ] Nadmořská výška
+- [ ] Kolik bude starání se o stromy cca stát
+- [ ] Kolik bude cca výnos (burza) možnosti nejhůř/nejlíp
+- [ ] Různé stromy
+- [ ]
+- [ ] Přidávání pozemků do vlastnictví přes katastr
+- [ ] Rozdělování na části
+- [ ] Propojování pozemků
+- [ ] Info o pozemku (základní info, odkaz na katastr)
+- [ ] Info o vedlejších pozemcích pro případnou koupy
+- [ ] Mapa a vrstvy
+- [ ]
+- [ ]
+- [ ] Udelat dokumentaci
+- [ ] Udelat prezetntaci
+------------------------------------------
+- [ ] Export
+- [ ]
+
