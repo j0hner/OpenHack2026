@@ -1,5 +1,12 @@
 # SADY
 
+## Todo
+
+- [ ] Pridat datasety
+- [ ] Vylepsit UX
+- [ ] Udelat dokumentaci
+- [ ] Udelat prezetntaci
+
 > **Vyberte pozemek. Zjistěte, čemu se na něm bude dařit.**
 
 Demo webové aplikace pro hackathon otevřených dat. Spojuje pozemek, půdu, klima, vláhu, terén, dostupnost, územní omezení a ekonomiku výsadby do jednoho srozumitelného doporučení pro založení ovocného sadu.
