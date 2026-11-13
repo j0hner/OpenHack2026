@@ -7,8 +7,7 @@ export type ParcelFeature = Feature<Polygon|MultiPolygon, Record<string, unknown
 export interface LocationData {
  center:[number,number]; bounds:[number,number,number,number];
  layers:Record<string,FeatureCollection<Polygon|MultiPolygon>>;
- climate:null|{period:string;model:string;resolution:string;years:{year:number;temperatureMeanC:number|null;rainfallMm:number|null;et0Mm:number|null;springFrostDays:number|null;summerDays:number|null}[]};
- terrain:{centerAltitudeM:number|null;slopeDeg:number|null;note:string};
+ climate:null|{period:string;model:string;resolution:string;grid?:[number,number];rainfallGrid?:[number,number];years:{year:number;temperatureMeanC:number|null;rainfallMm:number|null;et0Mm:number|null;springFrostDays:number|null;summerDays:number|null}[]};
 }
 export interface LocationEntry {id:string;bounds:[number,number,number,number];file:string;parcelsFile:string;center:[number,number]}
 const memo = new Map<string,Promise<unknown>>();

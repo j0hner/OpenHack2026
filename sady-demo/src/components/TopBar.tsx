@@ -49,7 +49,7 @@ export default function TopBar({ view, onViewChange, mode, onModeChange, onStart
             onClick={() => onModeChange('demo')}
             aria-pressed={mode === 'demo'}
           >
-            Demo
+            Demo scénáře
           </button>
           <button
             type="button"
@@ -57,7 +57,7 @@ export default function TopBar({ view, onViewChange, mode, onModeChange, onStart
             onClick={() => onModeChange('custom')}
             aria-pressed={mode === 'custom'}
           >
-            Vlastní pozemek
+            Skutečná data
           </button>
         </div>
         <button type="button" className="btn primary" onClick={onStartTour}>

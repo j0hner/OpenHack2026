@@ -85,7 +85,7 @@ export function computeEconomics(
       (options.irrigation ? IRRIGATION_ANNUAL_PER_HA * areaHa : 0),
   );
 
-  const droughtRisk = area.attributes.water?.droughtRisk ?? 30;
+  const droughtRisk = area.regional ? 0 : area.attributes.water?.droughtRisk ?? 30;
   const irrigationUpliftPct = options.irrigation ? Math.round(Math.min(18, droughtRisk * 0.18)) : 0;
 
   const maturityYield = areaHa * inputs.matureYieldTPerHa * scenario.yieldFactor * (1 + irrigationUpliftPct / 100);

@@ -62,7 +62,7 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
           </li>
         </ul>
         <div className="inline-note">
-          Skutečné podklady: ČÚZK parcely, BPEJ, Ortofoto a DMR 5G; ERA5-Land přes Open-Meteo; AOPK; ČSÚ sklizně a ceny. Satelitní podklad je ESA WorldCover / Sentinel-2 z roku 2021. Analytické výřezy pokrývají pět lokalit. Demo skóre a agronomické předpoklady zůstávají výslovně označené.
+          Režim Skutečná data počítá regionální index z průniků BPEJ a klimatu ERA5-Land / ERA5. V pěti lokalitách používá připravené výřezy, jinde živé dotazy podle geometrie. AOPK vstupuje do samostatných omezení. ČSÚ poskytuje celostátní ekonomickou referenci. Demo scénáře jsou dostupné odděleně; váhy a agronomické převody zůstávají orientačními pravidly SADY.
         </div>
       </div>
 

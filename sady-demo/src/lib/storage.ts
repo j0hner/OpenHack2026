@@ -3,6 +3,7 @@ import type { AnalysisArea, EconomicsInputs, FruitKey, PolygonGeometry } from '.
 const KEY = 'sady-demo-v1';
 
 export interface PersistedState {
+  modelVersion?: string;
   mode: 'demo' | 'custom';
   fruit: FruitKey;
   irrigation: boolean;
@@ -14,6 +15,9 @@ export interface PersistedState {
   drawnGeometry: PolygonGeometry | null;
   demoProfileId: string | null;
   parcels?: AnalysisArea[];
+  workingAreas?: AnalysisArea[];
+  areaNames?: Record<string, string>;
+  hiddenSampleIds?: string[];
 }
 
 export function loadState(): Partial<PersistedState> | null {

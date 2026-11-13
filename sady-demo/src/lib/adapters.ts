@@ -87,6 +87,6 @@ export async function lookupCadastralParcel(parcelNumber:string,katastr:string):
 export const ADAPTER_SUMMARY=[
  {name:'Nominatim / OpenStreetMap',status:'Napojeno',note:'Vyhledávání lokality na vyžádání, timeout a chybový stav.'},
  {name:'ČÚZK RÚIAN REST + katastrální WMS',status:'Napojeno',note:'Výběr parcely v celé ČR; lokální výřezy pěti lokalit, jinde online dotaz s timeoutem.'},
- {name:'BPEJ, ERA5-Land, DMR 5G, AOPK',status:'Pět výřezů',note:'Stažené otevřené podklady; mimo pokrytí se nevytváří náhradní údaje.'},
+ {name:'BPEJ, ERA5-Land / ERA5, AOPK',status:'Napojeno',note:'Pět připravených výřezů + živé prostorové dotazy podle polygonu a souřadnic. Chybějící údaje se nedoplňují demo profilem.'},
  {name:'ČSÚ ZEM03D / CEN0203B',status:'Napojeno',note:'Skutečné roční statistiky 2021–2025, pět druhů. Použití ceny v ekonomice je výslovná volba.'},
 ];

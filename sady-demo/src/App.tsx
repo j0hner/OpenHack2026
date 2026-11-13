@@ -1,4 +1,7 @@
 import { parcelArea, type ParcelFeature } from './lib/openData';
+import {useRegionalData} from './lib/useRegionalData';
+import {scoreRegionalArea} from './lib/regionalScoring';
+import {makeWorkingArea} from './lib/geometryOperations';
 import { useEffect, useMemo, useState } from 'react';
 import AreaDetail, { type DetailTab } from './components/AreaDetail';
 import ComparisonPanel from './components/ComparisonPanel';
@@ -16,6 +19,7 @@ import { sumAreaHa, unionAreaHa, bboxOf } from './lib/geo';
 import { clearState, loadState, saveState, type PersistedState } from './lib/storage';
 import type {
   AnalysisArea,
+  AreaGeometry,
   AvailabilityMap,
   EconomicsInputs,
   FruitKey,
@@ -164,7 +168,7 @@ const TOUR_STEPS: TourStep[] = [
 export default function App() {
   const [boot] = useState<Partial<PersistedState> | null>(() => loadState());
 
-  const [mode, setMode] = useState<'demo' | 'custom'>(boot?.mode ?? 'demo');
+  const [mode, setMode] = useState<'demo' | 'custom'>(boot?.modelVersion==='geo-1' ? boot.mode??'custom' : 'custom');
   const [fruit, setFruit] = useState<FruitKey>(boot?.fruit ?? 'apple');
   const [irrigation, setIrrigation] = useState<boolean>(boot?.irrigation ?? false);
   const [region, setRegion] = useState<RegionSelection>(boot?.region ?? EMPTY_REGION);
@@ -182,11 +186,14 @@ export default function App() {
   });
 
   const [parcels, setParcels] = useState<AnalysisArea[]>(boot?.parcels ?? []);
+  const [workingAreas, setWorkingAreas] = useState<AnalysisArea[]>(boot?.workingAreas ?? []);
+  const [areaNames, setAreaNames] = useState<Record<string, string>>(boot?.areaNames ?? {});
+  const [hiddenSampleIds, setHiddenSampleIds] = useState<string[]>(boot?.hiddenSampleIds ?? []);
   const bootSelected = (boot?.selectedIds ?? []).filter((id) =>
-    id === 'custom' ? Boolean(boot?.drawnGeometry) : [...DEMO_AREAS, ...parcels].some((area) => area.id === id),
+    id === 'custom' ? Boolean(boot?.drawnGeometry) : [...DEMO_AREAS, ...parcels, ...workingAreas].some((area) => area.id === id) && !hiddenSampleIds.includes(id),
   );
-  const [selectedIds, setSelectedIds] = useState<string[]>(bootSelected.length > 0 ? bootSelected : ['demo-a']);
-  const [activeId, setActiveId] = useState<string | null>(boot?.activeId ?? bootSelected[0] ?? 'demo-a');
+  const [selectedIds, setSelectedIds] = useState<string[]>(boot ? bootSelected : ['demo-a']);
+  const [activeId, setActiveId] = useState<string | null>(boot ? (boot?.activeId && bootSelected.includes(boot.activeId) ? boot.activeId : bootSelected[0] ?? null) : 'demo-a');
   const [drawnGeometry, setDrawnGeometry] = useState<PolygonGeometry | null>(boot?.drawnGeometry ?? null);
   const [customProfileId, setCustomProfileId] = useState<string | null>(boot?.demoProfileId ?? null);
 
@@ -200,26 +207,28 @@ export default function App() {
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
 
   const customArea = useMemo(
-    () => (drawnGeometry ? makeCustomArea(drawnGeometry, region, customProfileId) : null),
-    [drawnGeometry, region, customProfileId],
+    () => (drawnGeometry ? { ...makeCustomArea(drawnGeometry, region, customProfileId), name: areaNames.custom || 'Vlastní plocha' } : null),
+    [drawnGeometry, region, customProfileId, areaNames.custom],
   );
 
-  const allAreas = useMemo<AnalysisArea[]>(
-    () => [...DEMO_AREAS, ...parcels, ...(customArea ? [customArea] : [])],
-    [customArea, parcels],
+  const storedAreas = useMemo<AnalysisArea[]>(
+    () => [...DEMO_AREAS.filter(area => !hiddenSampleIds.includes(area.id)), ...parcels, ...workingAreas, ...(customArea ? [customArea] : [])]
+      .map(area => areaNames[area.id] ? { ...area, name: areaNames[area.id] } : area),
+    [customArea, parcels, workingAreas, areaNames, hiddenSampleIds],
   );
 
+  const {areas:allAreas,retry:retryRegional}=useRegionalData(storedAreas,selectedIds,mode==='custom');
   const areaIndex = useMemo(() => new Map(allAreas.map((area) => [area.id, area])), [allAreas]);
 
   const visibleAreas = useMemo(
-    () => allAreas.filter((area) => (area.kind === 'parcel' || (area.kind === 'custom' ? Boolean(customArea) : matchesRegion(area, region)))),
+    () => allAreas.filter((area) => area.kind !== 'sample' || matchesRegion(area, region)),
     [allAreas, region, customArea],
   );
 
   const scores = useMemo<Record<string, SuitabilityResult>>(() => {
     const mapped: Record<string, SuitabilityResult> = {};
     for (const area of allAreas) {
-      mapped[area.id] = scoreArea(area, fruit, {
+      mapped[area.id] = area.regional ? scoreRegionalArea(area,fruit) : scoreArea(area, fruit, {
         irrigation: irrigation && area.irrigationAvailable !== false,
       });
     }
@@ -231,7 +240,7 @@ export default function App() {
     for (const area of allAreas) {
       const perArea = {} as Record<FruitKey, SuitabilityResult>;
       for (const key of FRUIT_ORDER) {
-        perArea[key] = scoreArea(area, key, { irrigation: irrigation && area.irrigationAvailable !== false });
+        perArea[key] = area.regional ? scoreRegionalArea(area,key) : scoreArea(area, key, { irrigation: irrigation && area.irrigationAvailable !== false });
       }
       mapped[area.id] = perArea;
     }
@@ -252,6 +261,7 @@ export default function App() {
   /* ---------- ukládání do localStorage ---------- */
   useEffect(() => {
     saveState({
+      modelVersion:'geo-1',
       mode,
       fruit,
       irrigation,
@@ -263,8 +273,11 @@ export default function App() {
       drawnGeometry,
       demoProfileId: customProfileId,
       parcels,
+      workingAreas,
+      areaNames,
+      hiddenSampleIds,
     });
-  }, [mode, fruit, irrigation, selectedIds, activeId, region, layers, economicsByFruit, drawnGeometry, customProfileId, parcels]);
+  }, [mode, fruit, irrigation, selectedIds, activeId, region, layers, economicsByFruit, drawnGeometry, customProfileId, parcels, workingAreas, areaNames, hiddenSampleIds]);
 
   /* ---------- toast ---------- */
   useEffect(() => {
@@ -300,6 +313,65 @@ export default function App() {
   const handleClearSelection = () => {
     setSelectedIds([]);
     setActiveId(null);
+  };
+
+  const handleRenameArea = (id: string, value: string) => {
+    const name = value.trim();
+    if (!areaIndex.has(id) || !name || name.length > 100) return;
+    setAreaNames(previous => ({ ...previous, [id]: name }));
+    setToast({ text: `Pozemek přejmenován na „${name}“. Název je uložený pouze v této aplikaci.` });
+  };
+
+  const handleDeleteArea = (id: string) => {
+    const area = areaIndex.get(id);
+    if (!area) return;
+    const remaining = selectedIds.filter(item => item !== id);
+    setSelectedIds(remaining);
+    if (activeId === id) setActiveId(remaining[remaining.length - 1] ?? null);
+    setAreaNames(previous => { const next = { ...previous }; delete next[id]; return next; });
+    if (area.kind === 'sample') {
+      setHiddenSampleIds(previous => [...new Set([...previous, id])]);
+      setToast({ text: 'Ukázková plocha byla skryta. Tlačítko Obnovit demo ji vrátí.' });
+    } else if (id === 'custom') {
+      setDrawnGeometry(null);
+      setCustomProfileId(null);
+      setDrawMode(false);
+      setDrawPoints([]);
+      setToast({ text: 'Vlastní plocha byla smazána z této aplikace.' });
+    } else if (area.kind === 'parcel') {
+      setParcels(previous => previous.filter(parcel => parcel.id !== id));
+      setToast({ text: 'Parcela byla smazána z uložených pozemků této aplikace. V katastru zůstává beze změny.' });
+    } else {
+      setWorkingAreas(previous => previous.filter(item => item.id !== id));
+      setToast({ text: 'Pracovní plocha byla smazána. Původní pozemky zůstávají uložené.' });
+    }
+  };
+
+  const handleSplitArea = (sourceId:string,parts:AreaGeometry[]) => {
+    const source=areaIndex.get(sourceId);
+    if(!source||parts.length<2)return;
+    if(workingAreas.length+parts.length>100){setToast({text:'Lze uložit nejvýše 100 pracovních ploch. Nejprve smažte nepotřebné části.',error:true});return;}
+    try{
+      const created=parts.map((geometry,index)=>makeWorkingArea(geometry,`${source.name.slice(0,85)} – část ${index+1}`,[source],'split'));
+      setWorkingAreas(previous=>[...previous,...created]);
+      setSelectedIds(created.map(a=>a.id));setActiveId(created[0].id);
+      setMode('custom');setView('analyza');setDetailTab('prehled');
+      setFocus({bbox:bboxOf(source.geometry),nonce:Date.now()});
+      setToast({text:`Vytvořeno ${created.length} samostatných částí. Původní plocha zůstává uložená; výběr nyní obsahuje nové části.`});
+    }catch(error){setToast({text:error instanceof Error?error.message:'Rozdělení se nepodařilo.',error:true});}
+  };
+
+  const handleMergeAreas = (sourceIds:string[],geometry:AreaGeometry,name:string) => {
+    const sources=sourceIds.map(id=>areaIndex.get(id)).filter((a):a is AnalysisArea=>Boolean(a));
+    if(sources.length<2)return;
+    if(workingAreas.length>=100){setToast({text:'Lze uložit nejvýše 100 pracovních ploch. Nejprve smažte nepotřebné části.',error:true});return;}
+    try{
+      const created=makeWorkingArea(geometry,name,sources,'merge');
+      setWorkingAreas(previous=>[...previous,created]);setSelectedIds([created.id]);setActiveId(created.id);
+      setMode('custom');setView('analyza');setDetailTab('prehled');
+      setFocus({bbox:bboxOf(geometry),nonce:Date.now()});
+      setToast({text:'Spojená pracovní plocha je uložená a vybraná. Původní pozemky zůstávají uložené; překryvy se počítají jednou.'});
+    }catch(error){setToast({text:error instanceof Error?error.message:'Spojení se nepodařilo.',error:true});}
   };
 
   const handleRegionChange = (next: RegionSelection) => {
@@ -407,10 +479,7 @@ export default function App() {
   };
 
   const handleDeleteCustom = () => {
-    setDrawnGeometry(null);
-    setSelectedIds((previous) => previous.filter((id) => id !== 'custom'));
-    if (activeId === 'custom') setActiveId(null);
-    setToast({ text: 'Vlastní plocha byla smazána.' });
+    handleDeleteArea('custom');
   };
 
   const handleVertexMove = (index: number, lonLat: [number, number]) => {
@@ -420,6 +489,9 @@ export default function App() {
   const handleResetDemo = () => {
     clearState();
     setParcels([]);
+    setWorkingAreas([]);
+    setAreaNames({});
+    setHiddenSampleIds([]);
     setMode('demo');
     setFruit('apple');
     setIrrigation(false);
@@ -502,6 +574,7 @@ export default function App() {
   }, [tourStep]);
 
   const startTour = () => {
+    setHiddenSampleIds([]);
     setTourStep(0);
     runTourStep(0);
   };
@@ -533,8 +606,14 @@ export default function App() {
           fruitName={FRUITS[fruit].name}
           selectedIds={selectedIds}
           activeId={activeId}
+          activeArea={activeArea}
+          selectedAreas={selectedAreas}
+          onSplitArea={handleSplitArea}
+          onMergeAreas={handleMergeAreas}
           onSelectArea={handleSelectArea}
           onRemoveArea={handleRemoveArea}
+          onRenameArea={handleRenameArea}
+          onDeleteArea={handleDeleteArea}
           onClearSelection={handleClearSelection}
           layers={layers}
           onToggleLayer={handleToggleLayer}
@@ -596,6 +675,7 @@ export default function App() {
             {view === 'analyza' &&
               (activeArea ? (
                 <AreaDetail
+                  onRetryData={()=>retryRegional(activeArea)}
                   key={activeArea.id}
                   area={activeArea}
                   score={scores[activeArea.id]}
@@ -638,6 +718,7 @@ export default function App() {
                         type="button"
                         className="btn"
                         onClick={() => {
+                          setHiddenSampleIds(previous => previous.filter(id => id !== area.id));
                           setSelectedIds([area.id]);
                           setActiveId(area.id);
                           focusArea(area);
@@ -667,6 +748,7 @@ export default function App() {
                 onRemoveArea={handleRemoveArea}
                 onClearSelection={handleClearSelection}
                 onAddSamples={() => {
+                  setHiddenSampleIds(previous => previous.filter(id => !['demo-a', 'demo-b', 'demo-c'].includes(id)));
                   setSelectedIds(['demo-a', 'demo-b', 'demo-c']);
                   setActiveId('demo-a');
                 }}

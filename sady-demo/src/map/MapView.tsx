@@ -448,7 +448,6 @@ export default function MapView(props: MapViewProps) {
           <label className="map-base-control"><input type="checkbox" checked={cadastre} onChange={e=>{setCadastre(e.target.checked);setParcelStatus('');}}/> Katastrální parcely</label>
           {cadastre&&<span className="parcel-status" role="status">{zoom<14?'Pro hranice a výběr parcel přibližte mapu.':parcelStatus||'Klikněte na parcelu pro informace a přidání do výběru.'}</span>}
           {layerStatus&&<span className="parcel-status" role="status">{layerStatus}</span>}
-          {baseMap==='satellite'&&<a className="tiny" href="https://browser.dataspace.copernicus.eu/" target="_blank" rel="noopener noreferrer">Otevřít Copernicus Browser – mozaika v mapě je z roku 2021</a>}
           <button className="btn" type="button" onClick={handleHome} title="Návrat na pohled celé České republiky">
             ⌂ Celá ČR
           </button>
@@ -500,7 +499,7 @@ export default function MapView(props: MapViewProps) {
             </span>
           </div>
           <div className="tiny muted" style={{ marginTop: 4 }}>
-            Výstup demo modelu, nikoli pravděpodobnost úspěchu.
+            {props.mode==='custom'?'Regionální index ze skutečných podkladů; nejde o pravděpodobnost úspěchu.':'Výstup demo scénářů, nikoli pravděpodobnost úspěchu.'}
           </div>
         </div>
         <div className="availability-pill">

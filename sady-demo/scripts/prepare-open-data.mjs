@@ -57,13 +57,6 @@ for(const [id,lon,lat] of areas){
   years.push({year:y,temperatureMeanC:mean(temp),rainfallMm:rain.length===ii.length?sum(rain):null,et0Mm:et.length===ii.length?sum(et):null,springFrostDays:values('temperature_2m_min',spring).length===spring.length?values('temperature_2m_min',spring).filter(x=>x<0).length:null,summerDays:values('temperature_2m_max').length===ii.length?values('temperature_2m_max').filter(x=>x>=25).length:null,validTemperatureDays:temp.length,totalDays:ii.length});
  }
  local.climate=weather?{period:'2005–2024',model:'ERA5-Land',resolution:'0.1° (~9 km), nikoli měření na parcele',grid:[weather.longitude,weather.latitude],years}:null;
- const samples=[];
- for(const [dx,dy] of [[0,0],[-.0007,0],[.0007,0],[0,-.0005],[0,.0005]]){
-  const p=new URLSearchParams({geometry:JSON.stringify({x:lon+dx,y:lat+dy,spatialReference:{wkid:4326}}),geometryType:'esriGeometryPoint',returnGeometry:'false',returnCatalogItems:'false',f:'json'});
-  const v=await json(`https://ags.cuzk.gov.cz/arcgis2/rest/services/dmr5g/ImageServer/identify?${p}`);
-  samples.push(v.value!==null&&v.value!==''&&Number.isFinite(Number(v.value))?Number(v.value):null);
- }
- local.terrain={samples,centerAltitudeM:samples[0],slopeDeg:samples.every(Number.isFinite)?Math.atan(Math.hypot((samples[2]-samples[1])/(.0014*111320*Math.cos(lat*Math.PI/180)),(samples[4]-samples[3])/(.001*111320)))*180/Math.PI:null,note:'Orientační sklon z pěti vzorků kolem středu; nikoli celoplošná analýza.'};
  bundle[id]=local;
  await save('locations.json',bundle);
 }

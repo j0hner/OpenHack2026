@@ -7,6 +7,9 @@ const read=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const manifest=await read('manifest.json'),index=await read('locations-index.json');
 assert.equal(index.length,5);
 assert(!manifest.datasets.some(d=>d.id.includes('vuv')),'Neověřená licence nesmí být v distribuovaných datech.');
+const removedSources=/dmr5g|dmr\s*5g|terrascope|worldcover|sentinel/i;
+assert(!removedSources.test(JSON.stringify(manifest)),'Odstraněné podklady nesmí zůstat v manifestu.');
+assert(!removedSources.test(JSON.stringify(await read('downloads.json'))),'Odstraněné podklady nesmí zůstat v distribuovaném protokolu.');
 let parcels=0,bytes=0;
 for(const entry of index){
  const d=await read(entry.file),p=await read(entry.parcelsFile);
@@ -16,7 +19,8 @@ for(const entry of index){
   assert(y.rainfallMm>0&&y.rainfallMm<5000,'Chybějící nebo neplatné srážky');
   assert(y.et0Mm>0&&y.springFrostDays>=0&&y.springFrostDays<=92);
  }
- assert(Number.isFinite(d.terrain.centerAltitudeM));
+ assert(!('terrain' in d),'Odstraněné terénní vzorky nesmí být ve výřezu.');
+ assert(!removedSources.test(JSON.stringify(d)),'Odstraněné podklady nesmí zůstat ve výřezu.');
  assert(!('flood' in d.layers));
  assert(p.features.length>0);
  const ids=new Set();

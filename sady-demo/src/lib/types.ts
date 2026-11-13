@@ -85,6 +85,8 @@ export interface AreaLocation {
 }
 
 export interface AnalysisArea {
+  regional?: {status:'loading'|'ready'|'error';data:import('./regionalData').RegionalData|null;message?:string};
+  derivedFrom?: {operation:'split'|'merge';sourceIds:string[];sourceNames:string[]};
   id: string;
   /** 'A' | 'B' | 'C' u přednačtených ukázek */
   tag?: string;

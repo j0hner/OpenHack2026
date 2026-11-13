@@ -12,7 +12,9 @@
     "data:download": "node scripts/prepare-open-data.mjs",
     "data:package": "node scripts/package-open-data.mjs",
     "data:rainfall": "node scripts/fill-rainfall.mjs",
-    "data:verify": "node scripts/verify-open-data.mjs"
+    "data:verify": "node scripts/verify-open-data.mjs",
+    "test:regional": "node scripts/test-regional.mjs",
+    "test:geometry": "node scripts/test-geometry-operations.mjs"
   },
   "dependencies": {
     "@turf/area": "^7.1.0",

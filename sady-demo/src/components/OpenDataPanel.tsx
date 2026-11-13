@@ -1,9 +1,12 @@
 import {useEffect,useState} from 'react';
+import RegionalPanel from './RegionalPanel';
 import {locationFor,mean,overlaps,staticData,type LocationData} from '../lib/openData';
 import type {AnalysisArea,EconomicsInputs,FruitKey} from '../lib/types';
 type Reference={years:{year:number;harvestTonnes:number|null;pricePerKg:number|null}[];note:string};
 const fmt=(n:number|null,d=1)=>n===null?'nezjištěno':n.toLocaleString('cs-CZ',{maximumFractionDigits:d});
-export default function OpenDataPanel({area,fruit,onEconomicsChange}:{area:AnalysisArea;fruit:FruitKey;onEconomicsChange:(v:Partial<EconomicsInputs>)=>void}){
+type Props={area:AnalysisArea;fruit:FruitKey;onEconomicsChange:(v:Partial<EconomicsInputs>)=>void;onRetry:()=>void};
+export default function OpenDataPanel(props:Props){return props.area.regional?<RegionalPanel {...props}/>:<LegacyPanel {...props}/>;}
+function LegacyPanel({area,fruit,onEconomicsChange}:Props){
  const [data,setData]=useState<LocationData|null>(null),[state,setState]=useState('Načítám otevřená data…');
  const [reference,setReference]=useState<Reference|null>(null);
  useEffect(()=>{let active=true;setData(null);setState('Načítám otevřená data…');
@@ -27,7 +30,6 @@ export default function OpenDataPanel({area,fruit,onEconomicsChange}:{area:Analy
    <dt>BPEJ – podíl plochy</dt><dd>{joinError?'Prostorový průnik se nepodařil.':soil.length?soil.map((x,i)=><span key={i}>{x.name}: {fmt(x.percent)} %; </span>):'Plocha není pokryta staženou BPEJ; půdní vlastnosti neznáme.'}</dd>
    <dt>Teplota / srážky</dt><dd>{climate?`${fmt(mean(climate.years.map(y=>y.temperatureMeanC)))} °C / ${fmt(mean(climate.years.map(y=>y.rainfallMm)))} mm ročně`:'nezjištěno'}</dd>
    <dt>Mrazové dny březen–květen</dt><dd>{climate?`${fmt(mean(climate.years.map(y=>y.springFrostDays)))} dnů/rok (Tmin < 0 °C)`:'nezjištěno'}</dd>
-   <dt>Výška / orientační sklon středu lokality</dt><dd>{fmt(data.terrain.centerAltitudeM)} m / {fmt(data.terrain.slopeDeg)}°. {data.terrain.note}</dd>
    <dt>Ochrana přírody</dt><dd>{joinError?'nezjištěno':`${protectedPct} průniků s vybranými kategoriemi ochrany.`} Nejde o povolení výsadby. Q100: neověřeno, otevřený zdroj není připojen.</dd>
   </dl>}
   {climate&&<p className="tiny">ERA5-Land přes Open-Meteo, {climate.period}; {climate.resolution}. Mrazové dny nejsou pravděpodobnost poškození květů. Půdní pH, humus a vydatnost závlahy se z těchto podkladů neurčují.</p>}

@@ -60,8 +60,6 @@ const areaBbox = (id: string): Bbox => {
   return bboxOf(area.geometry.coordinates);
 };
 
-const midX = ([w, , e]: Bbox) => (w + e) / 2;
-
 /* ---------- LPIS – zemědělské půdní bloky (demo) ---------- */
 const lpisFeatures: GeoJSONFeature[] = ['demo-a', 'demo-b', 'demo-d', 'demo-e'].flatMap((id, index) => {
   const [w, s, e, n] = expand(areaBbox(id), 0.55);
@@ -71,43 +69,6 @@ const lpisFeatures: GeoJSONFeature[] = ['demo-a', 'demo-b', 'demo-d', 'demo-e'].
       detail: 'orná půda, výměra cca 20–40 ha (demo)',
     }),
   ];
-});
-
-/* ---------- Sklon a orientace (demo) ---------- */
-const terrainClasses: Record<string, { slope: string; color: string; aspect: string }[]> = {
-  'demo-a': [
-    { slope: '0–3°', color: '#e3efd8', aspect: 'jih' },
-    { slope: '3–8°', color: '#f2e7b8', aspect: 'jihovýchod' },
-  ],
-  'demo-b': [
-    { slope: '0–3°', color: '#e3efd8', aspect: 'jihozápad' },
-    { slope: '3–8°', color: '#f2e7b8', aspect: 'západ' },
-  ],
-  'demo-c': [
-    { slope: '8–15°', color: '#e7b98f', aspect: 'jihovýchod' },
-    { slope: '> 15°', color: '#d1836b', aspect: 'východ' },
-  ],
-  'demo-d': [
-    { slope: '0–3°', color: '#e3efd8', aspect: 'jihozápad' },
-    { slope: '3–8°', color: '#f2e7b8', aspect: 'jih' },
-  ],
-  'demo-e': [
-    { slope: '3–8°', color: '#f2e7b8', aspect: 'sever' },
-    { slope: '8–15°', color: '#e7b98f', aspect: 'severozápad' },
-  ],
-};
-
-const terrainFeatures: GeoJSONFeature[] = Object.entries(terrainClasses).flatMap(([id, units]) => {
-  const box = expand(areaBbox(id), 0.9);
-  const m = midX(box);
-  const [w, s, e, n] = box;
-  return units.map((unit, i) =>
-    polygon(rect(i === 0 ? w : m, s, i === 0 ? m : e, n), {
-      label: `sklon ${unit.slope}`,
-      detail: `orientace ${unit.aspect} (demo odhad z výškového modelu)`,
-      color: unit.color,
-    }),
-  );
 });
 
 /* ---------- Sucho / dostupnost vláhy (demo) ---------- */
@@ -168,22 +129,6 @@ export const MAP_LAYERS: MapLayerDef[] = [
   },
   {
     id:'bpej', name:'Půda a BPEJ', description:"Skutečné jednotky BPEJ v pěti připravených výřezech. Kódy a plošné podíly jsou v detailu. pH ani humus z nich neurčujeme.", quality:'real', usedInModel:false, legend:[{color:'#ba8b54',label:'BPEJ – kód jednotky'}], source:'ČÚZK / RÚIAN – BPEJ', features:[],
-  },
-  {
-    id: 'terrain',
-    name: 'Terén, sklon a orientace',
-    description:
-      'Sklon a expozice svahu. V demu odhad z výškového modelu; vstupuje do kategorie terén a ovlivňuje erozní riziko.',
-    quality: 'demo',
-    usedInModel: true,
-    legend: [
-      { color: '#e3efd8', label: 'sklon 0–3°' },
-      { color: '#f2e7b8', label: 'sklon 3–8°' },
-      { color: '#e7b98f', label: 'sklon 8–15°' },
-      { color: '#d1836b', label: 'sklon nad 15°' },
-    ],
-    source: 'ČÚZK DMR 5G – zamýšlený zdroj, v demu odhad',
-    features: terrainFeatures,
   },
   {
     id: 'drought',
@@ -254,7 +199,6 @@ export const MAP_LAYERS: MapLayerDef[] = [
 export const DEFAULT_LAYERS: Record<string, boolean> = {
   lpis: false,
   bpej: false,
-  terrain: false,
   drought: false,
   frost: false,
   flood: false,
