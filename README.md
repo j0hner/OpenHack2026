@@ -51,19 +51,25 @@ TypeScript a produkční build; `data:verify` ověřuje úplnost klimatu, platno
 - [ ] Půda/Lokalita
 - [ ] Nadmořská výška
 - [ ] Kolik bude starání se o stromy cca stát
+- [ ] Dotace
 - [ ] Kolik bude cca výnos (burza) možnosti nejhůř/nejlíp
 - [ ] Různé stromy
 - [ ]
 - [ ] Přidávání pozemků do vlastnictví přes katastr
-- [ ] Rozdělování na části
+- [ ] Rozdělování pozemků na části
 - [ ] Propojování pozemků
 - [ ] Info o pozemku (základní info, odkaz na katastr)
 - [ ] Info o vedlejších pozemcích pro případnou koupy
+- [ ] Jména pozemků
+- [ ] Odstraňování parcel
 - [ ] Mapa a vrstvy
+- [ ] 
+- [ ] Onboarding stránkou
+- [ ] Vyndat z dema
 - [ ]
-- [ ]
+- [ ] Local database
 - [ ] Udelat dokumentaci
 - [ ] Udelat prezetntaci
 ------------------------------------------
 - [ ] Export
-- [ ]
+- [ ] Mapy sentinel 2
