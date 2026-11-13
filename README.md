@@ -3,9 +3,28 @@
 ## Todo
 
 - [ ] Pridat datasety
-- [ ] Vylepsit UX
+- [ ] Výpočet sázecí vzdálenost
+- [ ] Základní info o starání
+- [ ] Regulace
+- [ ] Půda/Lokalita
+- [ ] Nadmořská výška
+- [ ] Kolik bude starání se o stromy cca stát
+- [ ] Kolik bude cca výnos (burza) možnosti nejhůř/nejlíp
+- [ ] Různé stromy
+- [ ] 
+- [ ] Přidávání pozemků do vlastnictví přes katastr
+- [ ] Rozdělování na části
+- [ ] Propojování pozemků
+- [ ] Info o pozemku (základní info, odkaz na katastr)
+- [ ] Info o vedlejších pozemcích pro případnou koupy
+- [ ] Mapa a vrstvy
+- [ ] 
+- [ ] 
 - [ ] Udelat dokumentaci
 - [ ] Udelat prezetntaci
+------------------------------------------
+- [ ] Export
+- [ ] 
 
 > **Vyberte pozemek. Zjistěte, čemu se na něm bude dařit.**
 
