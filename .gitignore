@@ -1,0 +1,8 @@
+node_modules/
+dist/
+work/
+test-results/
+playwright-report/
+*.local
+research/cors-evidence/*
+!research/cors-evidence/vuv-rest-metadata.txt
