@@ -1,3 +1,4 @@
+import type {ParcelFeature} from '../lib/openData';
 import { useMemo, useState } from 'react';
 import { MAP_LAYERS } from '../data/layers';
 import { KRAJE, okresyForKraj, obceForOkres } from '../data/regions';
@@ -6,6 +7,8 @@ import { areaHa, perimeterM } from '../lib/geo';
 import { fmtHa, fmtM } from '../lib/format';
 import type { AnalysisArea, MapLayerDef, SuitabilityResult } from '../lib/types';
 import { QualityBadge, VerdictBadge } from './ui';
+import GeometryTools from './GeometryTools';
+import type {AreaGeometry} from '../lib/types';
 
 export interface RegionSelection {
   kraj: string;
@@ -24,13 +27,20 @@ interface LeftPanelProps {
   fruitName: string;
   selectedIds: string[];
   activeId: string | null;
+  activeArea: AnalysisArea | null;
+  selectedAreas: AnalysisArea[];
+  onSplitArea: (sourceId:string,parts:AreaGeometry[])=>void;
+  onMergeAreas: (sourceIds:string[],geometry:AreaGeometry,name:string)=>void;
   onSelectArea: (id: string) => void;
   onRemoveArea: (id: string) => void;
+  onRenameArea: (id: string, name: string) => void;
+  onDeleteArea: (id: string) => void;
   onClearSelection: () => void;
   layers: Record<string, boolean>;
   onToggleLayer: (id: string) => void;
   showKraje: boolean;
   onToggleKraje: () => void;
+  onParcelSelect: (parcel:ParcelFeature)=>void;
   onSelectPlace: (place: PlaceResult) => void;
   customProfileId: string | null;
   onCustomProfileChange: (id: string | null) => void;
@@ -49,6 +59,10 @@ export default function LeftPanel(props: LeftPanelProps) {
   const [searchState, setSearchState] = useState<'idle' | 'loading' | 'ok' | 'error' | 'empty'>('idle');
   const [searchError, setSearchError] = useState('');
   const [results, setResults] = useState<PlaceResult[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [parcelNumber, setParcelNumber] = useState('');
   const [parcelKatastr, setParcelKatastr] = useState(props.region.katastr);
@@ -80,7 +94,8 @@ export default function LeftPanel(props: LeftPanelProps) {
     setParcelState('loading');
     setParcelError(null);
     try {
-      await lookupCadastralParcel(parcelNumber, parcelKatastr);
+      const parcel=await lookupCadastralParcel(parcelNumber, parcelKatastr);
+      props.onParcelSelect(parcel);
     } catch (error) {
       setParcelState('error');
       setParcelError({
@@ -253,8 +268,8 @@ export default function LeftPanel(props: LeftPanelProps) {
               const area = props.areas.find((item) => item.id === id);
               return (
                 <span className="chip" key={id}>
-                  {area ? area.tag ?? area.name : id}
-                  <button type="button" onClick={() => props.onRemoveArea(id)} aria-label={`Odebrat ${id}`}>
+                  {area ? area.name : id}
+                  <button type="button" onClick={() => props.onRemoveArea(id)} aria-label={`Odebrat ${area?.name ?? id} z výběru`}>
                     ×
                   </button>
                 </span>
@@ -276,16 +291,17 @@ export default function LeftPanel(props: LeftPanelProps) {
             const selected = props.selectedIds.includes(area.id);
             const verdictClass = score?.verdictClass ?? 'nodata';
             return (
+              <div key={area.id} className="saved-area-entry" data-area-id={area.id}>
               <button
                 type="button"
-                key={area.id}
+                style={{width:'100%'}}
                 className={`area-card${selected ? ' selected' : ''}${props.activeId === area.id ? ' active' : ''}`}
                 onClick={() => props.onSelectArea(area.id)}
                 aria-pressed={selected}
               >
                 <span className={`tag ${verdictClass}`}>{area.tag ?? 'V'}</span>
                 <span>
-                  <span className="area-name">{area.name}</span>
+                  <span className="area-name" style={{overflowWrap:'anywhere'}}>{area.name}</span>
                   <span className="area-meta">
                     {area.location.katastr} · {fmtHa(areaHa(area.geometry))} · {area.landUse}
                   </span>
@@ -298,15 +314,38 @@ export default function LeftPanel(props: LeftPanelProps) {
                   {selected ? '✓' : ''}
                 </span>
               </button>
+              <div className="link-row" style={{justifyContent:'flex-end',gap:8,padding:'5px 3px'}}>
+                <button type="button" className="link-button" aria-label={`Přejmenovat ${area.name}`} onClick={() => {
+                  setEditingId(area.id); setNameDraft(area.name); setNameError(''); setDeletingId(null);
+                }}>Přejmenovat</button>
+                <button type="button" className="link-button" aria-label={`${area.kind==='sample'?'Skrýt ukázku':'Smazat pozemek'} ${area.name}`} onClick={() => {
+                  setDeletingId(area.id); setEditingId(null);
+                }}>{area.kind==='sample'?'Skrýt ukázku':'Smazat pozemek'}</button>
+              </div>
+              {editingId===area.id && <form className="notice info" onSubmit={event => {
+                event.preventDefault(); const name=nameDraft.trim();
+                if(!name || name.length>100){setNameError('Název musí obsahovat 1 až 100 znaků.');return;}
+                props.onRenameArea(area.id,name); setEditingId(null); setNameError('');
+              }} onKeyDown={event => {if(event.key==='Escape'){setEditingId(null);setNameError('');}}}>
+                <label className="field"><span>Název pozemku v aplikaci</span><input autoFocus maxLength={100} aria-label={`Nový název pro ${area.name}`} value={nameDraft} onChange={event => {setNameDraft(event.target.value);setNameError('');}}/></label>
+                {nameError&&<p role="alert">{nameError}</p>}
+                <div className="link-row" style={{marginTop:8}}><button type="submit" className="btn small primary">Uložit název</button><button type="button" className="btn small" onClick={()=>setEditingId(null)}>Zrušit</button></div>
+              </form>}
+              {deletingId===area.id && <div className="notice warn" role="group" aria-label={`Potvrzení odstranění ${area.name}`}>
+                <p>{area.kind==='sample'?'Ukázku skryjete ze seznamu i mapy. Vrátí ji Obnovit demo.':'Pozemek a jeho výběr se smažou z této aplikace. Údaje v katastru tím neměníte.'}</p>
+                <div className="link-row" style={{marginTop:8}}><button type="button" className="btn small danger" onClick={()=>{props.onDeleteArea(area.id);setDeletingId(null);}}>{area.kind==='sample'?'Potvrdit skrytí':'Potvrdit smazání'}</button><button type="button" className="btn small" onClick={()=>setDeletingId(null)}>Zrušit</button></div>
+              </div>}
+              </div>
             );
           })}
         </div>
 
         <div className="footnote">
-          Vyhodnoceno je {props.allDemoCount} ukázkových ploch. Kliknutím plochu přidáte do výběru, křížkem ji odeberete.
-          Vlastní nakreslená plocha se označuje jako „Vlastní plocha“.
+          Připraveno je {props.allDemoCount} ukázkových ploch. Křížek ruší pouze výběr. Smazat pozemek odstraní uloženou parcelu nebo kresbu; ukázku lze skrýt. Názvy měníte pouze v této aplikaci.
         </div>
       </section>
+
+      <GeometryTools activeArea={props.activeArea} selectedAreas={props.selectedAreas} onSplit={props.onSplitArea} onMerge={props.onMergeAreas}/>
 
       {props.mode === 'custom' && (
         <section className="panel-section">
@@ -315,8 +354,8 @@ export default function LeftPanel(props: LeftPanelProps) {
           </div>
 
           <div className="notice info">
-            Půdní, klimatická a územní data pro vlastní pozemek nejsou v tomto statickém demu napojená. Chybějící
-            podklady zobrazujeme jako nedostupné – nikdy je nenahrazujeme demo výsledky bez označení.
+            Skutečné parcely vybírejte přes katastrální vrstvu nebo číslo a k. ú. V pěti lokalitách používáme připravené výřezy,
+            jinde živé prostorové dotazy. Chybějící podklady nenahrazujeme demo profilem.
           </div>
 
           <div className="accordion" style={{ marginTop: 9 }}>
@@ -337,7 +376,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                     <input
                       value={parcelKatastr}
                       onChange={(event) => setParcelKatastr(event.target.value)}
-                      placeholder="např. Bílany"
+                      placeholder="např. Bílany nebo 604038"
                     />
                   </label>
                 </div>
@@ -356,8 +395,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                   </div>
                 )}
                 <div className="field-note" style={{ marginTop: 7 }}>
-                  Zdroj: ČÚZK – INSPIRE WFS. Rozhraní neumožňuje volání z prohlížeče bez proxy; výsledek se proto
-                  zobrazuje jako chyba, ne jako domnělá parcela.
+                  Zdroj: ČÚZK RÚIAN REST, bez klíče. Pro jednoznačné hledání lze zadat šestimístný kód k. ú. Parcely lze vybírat také kliknutím v zapnuté katastrální mapě.
                 </div>
               </div>
             </details>
@@ -401,7 +439,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                 </div>
                 <div className="kv-row">
                   <span className="k">Označení</span>
-                  <span className="v">Vlastní plocha</span>
+                  <span className="v">{props.customArea.name}</span>
                 </div>
               </div>
               <div className="link-row" style={{ marginTop: 7 }}>
@@ -415,19 +453,9 @@ export default function LeftPanel(props: LeftPanelProps) {
             </div>
           )}
 
-          <label className="field" style={{ marginTop: 12 }}>
-            <span>Doplnit modelový datový profil</span>
-            <select value={props.customProfileId ?? ''} onChange={(event) => props.onCustomProfileChange(event.target.value || null)}>
-              <option value="">Nedoplňovat – ponechat „Nedostatek dat“</option>
-              <option value="demo-a">Profil A – Haná (příznivý)</option>
-              <option value="demo-b">Profil B – Žatecko (suché riziko)</option>
-              <option value="demo-d">Profil D – Hustopečsko (teplé)</option>
-              <option value="demo-e">Profil E – Vysočina (chladné)</option>
-            </select>
-          </label>
           <div className="field-note" style={{ marginTop: 5 }}>
-            Volitelné a výslovně označené demo data. Vhodné jen pro prezentaci modelu, nikoli jako podklad pro
-            skutečné rozhodnutí o pozemku.
+            Vlastní geometrie používá podklady podle skutečné polohy. Mimo připravené výřezy se dotazujeme
+            stejných otevřených zdrojů živě; profil jiné lokality se nepřiřazuje.
           </div>
         </section>
       )}
@@ -460,6 +488,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                   <input
                     type="checkbox"
                     checked={Boolean(props.layers[layer.id])}
+                    disabled={layer.quality === 'unavailable'}
                     onChange={() => props.onToggleLayer(layer.id)}
                   />
                   <span />

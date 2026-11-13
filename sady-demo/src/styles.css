@@ -2312,3 +2312,25 @@ details.accordion {
   border-radius: 10px;
   overflow: hidden;
 }
+
+.map-top { flex-wrap: wrap; }
+.map-actions { max-width: 100%; }
+.map-base-control, .parcel-status {
+  background: rgba(255,255,255,.97); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 9px; box-shadow: var(--shadow-sm); font-size: 12px;
+}
+.map-base-control { display: flex; align-items: center; gap: 6px; }
+.map-base-control select { max-width: 220px; padding: 3px; }
+.map-base-control input { width: auto; }
+.parcel-status { max-width: 330px; }
+.map-actions > a { background: white; padding: 6px; border-radius: 6px; }
+.parcel-popup p { margin: 8px 0; }
+.parcel-popup .btn { display: block; margin-top: 12px; }
+.open-data-card { margin-top: 12px; }
+.open-data-card summary { cursor: pointer; line-height: 1.7; }
+.open-data-values { font-size: 12px; line-height: 1.55; }
+.open-data-values dt { font-weight: 700; margin-top: 8px; }
+.open-data-values dd { margin-left: 0; color: var(--ink-soft); }
+.open-data-card table { width: 100%; font-size: 12px; }
+.open-data-card th, .open-data-card td { text-align: right; padding: 4px; }
+.open-data-card th:first-child, .open-data-card td:first-child { text-align: left; }

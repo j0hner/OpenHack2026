@@ -1,3 +1,5 @@
+import OpenDataPanel from './OpenDataPanel';
+import { cadastralUrl } from '../lib/openData';
 import { FRUITS, FRUIT_ORDER } from '../data/fruitProfiles';
 import { PROVENANCE } from '../data/provenance';
 import { areaHa, centerOf, perimeterM } from '../lib/geo';
@@ -10,6 +12,7 @@ import { Meter, QualityBadge, ScoreGauge, Toggle, VerdictBadge, severityIcon } f
 export type DetailTab = 'prehled' | 'doporuceni' | 'ekonomika' | 'data';
 
 interface Props {
+  onRetryData:()=>void;
   area: AnalysisArea;
   score: SuitabilityResult;
   ranking: Record<FruitKey, SuitabilityResult>;
@@ -51,8 +54,8 @@ export default function AreaDetail(props: Props) {
     <div>
       <div className="area-header">
         <div className="eyebrow">
-          {area.kind === 'sample' ? `Ukázková plocha ${area.tag ?? ''}` : 'Vlastní plocha'}
-          <span className="badge q-demo">{area.kind === 'sample' ? 'Demo data' : 'Bez analytických dat'}</span>
+          {area.kind === 'sample' ? `Ukázková plocha ${area.tag ?? ''}` : area.kind === 'parcel' ? 'Katastrální parcela ČÚZK' : 'Vlastní plocha'}
+          <span className={`badge ${area.regional?'q-real':'q-demo'}`}>{area.regional?'Výpočet ze skutečných podkladů':area.kind==='sample'?'Demo scénář':'Modelový profil'}</span>
         </div>
         <h2 className="area-title">{area.name}</h2>
         <div className="area-loc">
@@ -78,6 +81,7 @@ export default function AreaDetail(props: Props) {
             Identifikace <b>{area.location.code ?? 'vlastní'}</b>
           </span>
         </div>
+        {area.cadastral && <p>Evidovaná výměra: {area.cadastral.officialAreaM2?.toLocaleString('cs-CZ') ?? 'neuvedena'} m². <a href={cadastralUrl(area.cadastral.id)} target="_blank" rel="noopener noreferrer">Otevřít oficiální katastr</a></p>}
         <p className="inline-note">{area.story}</p>
         <p className="tiny muted" style={{ marginTop: 4 }}>
           {area.sourceNote}
@@ -115,7 +119,7 @@ export default function AreaDetail(props: Props) {
           <div className="verdict-caption">
             {score.overall != null
               ? `Orientační shoda podmínek pro ${profile.name.toLowerCase()} · skóre není pravděpodobnost úspěchu.${
-                  score.verdictClass === 'risk' && score.overall >= 55
+                  score.verdictClass === 'risk' && score.overall >= 55 && score.categories.some(c=>c.score!==null&&c.score<30)
                     ? ' Výsledek je „Rizikový“, protože některá kategorie klesla pod mezní hodnotu 30 bodů.'
                     : ''
                 }`
@@ -138,7 +142,7 @@ export default function AreaDetail(props: Props) {
           checked={props.irrigation && area.irrigationAvailable !== false}
           onChange={props.onIrrigationChange}
           label="Modelovat doplňkovou závlahu"
-          description="Zlepší hodnocení vláhy, zvýší investici i provozní náklady. Modelový předpoklad, ne potvrzení zdroje vody."
+          description={area.regional?'Změní ekonomický scénář. Regionální skóre neměníme bez doloženého zdroje vody.':'Zlepší hodnocení vláhy, zvýší investici i provozní náklady. Modelový předpoklad, ne potvrzení zdroje vody.'}
           disabled={area.irrigationAvailable === false}
         />
         {area.irrigationAvailable === false && (
@@ -162,6 +166,7 @@ export default function AreaDetail(props: Props) {
       </div>
 
       <div style={{ marginTop: 12 }}>
+        {(tab === 'prehled' || tab === 'data' || tab === 'ekonomika') && <OpenDataPanel area={area} fruit={fruit} onEconomicsChange={props.onEconomicsChange} onRetry={props.onRetryData} />}
         {tab === 'prehled' && <Overview score={score} area={area} />}
         {tab === 'doporuceni' && (
           <RecommendationPanel
@@ -282,8 +287,7 @@ function Overview({ score, area }: { score: SuitabilityResult; area: AnalysisAre
           </ul>
         ) : (
           <div className="notice good">
-            V demo podkladech není zjištěný střet se záplavovým územím ani ochranou přírody. To není potvrzení, že
-            záměr je povolený – územní a vodoprávní podmínky je nutné ověřit.
+            {area.regional?'V připojených kategoriích AOPK není evidovaný průnik, nebo je podklad nedostupný (viz zdroje výše). Záplavy Q100 a další právní omezení zůstávají neověřené.':'V demo podkladech není zjištěný střet. To není potvrzení, že záměr je povolený.'}
           </div>
         )}
         {constraint?.note && <div className="inline-note">{constraint.note}</div>}
@@ -292,7 +296,7 @@ function Overview({ score, area }: { score: SuitabilityResult; area: AnalysisAre
       <div className="card">
         <div className="card-title">
           <span>Kategorie hodnocení</span>
-          <span className="hint">váhy: půda 30 · klima 30 · vláha 20 · terén 10 · provoz 10</span>
+          <span className="hint">{area.regional?'váhy: půda 35 · klima 40 · vláha 25':'váhy: půda 30 · klima 30 · vláha 20 · terén 10 · provoz 10'}</span>
         </div>
         {score.categories.map((category) => {
           const tone =
@@ -326,7 +330,7 @@ function Overview({ score, area }: { score: SuitabilityResult; area: AnalysisAre
           </div>
         )}
         <div className="footnote">
-          Váhy 30 / 30 / 20 / 10 / 10 jsou transparentní návrh pro demo, nikoli odborně validovaná metodika.
+          {area.regional?'Váhy 35 / 40 / 25 jsou orientační pravidla regionálního indexu; nejde o odborně validovanou metodiku.':'Váhy 30 / 30 / 20 / 10 / 10 jsou transparentní návrh pro demo, nikoli odborně validovaná metodika.'}
           Ekonomika, kvalita podkladů a územní kolize se vyhodnocují samostatně.
         </div>
       </div>
@@ -357,6 +361,7 @@ function DataTab({
   score: SuitabilityResult;
   onOpenProvenance: () => void;
 }) {
+  if(area.regional)return <div className="card"><strong>Podklady pro tuto plochu jsou vypsané výše.</strong><p className="small">{score.categories.map(c=>`${c.label}: ${c.score===null?'nedostupné':c.score+'/100 (částečné podklady)'}`).join(' · ')}</p><ul className="plain-list">{score.assumptions.map(text=><li key={text}>{text}</li>)}</ul><button type="button" className="btn" onClick={onOpenProvenance}>Otevřít zdroje a nejistoty</button></div>;
   const rows: {
     indicator: string;
     value: string;
@@ -396,7 +401,7 @@ function DataTab({
       value: area.attributes.terrain
         ? `sklon ${fmtNum(area.attributes.terrain.slopeDeg, 1)}°, orientace ${area.attributes.terrain.aspect}, ${area.attributes.terrain.altitudeM} m n. m.`
         : 'Podklad není k dispozici',
-      source: area.attributes.terrain ? 'Orientační odhad z výškového modelu' : 'ČÚZK DMR – nepřipojeno',
+      source: area.attributes.terrain ? 'Orientační odhad z výškového modelu' : 'Terénní zdroj není připojený',
       quality: area.attributes.terrain ? 'demo' : 'unavailable',
       availability: area.availability.terrain,
     },

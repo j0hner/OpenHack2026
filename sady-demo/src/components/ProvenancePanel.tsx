@@ -62,8 +62,7 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
           </li>
         </ul>
         <div className="inline-note">
-          Analytická data (BPEJ, LPIS, ČHMÚ, AOPK, ceny a podpory) nejsou v tomto statickém demu napojená. Nahrazují je
-          výslovně označené modelové hodnoty, nikdy ne nevydávané za skutečnost.
+          Režim Skutečná data počítá regionální index z průniků BPEJ a klimatu ERA5-Land / ERA5. V pěti lokalitách používá připravené výřezy, jinde živé dotazy podle geometrie. AOPK vstupuje do samostatných omezení. ČSÚ poskytuje celostátní ekonomickou referenci. Demo scénáře jsou dostupné odděleně; váhy a agronomické převody zůstávají orientačními pravidly SADY.
         </div>
       </div>
 

@@ -74,6 +74,7 @@ export interface AreaAttributes {
 export type AvailabilityMap = Record<CategoryKey, Availability>;
 
 export type PolygonGeometry = { type: 'Polygon'; coordinates: number[][][] };
+export type AreaGeometry = PolygonGeometry | { type: 'MultiPolygon'; coordinates: number[][][][] };
 
 export interface AreaLocation {
   code?: string;
@@ -84,13 +85,16 @@ export interface AreaLocation {
 }
 
 export interface AnalysisArea {
+  regional?: {status:'loading'|'ready'|'error';data:import('./regionalData').RegionalData|null;message?:string};
+  derivedFrom?: {operation:'split'|'merge';sourceIds:string[];sourceNames:string[]};
   id: string;
   /** 'A' | 'B' | 'C' u přednačtených ukázek */
   tag?: string;
   name: string;
   kind: AreaKind;
   landUse: string;
-  geometry: PolygonGeometry;
+  geometry: AreaGeometry;
+  cadastral?: {id:string;officialAreaM2:number|null};
   location: AreaLocation;
   attributes: AreaAttributes;
   availability: AvailabilityMap;

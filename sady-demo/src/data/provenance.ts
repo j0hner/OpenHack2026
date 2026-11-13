@@ -7,12 +7,12 @@ import type { ProvenanceRow } from '../lib/types';
  * neznamená, že je zdroj napojený. Demo data nejsou vydávaná za skutečná.
  */
 
-export const PROVENANCE: ProvenanceRow[] = [
+const MODEL_PROVENANCE: ProvenanceRow[] = [
   {
     indicator: 'Hranice České republiky',
     source: 'Natural Earth 1:50m (public domain)',
     period: '2023',
-    resolution: 'generalizováno, ~1 : 50 000',
+    resolution: 'generalizováno, 1 : 50 000 000',
     quality: 'real',
     connected: 'Ano – lokálně přibalený GeoJSON, funguje i bez internetu',
     note: 'Používá se pro náhled celé ČR a jako záložní podklad při výpadku mapových dlaždic.',
@@ -92,7 +92,7 @@ export const PROVENANCE: ProvenanceRow[] = [
   },
   {
     indicator: 'Terén, sklon, expozice',
-    source: 'ČÚZK – DMR 5G',
+    source: 'Autorské terénní předpoklady demo scénáře SADY',
     period: '2013–2016',
     resolution: '2 × 2 m',
     quality: 'demo',
@@ -127,15 +127,6 @@ export const PROVENANCE: ProvenanceRow[] = [
     note: 'Skutečný příjezd a jeho průjezdnost je nutné ověřit v terénu.',
   },
   {
-    indicator: 'Vegetační a krajinný kontext',
-    source: 'Copernicus / Sentinel-2',
-    period: '2015–2024',
-    resolution: '10 m',
-    quality: 'unavailable',
-    connected: 'Ne – v demu nenapojeno',
-    note: 'Zamýšlené rozšíření: NDVI trendy a kontrola stavu porostu.',
-  },
-  {
     indicator: 'Referenční výnosy a ceny ovoce',
     source: 'ČSÚ, Situační a výhledové zprávy MZe, Eurostat',
     period: '2019–2023',
@@ -162,6 +153,18 @@ export const PROVENANCE: ProvenanceRow[] = [
     connected: 'Ne – modelové hodnoty',
     note: 'Skutečná cena se odvíjí od konkrétní nabídky a vyjednávání.',
   },
+];
+
+const prepared = (indicator:string,source:string,period:string,resolution:string,note:string):ProvenanceRow => ({indicator,source,period,resolution,note,quality:'real',connected:'Připravené výřezy + živé prostorové dotazy pro danou geometrii; vstupy regionálního indexu (AOPK samostatná omezení)'});
+export const PROVENANCE:ProvenanceRow[]=[
+ prepared('Katastrální parcely','ČÚZK / RÚIAN REST + katastrální WMS','stav při stažení; živé API průběžně','parcela','Pět lokálních výřezů + živý výběr v celé ČR, popup a odkaz do oficiálního katastru.'),
+ prepared('Skutečné jednotky BPEJ','ČÚZK / RÚIAN BPEJ, agendový zdroj SPÚ','stav při stažení','polygon BPEJ','Plošné podíly průnikem; kód BPEJ není půdní rozbor, pH a humus se nedoplňuje.'),
+ prepared('Historické klimatické agregace','Copernicus / ECMWF ERA5-Land + ERA5 přes Open-Meteo','2005–2024','teplota ~9 km; srážky / ET0 ~25 km','Reanalýza pro střed lokality, nikoli měření na parcele nebo predikce škod.'),
+ prepared('Skutečné průniky s ochranou přírody','AOPK ČR, otevřené vrstvy 0, 2, 6, 7','stav při stažení','ZCHÚ, EVL a ptačí oblasti','Pět výřezů; zjednodušení 0,00002°. Neobsahuje všechna právní omezení ani ochranná pásma.'),
+ {...prepared('Sklizeň a referenční ceny','ČSÚ ZEM03D / CEN0203B','2021–2025','ČR, pět ovocných druhů','Skutečná sklizeň a cena, Kč/t převedeno na Kč/kg; chybějící údaje jsou null. Cenu lze výslovně použít v ekonomice.'),connected:'Statické statistiky ČR; žádný odhad výnosu t/ha parcely'},
+ {...prepared('Mapové podklady','OpenStreetMap, ČÚZK Ortofoto a katastrální mapa','dle poskytovatele','mapové dlaždice / WMS','Dva podklady a katastrální překryv, bez klíčů.'),connected:'Online mapové podklady'},
+ {indicator:'Záplavové riziko Q100',source:'Otevřená distribuční licence neověřena',period:'neověřeno',resolution:'neověřeno',quality:'unavailable',connected:'Nepřipojeno',note:'Data VÚV se nepřibalují. Absence polygonu není nulové riziko.'},
+ ...MODEL_PROVENANCE.filter(p=>!['Katastrální parcely a RÚIAN','Záplavová území','Chráněná území','Vegetační a krajinný kontext'].includes(p.indicator)).map(p=>p.quality==='real'?p:{...p,indicator:p.indicator+' (demo model)',note:(p.note??'')+' Tyto předpoklady jsou oddělené od skutečných podkladů.'}),
 ];
 
 export const QUALITY_LABELS: Record<string, { label: string; className: string; hint: string }> = {
