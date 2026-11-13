@@ -67,4 +67,3 @@ TypeScript a produkční build; `data:verify` ověřuje úplnost klimatu, platno
 ------------------------------------------
 - [ ] Export
 - [ ]
-
