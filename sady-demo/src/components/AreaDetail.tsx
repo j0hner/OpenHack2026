@@ -1,3 +1,5 @@
+import OpenDataPanel from './OpenDataPanel';
+import { cadastralUrl } from '../lib/openData';
 import { FRUITS, FRUIT_ORDER } from '../data/fruitProfiles';
 import { PROVENANCE } from '../data/provenance';
 import { areaHa, centerOf, perimeterM } from '../lib/geo';
@@ -51,8 +53,8 @@ export default function AreaDetail(props: Props) {
     <div>
       <div className="area-header">
         <div className="eyebrow">
-          {area.kind === 'sample' ? `Ukázková plocha ${area.tag ?? ''}` : 'Vlastní plocha'}
-          <span className="badge q-demo">{area.kind === 'sample' ? 'Demo data' : 'Bez analytických dat'}</span>
+          {area.kind === 'sample' ? `Ukázková plocha ${area.tag ?? ''}` : area.kind === 'parcel' ? 'Katastrální parcela ČÚZK' : 'Vlastní plocha'}
+          <span className={`badge ${area.kind==='sample'?'q-demo':'q-real'}`}>{area.kind === 'sample' ? 'Demo scénář + otevřené podklady' : area.kind==='parcel' ? 'Skutečná parcela' : 'Vlastní geometrie'}</span>
         </div>
         <h2 className="area-title">{area.name}</h2>
         <div className="area-loc">
@@ -78,6 +80,7 @@ export default function AreaDetail(props: Props) {
             Identifikace <b>{area.location.code ?? 'vlastní'}</b>
           </span>
         </div>
+        {area.cadastral && <p>Evidovaná výměra: {area.cadastral.officialAreaM2?.toLocaleString('cs-CZ') ?? 'neuvedena'} m². <a href={cadastralUrl(area.cadastral.id)} target="_blank" rel="noopener noreferrer">Otevřít oficiální katastr</a></p>}
         <p className="inline-note">{area.story}</p>
         <p className="tiny muted" style={{ marginTop: 4 }}>
           {area.sourceNote}
@@ -162,6 +165,7 @@ export default function AreaDetail(props: Props) {
       </div>
 
       <div style={{ marginTop: 12 }}>
+        {(tab === 'prehled' || tab === 'data' || tab === 'ekonomika') && <OpenDataPanel area={area} fruit={fruit} onEconomicsChange={props.onEconomicsChange} />}
         {tab === 'prehled' && <Overview score={score} area={area} />}
         {tab === 'doporuceni' && (
           <RecommendationPanel

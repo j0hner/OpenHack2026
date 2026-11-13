@@ -1,4 +1,4 @@
-import type { EconomicsInputs, FruitKey, PolygonGeometry } from './types';
+import type { AnalysisArea, EconomicsInputs, FruitKey, PolygonGeometry } from './types';
 
 const KEY = 'sady-demo-v1';
 
@@ -13,6 +13,7 @@ export interface PersistedState {
   economicsByFruit: Partial<Record<FruitKey, EconomicsInputs>>;
   drawnGeometry: PolygonGeometry | null;
   demoProfileId: string | null;
+  parcels?: AnalysisArea[];
 }
 
 export function loadState(): Partial<PersistedState> | null {

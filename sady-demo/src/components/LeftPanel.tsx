@@ -1,3 +1,4 @@
+import type {ParcelFeature} from '../lib/openData';
 import { useMemo, useState } from 'react';
 import { MAP_LAYERS } from '../data/layers';
 import { KRAJE, okresyForKraj, obceForOkres } from '../data/regions';
@@ -31,6 +32,7 @@ interface LeftPanelProps {
   onToggleLayer: (id: string) => void;
   showKraje: boolean;
   onToggleKraje: () => void;
+  onParcelSelect: (parcel:ParcelFeature)=>void;
   onSelectPlace: (place: PlaceResult) => void;
   customProfileId: string | null;
   onCustomProfileChange: (id: string | null) => void;
@@ -80,7 +82,8 @@ export default function LeftPanel(props: LeftPanelProps) {
     setParcelState('loading');
     setParcelError(null);
     try {
-      await lookupCadastralParcel(parcelNumber, parcelKatastr);
+      const parcel=await lookupCadastralParcel(parcelNumber, parcelKatastr);
+      props.onParcelSelect(parcel);
     } catch (error) {
       setParcelState('error');
       setParcelError({
@@ -315,7 +318,7 @@ export default function LeftPanel(props: LeftPanelProps) {
           </div>
 
           <div className="notice info">
-            Půdní, klimatická a územní data pro vlastní pozemek nejsou v tomto statickém demu napojená. Chybějící
+            Skutečné parcely vybírejte přes katastrální vrstvu nebo číslo a k. ú. Analytická data jsou připravená v pěti výřezech. Chybějící
             podklady zobrazujeme jako nedostupné – nikdy je nenahrazujeme demo výsledky bez označení.
           </div>
 
@@ -337,7 +340,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                     <input
                       value={parcelKatastr}
                       onChange={(event) => setParcelKatastr(event.target.value)}
-                      placeholder="např. Bílany"
+                      placeholder="např. Bílany nebo 604038"
                     />
                   </label>
                 </div>
@@ -356,8 +359,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                   </div>
                 )}
                 <div className="field-note" style={{ marginTop: 7 }}>
-                  Zdroj: ČÚZK – INSPIRE WFS. Rozhraní neumožňuje volání z prohlížeče bez proxy; výsledek se proto
-                  zobrazuje jako chyba, ne jako domnělá parcela.
+                  Zdroj: ČÚZK RÚIAN REST, bez klíče. Pro jednoznačné hledání lze zadat šestimístný kód k. ú. Parcely lze vybírat také kliknutím v zapnuté katastrální mapě.
                 </div>
               </div>
             </details>
@@ -460,6 +462,7 @@ export default function LeftPanel(props: LeftPanelProps) {
                   <input
                     type="checkbox"
                     checked={Boolean(props.layers[layer.id])}
+                    disabled={layer.quality === 'unavailable'}
                     onChange={() => props.onToggleLayer(layer.id)}
                   />
                   <span />

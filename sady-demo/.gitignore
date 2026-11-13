@@ -6,3 +6,4 @@ dist-ssr
 .vite
 .env
 .env.local
+.data-cache/

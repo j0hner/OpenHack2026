@@ -62,8 +62,7 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
           </li>
         </ul>
         <div className="inline-note">
-          Analytická data (BPEJ, LPIS, ČHMÚ, AOPK, ceny a podpory) nejsou v tomto statickém demu napojená. Nahrazují je
-          výslovně označené modelové hodnoty, nikdy ne nevydávané za skutečnost.
+          Skutečné podklady: ČÚZK parcely, BPEJ, Ortofoto a DMR 5G; ERA5-Land přes Open-Meteo; AOPK; ČSÚ sklizně a ceny. Satelitní podklad je ESA WorldCover / Sentinel-2 z roku 2021. Analytické výřezy pokrývají pět lokalit. Demo skóre a agronomické předpoklady zůstávají výslovně označené.
         </div>
       </div>
 

@@ -74,6 +74,7 @@ export interface AreaAttributes {
 export type AvailabilityMap = Record<CategoryKey, Availability>;
 
 export type PolygonGeometry = { type: 'Polygon'; coordinates: number[][][] };
+export type AreaGeometry = PolygonGeometry | { type: 'MultiPolygon'; coordinates: number[][][][] };
 
 export interface AreaLocation {
   code?: string;
@@ -90,7 +91,8 @@ export interface AnalysisArea {
   name: string;
   kind: AreaKind;
   landUse: string;
-  geometry: PolygonGeometry;
+  geometry: AreaGeometry;
+  cadastral?: {id:string;officialAreaM2:number|null};
   location: AreaLocation;
   attributes: AreaAttributes;
   availability: AvailabilityMap;

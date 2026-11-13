@@ -1,11 +1,5 @@
-/**
- * Datové adaptéry pro režim „Vlastní pozemek“.
- *
- * Skutečné veřejné zdroje se volají tam, kde je to z prohlížeče proveditelné
- * (vyhledání lokality přes Nominatim). Katastrální WFS ČÚZK je z prohlížeče
- * blokované – adaptér to zkusí a výsledek poctivě vrátí jako chybu, nikdy
- * ji nenahradí demo daty.
- */
+import type { ParcelFeature } from './openData';
+/** Veřejné dotazy s timeoutem; chyba se nikdy nenahrazuje demo parcelou. */
 
 export interface PlaceResult {
   label: string;
@@ -66,57 +60,33 @@ export async function searchPlaces(query: string): Promise<PlaceResult[]> {
   }));
 }
 
-const CUZK_WFS = 'https://services.cuzk.cz/wfs/inspire-cp-wfs.asp';
+const CUZK_REST = 'https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer';
 
-/**
- * Pokus o dotaz na katastrální parcely ČÚZK.
- * Služba nepovoluje volání z prohlížeče (CORS) – chyba se zobrazí uživateli.
- */
-export async function lookupCadastralParcel(parcelNumber: string, katastr: string): Promise<never> {
-  if (!parcelNumber.trim() || !katastr.trim()) {
-    throw new AdapterError(
-      'Chybí vstup',
-      'Zadejte parcelní číslo i katastrální území. Teprve pak lze parcelu dohledávat.',
-    );
-  }
-  const url = `${CUZK_WFS}?service=WFS&request=GetCapabilities`;
-  let response: Response | null = null;
-  let failure = '';
-  try {
-    response = await withTimeout(url, { headers: { Accept: 'application/xml' } }, 7000);
-  } catch (error) {
-    failure = error instanceof Error ? `${error.name}: ${error.message}` : 'neznámá chyba';
-  }
 
-  if (!response || !response.ok) {
-    throw new AdapterError(
-      'Parcelu se nepodařilo ověřit',
-      `Katastrální WFS ČÚZK není z prohlížeče dostupné${
-        response ? ` (HTTP ${response.status})` : failure ? ` (${failure})` : ''
-      }. Statické demo bez backendu ho nemůže obejít, proto nic nedoplňujeme demo daty. Řešení: napojit proxy/WFS službu v backendu, nebo použít export z Nahlížení do katastru. Plochu lze zakreslit ručně a pracovat s ní jako s vlastní plochou.`,
-    );
-  }
-
-  throw new AdapterError(
-    'Přímé dotazování parcel není v demu implementováno',
-    `Rozhraní ČÚZK odpovědělo, ale filtrování podle parcelního čísla a k. ú. vyžaduje dotaz GetFeature s CQL, který v tomto statickém demu není implementovaný. Zadané údaje (${parcelNumber.trim()}, ${katastr.trim()}) jsme neuložili. Plochu zakreslete ručně.`,
-  );
+export async function lookupCadastralParcel(parcelNumber:string,katastr:string):Promise<ParcelFeature>{
+ const number=parcelNumber.trim(),territory=katastr.trim();
+ if(!/^(?:st\.\s*)?\d+(?:\/\d+)?$/i.test(number)||!territory||territory.length>100)
+  throw new AdapterError('Zkontrolujte vstup','Zadejte číslo parcely (např. 1123) a přesný název nebo šestimístný kód katastrálního území.');
+ const query=async(layer:number,params:Record<string,string>)=>{
+  const r=await withTimeout(CUZK_REST+'/'+layer+'/query?'+new URLSearchParams({f:'json',...params}),{},12000);
+  if(!r.ok)throw new AdapterError('ČÚZK je nedostupný','HTTP '+r.status);
+  const d=await r.json();if(d.error||d.exceededTransferLimit)throw new AdapterError('Neúplná odpověď ČÚZK','Zkuste upřesnit vstup nebo vyberte parcelu v mapě.');return d;
+ };
+ let code=territory;
+ if(!/^\d{6}$/.test(code)){
+  const escaped=territory.replaceAll("'","''").toLocaleUpperCase('cs-CZ');
+  const d=await query(7,{where:"UPPER(nazev) = '"+escaped+"'",outFields:'kod,nazev',returnGeometry:'false',resultRecordCount:'10'});
+  if(d.features?.length!==1)throw new AdapterError('Katastrální území není jednoznačné','Použijte jeho přesný název nebo šestimístný kód ČÚZK.');
+  code=String(d.features[0].attributes.kod);
+ }
+ const d=await query(5,{where:'katastralniuzemi = '+code+" AND cisloparcely = '"+number+"'",outFields:'id,cisloparcely,vymeraparcely,druhpozemkukod,katastralniuzemi',outSR:'4326',f:'geojson',resultRecordCount:'10'});
+ if(d.features?.length!==1)throw new AdapterError('Parcela nebyla jednoznačně nalezena','Ověřte parcelní číslo nebo použijte výběr v katastrální mapě.');
+ const f=d.features[0];if(!['Polygon','MultiPolygon'].includes(f.geometry?.type)||!/^\d+$/.test(String(f.properties?.id)))throw new AdapterError('Geometrie parcely není dostupná','Zkuste výběr v mapě.');
+ return f;
 }
-
-export const ADAPTER_SUMMARY = [
-  {
-    name: 'Nominatim / OpenStreetMap – vyhledání lokality',
-    status: 'Napojeno',
-    note: 'Online dotaz, ošetřený timeout a chybový stav.',
-  },
-  {
-    name: 'ČÚZK WFS – katastrální parcely',
-    status: 'Nedostupné',
-    note: 'Veřejné WFS blokuje volání z prohlížeče (CORS); demo bez backendu to neobchází.',
-  },
-  {
-    name: 'LPIS, BPEJ, ČHMÚ, AOPK – analytická data',
-    status: 'Nenapojeno',
-    note: 'V demu nahrazeno výslovně označenými modelovými daty, nikdy nevydávanými za skutečnost.',
-  },
+export const ADAPTER_SUMMARY=[
+ {name:'Nominatim / OpenStreetMap',status:'Napojeno',note:'Vyhledávání lokality na vyžádání, timeout a chybový stav.'},
+ {name:'ČÚZK RÚIAN REST + katastrální WMS',status:'Napojeno',note:'Výběr parcely v celé ČR; lokální výřezy pěti lokalit, jinde online dotaz s timeoutem.'},
+ {name:'BPEJ, ERA5-Land, DMR 5G, AOPK',status:'Pět výřezů',note:'Stažené otevřené podklady; mimo pokrytí se nevytváří náhradní údaje.'},
+ {name:'ČSÚ ZEM03D / CEN0203B',status:'Napojeno',note:'Skutečné roční statistiky 2021–2025, pět druhů. Použití ceny v ekonomice je výslovná volba.'},
 ];

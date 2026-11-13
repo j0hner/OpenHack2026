@@ -1,3 +1,4 @@
+import { parcelArea, type ParcelFeature } from './lib/openData';
 import { useEffect, useMemo, useState } from 'react';
 import AreaDetail, { type DetailTab } from './components/AreaDetail';
 import ComparisonPanel from './components/ComparisonPanel';
@@ -116,7 +117,7 @@ function makeCustomArea(
     availability: profile ? { ...PARTIAL_AVAILABILITY } : { ...EMPTY_AVAILABILITY },
     sourceNote: profile
       ? 'Vlastní geometrie + modelový datový profil ukázkové plochy (výslovně označená demo data).'
-      : 'Vlastní nakreslená geometrie bez připojených analytických dat. Katastrální ani environmentální data nejsou v demu napojená.',
+      : 'Vlastní nakreslená geometrie bez připojených analytických dat. Skutečné otevřené podklady se připojují v pěti připravených výřezech a zobrazují samostatně.',
     story: profile
       ? 'Plocha zakreslená uživatelem s doplněným demo profilem. Slouží k předvedení modelu, ne k rozhodnutí o pozemku.'
       : 'Plocha zakreslená uživatelem. Protože chybí půdní, klimatické i vláhové podklady, výsledek poctivě hlásí „Nedostatek dat“.',
@@ -180,8 +181,9 @@ export default function App() {
     return base;
   });
 
+  const [parcels, setParcels] = useState<AnalysisArea[]>(boot?.parcels ?? []);
   const bootSelected = (boot?.selectedIds ?? []).filter((id) =>
-    id === 'custom' ? Boolean(boot?.drawnGeometry) : DEMO_AREAS.some((area) => area.id === id),
+    id === 'custom' ? Boolean(boot?.drawnGeometry) : [...DEMO_AREAS, ...parcels].some((area) => area.id === id),
   );
   const [selectedIds, setSelectedIds] = useState<string[]>(bootSelected.length > 0 ? bootSelected : ['demo-a']);
   const [activeId, setActiveId] = useState<string | null>(boot?.activeId ?? bootSelected[0] ?? 'demo-a');
@@ -203,14 +205,14 @@ export default function App() {
   );
 
   const allAreas = useMemo<AnalysisArea[]>(
-    () => [...DEMO_AREAS, ...(customArea ? [customArea] : [])],
-    [customArea],
+    () => [...DEMO_AREAS, ...parcels, ...(customArea ? [customArea] : [])],
+    [customArea, parcels],
   );
 
   const areaIndex = useMemo(() => new Map(allAreas.map((area) => [area.id, area])), [allAreas]);
 
   const visibleAreas = useMemo(
-    () => allAreas.filter((area) => (area.kind === 'custom' ? Boolean(customArea) : matchesRegion(area, region))),
+    () => allAreas.filter((area) => (area.kind === 'parcel' || (area.kind === 'custom' ? Boolean(customArea) : matchesRegion(area, region)))),
     [allAreas, region, customArea],
   );
 
@@ -260,8 +262,9 @@ export default function App() {
       economicsByFruit,
       drawnGeometry,
       demoProfileId: customProfileId,
+      parcels,
     });
-  }, [mode, fruit, irrigation, selectedIds, activeId, region, layers, economicsByFruit, drawnGeometry, customProfileId]);
+  }, [mode, fruit, irrigation, selectedIds, activeId, region, layers, economicsByFruit, drawnGeometry, customProfileId, parcels]);
 
   /* ---------- toast ---------- */
   useEffect(() => {
@@ -327,6 +330,17 @@ export default function App() {
     );
     const bbox = feature ? boundsOfGeometry(feature.geometry) : null;
     if (bbox) setFocus({ bbox, nonce: Date.now() });
+  };
+
+  const handleParcelSelect = (feature: ParcelFeature) => {
+    const selected = parcelArea(feature);
+    setParcels(previous => [...previous.filter(p => p.id !== selected.id), selected].slice(-50));
+    setSelectedIds(previous => [...new Set([...previous, selected.id])]);
+    setActiveId(selected.id);
+    setMode('custom');
+    setView('analyza');
+    setDetailTab('prehled');
+    setFocus({bbox:bboxOf(selected.geometry),nonce:Date.now()});
   };
 
   const handleFruitChange = (next: FruitKey) => setFruit(next);
@@ -405,6 +419,7 @@ export default function App() {
 
   const handleResetDemo = () => {
     clearState();
+    setParcels([]);
     setMode('demo');
     setFruit('apple');
     setIrrigation(false);
@@ -526,6 +541,7 @@ export default function App() {
           showKraje={showKraje}
           onToggleKraje={() => setShowKraje((value) => !value)}
           onSelectPlace={handleSelectPlace}
+          onParcelSelect={handleParcelSelect}
           customProfileId={customProfileId}
           onCustomProfileChange={(id) => {
             setCustomProfileId(id);
@@ -546,6 +562,7 @@ export default function App() {
         />
 
         <MapView
+          onParcelSelect={handleParcelSelect}
           areas={visibleAreas}
           scores={scores}
           selectedIds={selectedIds}

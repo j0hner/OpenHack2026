@@ -1,3 +1,5 @@
+import {BASE_MAPS, createBaseLayer, createCadastralLayer, type BaseMap} from './baseLayers';
+import {queryParcels, LAND_USE, cadastralUrl, locationIndex, loadLocation, type ParcelFeature} from '../lib/openData';
 import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import czechiaGeo from '../data/geo/czechia.json';
@@ -28,6 +30,7 @@ interface MapViewProps {
   scopeLabel: string;
   mode: 'demo' | 'custom';
   onAreaClick: (id: string) => void;
+  onParcelSelect: (feature: ParcelFeature) => void;
   onMapClick: (lonLat: [number, number]) => void;
   onVertexMove: (index: number, lonLat: [number, number]) => void;
   onKrajClick: (name: string) => void;
@@ -50,6 +53,7 @@ const CZ_BOUNDS: L.LatLngBoundsExpression = [
   [51.1, 18.9],
 ];
 
+const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const toLatLng = (point: number[]): [number, number] => [point[1], point[0]];
 
 export default function MapView(props: MapViewProps) {
@@ -64,6 +68,13 @@ export default function MapView(props: MapViewProps) {
   const callbacksRef = useRef(props);
   callbacksRef.current = props;
 
+  const [baseMap, setBaseMap] = useState<BaseMap>('osm');
+  const [cadastre, setCadastre] = useState(false);
+  const parcelModeRef = useRef(false); parcelModeRef.current = cadastre;
+  const [parcelStatus, setParcelStatus] = useState('');
+  const [layerStatus, setLayerStatus] = useState('');
+  const [zoom, setZoom] = useState(7);
+  const [realLayers, setRealLayers] = useState<Record<string, GeoJSON.FeatureCollection>>({});
   const [tilesOk, setTilesOk] = useState(true);
   const [ready, setReady] = useState(false);
 
@@ -75,7 +86,7 @@ export default function MapView(props: MapViewProps) {
       center: [49.83, 15.35],
       zoom: 7,
       minZoom: 6,
-      maxZoom: 18,
+      maxZoom: 20,
       zoomControl: false,
       preferCanvas: false,
     });
@@ -83,22 +94,6 @@ export default function MapView(props: MapViewProps) {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 140 }).addTo(map);
-
-    let tileErrors = 0;
-    const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">přispěvatelé OpenStreetMap</a>',
-      crossOrigin: true,
-    });
-    tiles.on('tileerror', () => {
-      tileErrors += 1;
-      if (tileErrors >= 4) setTilesOk(false);
-    });
-    tiles.on('load', () => {
-      tileErrors = 0;
-      setTilesOk(true);
-    });
-    tiles.addTo(map);
 
     const country = L.geoJSON(czechiaGeo as unknown as GeoJSON.GeoJsonObject, {
       style: { color: '#9fb6a3', weight: 1.2, fillColor: '#eef2ea', fillOpacity: 0.55 },
@@ -115,9 +110,10 @@ export default function MapView(props: MapViewProps) {
     drawingGroupRef.current = L.layerGroup().addTo(map);
 
     map.on('click', (event: L.LeafletMouseEvent) => {
-      callbacksRef.current.onMapClick([event.latlng.lng, event.latlng.lat]);
+      if (!parcelModeRef.current || callbacksRef.current.drawMode) callbacksRef.current.onMapClick([event.latlng.lng, event.latlng.lat]);
     });
 
+    map.on('zoomend', () => setZoom(map.getZoom()));
     setReady(true);
 
     return () => {
@@ -129,11 +125,66 @@ export default function MapView(props: MapViewProps) {
   /* ---------- podklad / offline stav ---------- */
   useEffect(() => {
     countryRef.current?.setStyle({
-      fillOpacity: tilesOk ? 0.5 : 0.9,
+      fillOpacity: tilesOk ? 0 : 0.9,
       color: tilesOk ? '#9fb6a3' : '#8aa38f',
       weight: tilesOk ? 1.1 : 1.4,
     });
   }, [tilesOk]);
+
+
+  useEffect(() => {
+    const map=mapRef.current; if(!map)return;
+    let errors=0;setTilesOk(true);
+    const layer=createBaseLayer(baseMap);
+    layer.on('tileerror',()=>{if(++errors>=3)setTilesOk(false);});
+    layer.on('tileload',()=>{errors=0;setTilesOk(true);});
+    layer.addTo(map); layer.bringToBack();
+    return()=>{map.removeLayer(layer);};
+  },[baseMap,ready]);
+  useEffect(()=>{
+    const map=mapRef.current;if(!map||!cadastre)return;
+    const layer=createCadastralLayer().addTo(map);
+    layer.on('tileerror',()=>setParcelStatus('Katastrální podklad se nepodařilo načíst. Výběr parcely po kliknutí můžete zkusit znovu.'));
+    let current:AbortController|null=null,disposed=false;
+    const selected=L.layerGroup().addTo(map);
+    const click=async(event:L.LeafletMouseEvent)=>{
+      if(callbacksRef.current.drawMode)return;
+      if(map.getZoom()<14){setParcelStatus('Přibližte mapu alespoň na úroveň 14 pro výběr parcely.');return;}
+      current?.abort();const request=new AbortController();current=request;
+      setParcelStatus('Načítám informace o parcele…');
+      try{
+        const features=await queryParcels([event.latlng.lng,event.latlng.lat],request.signal);
+        if(disposed||request.signal.aborted)return;
+        selected.clearLayers();
+        if(!features.length){setParcelStatus('Na tomto místě není parcela v dostupných datech.');return;}
+        const f=features[0],p=f.properties,id=String(p.id);
+        L.geoJSON(f,{style:{color:'#d87916',weight:3,fillOpacity:.16},interactive:false}).addTo(selected);
+        const box=document.createElement('div');box.className='parcel-popup';
+        const title=document.createElement('strong');title.textContent='Parcela '+p.cisloparcely;box.append(title);
+        const info=document.createElement('p');info.textContent='K. ú. (kód): '+p.katastralniuzemi+' · '+(LAND_USE[String(p.druhpozemkukod)]??'druh neuveden')+' · evidovaná výměra '+Number(p.vymeraparcely).toLocaleString('cs-CZ')+' m²';box.append(info);
+        const link=document.createElement('a');link.href=cadastralUrl(id);link.target='_blank';link.rel='noopener noreferrer';link.textContent='Otevřít v oficiálním katastru ČÚZK';box.append(link);
+        const button=document.createElement('button');button.type='button';button.className='btn primary';button.textContent='Přidat parcelu do výběru';button.onclick=()=>{callbacksRef.current.onParcelSelect(f);map.closePopup();};box.append(button);
+        L.popup({maxWidth:310}).setLatLng(event.latlng).setContent(box).openOn(map);
+        setParcelStatus('Parcela nalezena. Podrobnosti a přidání jsou v mapovém popupu.');
+      }catch(error){if(!disposed&&!request.signal.aborted)setParcelStatus(error instanceof Error?error.message:'Parcelu se nepodařilo načíst.');}
+    };
+    map.on('click',click);
+    return()=>{disposed=true;current?.abort();map.off('click',click);map.removeLayer(layer);map.removeLayer(selected);map.closePopup();};
+  },[cadastre,ready]);
+  useEffect(()=>{
+    let active=true;
+    const wanted=['bpej','protected'].filter(id=>props.layers[id]);
+    if(!wanted.length){setLayerStatus('');return;}
+    setLayerStatus('Načítám otevřené analytické vrstvy pěti lokalit…');
+    // Small analytical files are separate from the much larger parcel geometries.
+    locationIndex().then(entries=>Promise.all(entries.map(loadLocation))).then(locations=>{
+      if(!active)return;const next:Record<string,GeoJSON.FeatureCollection>={};
+      for(const id of wanted){const keys=id==='protected'?['protected','protectedSmall','natura','birds']:[id];
+        next[id]={type:'FeatureCollection',features:locations.flatMap(d=>keys.flatMap(k=>d.layers[k].features)).map(f=>({...f,properties:{...f.properties,label:String(f.properties?.nazev??f.properties?.name??id),detail:'Otevřená data – výřezy pěti lokalit',color:id==='bpej'?'#ba8b54':'#5c8f3f'}}))};
+      }setRealLayers(previous=>({...previous,...next}));setLayerStatus('');
+    }).catch(()=>{if(active)setLayerStatus('Analytická vrstva se nenačetla. Vypněte a znovu zapněte vrstvu pro opakování.');});
+    return()=>{active=false;};
+  },[props.layers]);
 
   /* ---------- kraje ---------- */
   useEffect(() => {
@@ -162,10 +213,10 @@ export default function MapView(props: MapViewProps) {
         });
         featureLayer.bindTooltip(name, { sticky: true, direction: 'top' });
       },
-      interactive: !props.drawMode,
+      interactive: !props.drawMode && !cadastre,
     });
     group.addLayer(layer);
-  }, [props.showKraje, props.selectedKraj, props.drawMode]);
+  }, [props.showKraje, props.selectedKraj, props.drawMode, cadastre]);
 
   /* ---------- ukázkové plochy a skóre ---------- */
   useEffect(() => {
@@ -179,25 +230,24 @@ export default function MapView(props: MapViewProps) {
       const color = props.layers.suitability ? VERDICT_COLORS[verdictClass] ?? '#5b7a66' : '#3c6c50';
       const selected = props.selectedIds.includes(area.id);
       const active = props.activeId === area.id;
-      const latlngs = area.geometry.coordinates[0].map(toLatLng);
-
-      const polygon = L.polygon(latlngs, {
+      const polygon = L.geoJSON({type:'Feature', properties:{}, geometry:area.geometry} as GeoJSON.GeoJsonObject, { style: {
         color: selected ? '#14492f' : color,
         weight: active ? 4 : selected ? 3 : 1.8,
         fillColor: color,
         fillOpacity: selected ? 0.45 : 0.3,
         dashArray: area.kind === 'custom' ? '7 5' : undefined,
-        interactive: !props.drawMode,
+        }, interactive: !props.drawMode,
       });
 
       polygon.on('click', (event) => {
         L.DomEvent.stopPropagation(event);
-        callbacksRef.current.onAreaClick(area.id);
+        if (parcelModeRef.current) mapRef.current?.fire('click', {latlng: event.latlng});
+        else callbacksRef.current.onAreaClick(area.id);
       });
 
       const scoreText = result?.overall != null ? `${result.overall}/100` : 'Nedostatek dat';
       polygon.bindTooltip(
-        `<strong>${area.tag ? `${area.tag} · ` : ''}${area.name}</strong><br/>${result?.verdict ?? 'Bez vyhodnocení'}${
+        `<strong>${area.tag ? `${escapeHtml(area.tag)} · ` : ''}${escapeHtml(area.name)}</strong><br/>${result?.verdict ?? 'Bez vyhodnocení'}${
           result?.overall != null ? ` · ${scoreText}` : ''
         }`,
         { sticky: true, direction: 'top', className: 'sady-tooltip' },
@@ -205,12 +255,12 @@ export default function MapView(props: MapViewProps) {
 
       group.addLayer(polygon);
 
-      const label = L.marker(latlngs[0], {
+      const label = L.marker(polygon.getBounds().getNorthWest(), {
         interactive: false,
         icon: L.divIcon({
           className: 'area-label-wrap',
           html: `<span class="map-tag${area.kind === 'custom' ? ' custom' : ''}">${
-            area.tag ? area.tag : 'Vlastní plocha'
+            area.tag ? escapeHtml(area.tag) : area.kind==='parcel' ? 'Parcela' : 'Vlastní plocha'
           }</span>`,
           iconSize: [18, 16],
           iconAnchor: [-2, 2],
@@ -238,7 +288,7 @@ export default function MapView(props: MapViewProps) {
 
       group.clearLayers();
       const geoLayer = L.geoJSON(
-        { type: 'FeatureCollection', features: definition.features } as unknown as GeoJSON.GeoJsonObject,
+        { type: 'FeatureCollection', features: ['bpej','protected'].includes(definition.id) ? realLayers[definition.id]?.features ?? [] : definition.features } as unknown as GeoJSON.GeoJsonObject,
         {
           style: (feature) => {
             const color = String(feature?.properties?.color ?? '#7f8f7a');
@@ -250,19 +300,19 @@ export default function MapView(props: MapViewProps) {
           onEachFeature: (feature, layer) => {
             const label = String(feature.properties?.label ?? definition.name);
             const detail = String(feature.properties?.detail ?? '');
-            layer.bindTooltip(`<strong>${label}</strong>${detail ? `<br/>${detail}` : ''}`, {
+            layer.bindTooltip(`<strong>${escapeHtml(label)}</strong>${detail ? `<br/>${escapeHtml(detail)}` : ''}`, {
               sticky: true,
               direction: 'top',
               className: 'sady-tooltip',
             });
           },
-          interactive: !props.drawMode,
+          interactive: !props.drawMode && !cadastre,
         },
       );
       group.addLayer(geoLayer);
       group.addTo(map);
     }
-  }, [props.layers, props.drawMode]);
+  }, [props.layers, props.drawMode, realLayers, cadastre]);
 
   /* ---------- kreslení a vlastní plocha ---------- */
   useEffect(() => {
@@ -394,6 +444,11 @@ export default function MapView(props: MapViewProps) {
           </div>
         </div>
         <div className="map-actions">
+          <label className="map-base-control">Podklad <select aria-label="Mapový podklad" value={baseMap} onChange={e=>setBaseMap(e.target.value as BaseMap)}>{Object.entries(BASE_MAPS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+          <label className="map-base-control"><input type="checkbox" checked={cadastre} onChange={e=>{setCadastre(e.target.checked);setParcelStatus('');}}/> Katastrální parcely</label>
+          {cadastre&&<span className="parcel-status" role="status">{zoom<14?'Pro hranice a výběr parcel přibližte mapu.':parcelStatus||'Klikněte na parcelu pro informace a přidání do výběru.'}</span>}
+          {layerStatus&&<span className="parcel-status" role="status">{layerStatus}</span>}
+          {baseMap==='satellite'&&<a className="tiny" href="https://browser.dataspace.copernicus.eu/" target="_blank" rel="noopener noreferrer">Otevřít Copernicus Browser – mozaika v mapě je z roku 2021</a>}
           <button className="btn" type="button" onClick={handleHome} title="Návrat na pohled celé České republiky">
             ⌂ Celá ČR
           </button>

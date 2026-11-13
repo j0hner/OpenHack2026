@@ -4,36 +4,33 @@ import { feature as turfFeature } from '@turf/helpers';
 import { length as turfLength } from '@turf/length';
 import { union as turfUnion } from '@turf/union';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import type { PolygonGeometry } from './types';
+import type { AreaGeometry } from './types';
 
 export type Bbox = [number, number, number, number];
 
-export const toFeature = (geometry: PolygonGeometry): Feature<Polygon> =>
-  turfFeature({ type: 'Polygon', coordinates: geometry.coordinates as Polygon['coordinates'] });
+export const toFeature = (geometry: AreaGeometry): Feature<Polygon | MultiPolygon> =>
+  turfFeature(geometry as Polygon | MultiPolygon);
 
-export const areaHa = (geometry: PolygonGeometry): number => turfArea(toFeature(geometry)) / 10_000;
+export const areaHa = (geometry: AreaGeometry): number => turfArea(toFeature(geometry)) / 10_000;
 
-export const perimeterM = (geometry: PolygonGeometry): number =>
+export const perimeterM = (geometry: AreaGeometry): number =>
   turfLength(toFeature(geometry), { units: 'kilometers' }) * 1000;
 
-export const bboxOf = (geometry: PolygonGeometry): Bbox => turfBbox(toFeature(geometry)) as Bbox;
+export const bboxOf = (geometry: AreaGeometry): Bbox => turfBbox(toFeature(geometry)) as Bbox;
 
-export const centerOf = (geometry: PolygonGeometry): [number, number] => {
+export const centerOf = (geometry: AreaGeometry): [number, number] => {
   const [w, s, e, n] = bboxOf(geometry);
   return [(w + e) / 2, (s + n) / 2];
 };
 
 const unionFeatures = (a: Feature<Polygon | MultiPolygon>, b: Feature<Polygon | MultiPolygon>) =>
-  (turfUnion as unknown as (
-    first: Feature<Polygon | MultiPolygon>,
-    second: Feature<Polygon | MultiPolygon>,
-  ) => Feature<Polygon | MultiPolygon> | null)(a, b);
+  turfUnion({type:'FeatureCollection',features:[a,b]});
 
 /**
  * Společná výměra bez dvojího započtení překryvů.
  * Sjednotí všechny vybrané polygony a změří výsledek.
  */
-export function unionAreaHa(geometries: PolygonGeometry[]): number {
+export function unionAreaHa(geometries: AreaGeometry[]): number {
   if (geometries.length === 0) return 0;
   if (geometries.length === 1) return areaHa(geometries[0]);
   try {
@@ -50,7 +47,7 @@ export function unionAreaHa(geometries: PolygonGeometry[]): number {
   }
 }
 
-export const sumAreaHa = (geometries: PolygonGeometry[]): number =>
+export const sumAreaHa = (geometries: AreaGeometry[]): number =>
   geometries.reduce((sum, geometry) => sum + areaHa(geometry), 0);
 
 export const formatLatLon = ([lon, lat]: [number, number]): string =>
