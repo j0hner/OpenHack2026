@@ -1,7 +1,5 @@
 # Moje Sady
 
-Tabule: https://excalidraw.com/#room=1e201f6f911c13cabd8d,-7MJLrhy6w7bKVjpEsktng
-
 Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v kořeni repozitáře, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a filtrované vektorové parcely RÚIAN. Oba podklady jsou omezené na ČR. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
 
 ## Spuštění
