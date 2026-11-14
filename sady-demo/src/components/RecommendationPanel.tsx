@@ -56,7 +56,7 @@ export default function RecommendationPanel({
                 <span className="fruit-ranking-name">{FRUITS[key].name}</span>
                 <span className="fruit-ranking-bar" aria-hidden="true"><span style={{width:`${item.overall??0}%`}} /></span>
                 <span className="rank">
-                  {item.overall != null ? `${index+1}. · ${item.overall}/100` : 'Bez podkladů'}
+                  {item.overall != null ? `${index+1}. · ${item.overall}/100` : item.verdict}
                 </span>
               </button>
             );

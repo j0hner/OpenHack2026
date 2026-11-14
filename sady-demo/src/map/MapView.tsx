@@ -1,11 +1,6 @@
 import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import {
-  IconStack2,
-  IconMaximize,
-  IconHome2,
-  IconX,
-} from "@tabler/icons-react";
+import { IconStack2, IconX } from "@tabler/icons-react";
 import {
   BASE_MAPS,
   createBaseLayer,
@@ -22,7 +17,7 @@ import {
 import { representativePoint } from "../lib/regionalData";
 import { areaHa } from "../lib/geo";
 import czechiaGeo from "../data/geo/czechia.json";
-import krajeGeo from "../data/geo/kraje.json";
+import CzechiaOutlineIcon from "./CzechiaOutlineIcon";
 import { MAP_LAYERS } from "../data/layers";
 import ParcelPreview from "../components/ParcelPreview";
 import { parcelEligibility } from "../lib/parcelEligibility";
@@ -52,7 +47,6 @@ interface MapViewProps {
   selectedIds: string[];
   activeId: string | null;
   layers: Record<string, boolean>;
-  showKraje: boolean;
   focus: FocusTarget | null;
   detailOpen: boolean;
   splitMode: boolean;
@@ -66,7 +60,6 @@ interface MapViewProps {
   onCancelSplit: () => void;
   onHome: () => void;
   onToggleLayer?: (id: string) => void;
-  onToggleKraje?: () => void;
 }
 const CZ_BOUNDS: L.LatLngBoundsExpression = [
   [48.5, 12],
@@ -149,7 +142,6 @@ export default function MapView(props: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const countryRef = useRef<L.GeoJSON | null>(null);
   const areaGroupRef = useRef<L.LayerGroup | null>(null);
-  const boundaryGroupRef = useRef<L.LayerGroup | null>(null);
   const splitGroupRef = useRef<L.LayerGroup | null>(null);
   const pendingGroupRef = useRef<L.LayerGroup | null>(null);
   const coverageGroupRef = useRef<L.LayerGroup | null>(null);
@@ -167,7 +159,6 @@ export default function MapView(props: MapViewProps) {
   const [tilesOk, setTilesOk] = useState(true);
   const [parcelStatus, setParcelStatus] = useState("");
   const [layerStatus, setLayerStatus] = useState("");
-  const [controlStatus, setControlStatus] = useState("");
   const [pendingParcel, setPendingParcel] = useState<ParcelFeature | null>(
     null,
   );
@@ -231,7 +222,6 @@ export default function MapView(props: MapViewProps) {
       interactive: false,
     }).addTo(map);
     countryRef.current = country;
-    boundaryGroupRef.current = L.layerGroup().addTo(map);
     areaGroupRef.current = L.layerGroup().addTo(map);
     splitGroupRef.current = L.layerGroup().addTo(map);
     pendingGroupRef.current = L.layerGroup().addTo(map);
@@ -276,13 +266,10 @@ export default function MapView(props: MapViewProps) {
       updateBounds();
     });
     resize.observe(containerRef.current);
-    const fullscreen = () => map.invalidateSize({ pan: false });
-    document.addEventListener("fullscreenchange", fullscreen);
     setZoom(map.getZoom());
     setReady(true);
     return () => {
       resize.disconnect();
-      document.removeEventListener("fullscreenchange", fullscreen);
       parcelRequestRef.current?.abort();
       map.remove();
       mapRef.current = null;
@@ -446,19 +433,6 @@ export default function MapView(props: MapViewProps) {
       group.addLayer(layer);
     }
   }, [coverageEnabled, coverage.parcels, props.splitMode, ready]);
-
-  useEffect(() => {
-    const group = boundaryGroupRef.current;
-    if (!group) return;
-    group.clearLayers();
-    if (!props.showKraje) return;
-    group.addLayer(
-      L.geoJSON(krajeGeo as unknown as GeoJSON.GeoJsonObject, {
-        style: { color: "#e2e9de", weight: 0.8, opacity: 0.6, fillOpacity: 0 },
-        interactive: false,
-      }),
-    );
-  }, [props.showKraje, ready]);
 
   useEffect(() => {
     const group = areaGroupRef.current;
@@ -767,20 +741,6 @@ export default function MapView(props: MapViewProps) {
       duration: 0.55,
     });
   };
-  const fullscreen = async () => {
-    setControlStatus("");
-    const target =
-      containerRef.current?.closest(".map-stage") ??
-      containerRef.current?.parentElement;
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else if (target instanceof HTMLElement) await target.requestFullscreen();
-    } catch {
-      setControlStatus(
-        "Celou obrazovku prohlížeč nepovolil. Mapu lze dál běžně ovládat.",
-      );
-    }
-  };
   return (
     <section
       className={`map-shell${props.detailOpen || pendingParcel ? " has-detail" : ""}${pendingParcel ? " has-parcel-preview" : ""}${props.splitMode ? " is-splitting" : ""}`}
@@ -822,16 +782,7 @@ export default function MapView(props: MapViewProps) {
           title="Zobrazit celou Českou republiku"
           aria-label="Zobrazit celou Českou republiku"
         >
-          <IconHome2 size={18} stroke={1.7} />
-        </button>
-        <button
-          type="button"
-          className="map-control-button icon-only"
-          onClick={() => void fullscreen()}
-          title="Mapa na celou obrazovku"
-          aria-label="Mapa na celou obrazovku"
-        >
-          <IconMaximize size={18} stroke={1.7} />
+          <CzechiaOutlineIcon />
         </button>
         {layersOpen && (
           <div
@@ -891,16 +842,6 @@ export default function MapView(props: MapViewProps) {
                 <small>Hranice a výběr od přiblížení 14</small>
               </span>
             </label>
-            {props.onToggleKraje && (
-              <label className="map-layer-check">
-                <input
-                  type="checkbox"
-                  checked={props.showKraje}
-                  onChange={props.onToggleKraje}
-                />
-                <span>Hranice krajů</span>
-              </label>
-            )}
             {props.onToggleLayer && (
               <label className="map-layer-check">
                 <input
@@ -983,11 +924,11 @@ export default function MapView(props: MapViewProps) {
           </button>
         </div>
       )}
-      {(!tilesOk || parcelStatus || layerStatus || controlStatus) && (
+      {(!tilesOk || parcelStatus || layerStatus) && (
         <div className="map-status" role="status">
           {!tilesOk
             ? "Mapový podklad není dostupný. Zkuste ve vrstvách změnit podklad."
-            : parcelStatus || layerStatus || controlStatus}
+            : parcelStatus || layerStatus}
         </div>
       )}
     </section>

@@ -134,7 +134,17 @@ export interface RiskItem {
 export interface SuitabilityResult {
   fruit: FruitKey;
   overall: number | null;
-  verdict: "Vhodný" | "Vhodný s opatřeními" | "Rizikový" | "Nedostatek dat";
+  /** Availability of the mandatory soil and climate inputs, distinct from quality. */
+  dataStatus: "idle" | "loading" | "ready" | "insufficient" | "error";
+  dataMessage: string;
+  verdict:
+    | "Vhodný"
+    | "Vhodný s opatřeními"
+    | "Rizikový"
+    | "Nedostatek dat"
+    | "Dosud neověřeno"
+    | "Načítám podklady"
+    | "Chyba načítání";
   verdictClass: VerdictClass;
   reasons: string[];
   risks: RiskItem[];

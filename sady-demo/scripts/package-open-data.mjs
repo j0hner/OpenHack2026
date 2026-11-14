@@ -88,7 +88,6 @@ const datasets=[
  {id:'orthophoto',name:'ČÚZK – Ortofoto ČR',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer',use:'Online letecký podklad'},
  {id:'cadastral-map',name:'ČÚZK – katastrální mapa',license:'Otevřená prostorová data ČÚZK, CC BY 4.0',url:'https://services.cuzk.gov.cz/wms/local-km-wms.asp',use:'Transparentní online WMS, vrstva KN, od přiblížení 14'},
  {id:'natural-earth',name:'Natural Earth 1:50m',license:'Public domain',url:'https://www.naturalearthdata.com/about/terms-of-use/',use:'Již přítomná záložní hranice ČR'},
- {id:'gisco',name:'Eurostat GISCO NUTS 2021',license:'Podmínky Eurostat GISCO; zachované původní atribuce',url:'https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics',use:'Již přítomné generalizované hranice krajů'},
 ];
 await save('manifest.json',{preparedAt:new Date().toISOString(),scope:'Pět regionálních výřezů skutečných otevřených dat; nejde o celorepublikovou offline databázi',datasets,files,notes:['Modelové pěstitelské profily a náklady nejsou otevřenými měřenými daty.','Chybějící hodnoty zůstávají null.','Podklady se načítají po jednotlivých lokalitách.']});
 const receipts=await cached('downloads.json').catch(()=>read('downloads.json')).catch(()=>null);

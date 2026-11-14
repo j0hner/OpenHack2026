@@ -14,6 +14,9 @@ import ParcelList from "./components/ParcelList";
 import ParcelCard from "./components/ParcelCard";
 import LocationSearch from "./components/LocationSearch";
 import Dialog from "./components/Dialog";
+import ThemeSettings from "./components/ThemeSettings";
+import { useTheme } from "./lib/theme";
+import AnalysisBackdrop from "./components/AnalysisBackdrop";
 import ParcelPreview from "./components/ParcelPreview";
 import { parcelEligibility } from "./lib/parcelEligibility";
 import AreaDetail, { type DetailTab } from "./components/AreaDetail";
@@ -112,6 +115,7 @@ const rawSource = (source: AnalysisArea): AnalysisArea => {
 };
 
 export default function App() {
+  const [theme, setTheme] = useTheme();
   const [boot] = useState(() => loadState());
   const [fruit] = useState<FruitKey>(boot?.fruit ?? "apple");
   const [fruitByArea, setFruitByArea] = useState<Record<string, FruitKey>>(
@@ -142,7 +146,6 @@ export default function App() {
   );
   const [irrigation, setIrrigation] = useState(boot?.irrigation ?? false);
   const [layers, setLayers] = useState({ ...DEFAULT_LAYERS, ...boot?.layers });
-  const [showKraje, setShowKraje] = useState(false);
   const [focus, setFocus] = useState<Focus | null>(null);
   const [searchMarker, setSearchMarker] = useState<{
     lat: number;
@@ -493,6 +496,7 @@ export default function App() {
     setView(next);
     if (next === "mapa") setMobileList(false);
   };
+  const closeAnalysis = useCallback(() => setView("mapa"), []);
   const fullDetailProps =
     active && ranking
       ? {
@@ -565,7 +569,6 @@ export default function App() {
           >
             <IconList size={21} />
           </button>
-          <span className="data-mode">Otevřená data</span>
         </div>
       </header>
       <ParcelList
@@ -598,7 +601,6 @@ export default function App() {
           selectedIds={selectedIds}
           activeId={activeId}
           layers={layers}
-          showKraje={showKraje}
           focus={focus}
           detailOpen={detailOpen && view === "mapa"}
           splitMode={!!splitSourceId}
@@ -626,7 +628,6 @@ export default function App() {
           onToggleLayer={(id) =>
             setLayers((previous) => ({ ...previous, [id]: !previous[id] }))
           }
-          onToggleKraje={() => setShowKraje((v) => !v)}
         />
         {view === "mapa" &&
           detailOpen &&
@@ -739,20 +740,22 @@ export default function App() {
           </div>
         )}
         {view !== "mapa" && (
+          <AnalysisBackdrop enabled={view === "analyzy"} onClose={closeAnalysis}>
           <section className="workspace-panel" aria-label={titles[view]}>
             <div className="workspace-panel-heading">
               <div>
                 <span className="eyebrow">Moje pozemky</span>
                 <h1>{titles[view]}</h1>
               </div>
-              <button
-                className="btn"
-                type="button"
-                onClick={() => setView("mapa")}
-              >
-                <IconMap size={17} />
-                Zpět na mapu
-              </button>
+              {view === "analyzy" ? (
+                <button className="icon-button" type="button" onClick={closeAnalysis} aria-label="Zavřít detailní analýzu" title="Zavřít detailní analýzu">
+                  <IconX size={20} />
+                </button>
+              ) : (
+                <button className="btn" type="button" onClick={() => setView("mapa")}>
+                  <IconMap size={17} /> Zpět na mapu
+                </button>
+              )}
             </div>
             {view === "analyzy" &&
               (fullDetailProps ? (
@@ -833,7 +836,7 @@ export default function App() {
                           <td>{FRUITS[areaFruit(a.id)].name}</td>
                           <td>
                             {scores[a.id].overall === null
-                              ? "Nedostatek dat"
+                              ? scores[a.id].verdict
                               : scores[a.id].overall + "/100"}
                           </td>
                           <td>
@@ -856,6 +859,7 @@ export default function App() {
             )}
             {view === "nastaveni" && (
               <div className="settings-grid">
+                <ThemeSettings theme={theme} onChange={setTheme} />
                 <section className="card">
                   <h2>Podklady hodnocení</h2>
                   <p>
@@ -892,6 +896,7 @@ export default function App() {
               </div>
             )}
           </section>
+          </AnalysisBackdrop>
         )}
       </main>
       {addOpen && (

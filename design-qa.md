@@ -2,6 +2,22 @@
 
 final result: passed
 
+## Oprava stavů analýzy a následné úpravy vzhledu
+
+Ověřeno 14. 11. 2026 na stejné větvi. Stručná karta, přehled pozemků, mapa i detailní analýza nyní používají společný výsledek a stav podkladů. „Nedostatek dat“ se zobrazuje až po skutečném potvrzení nedostatečného pokrytí. Neověřený pozemek, probíhající načítání a chyba poskytovatele mají vlastní označení. Dostatek základních vstupů se výslovně ukazuje i při konzervativní kvalitě podkladů 60 %.
+
+- Půda BPEJ a klima se publikují hned po dokončení; čtyři pomalejší dotazy AOPK následně doplní územní omezení. Probíhající kontrola zůstává viditelná, neznámá ochrana se nevydává za nulový průnik.
+- Pozdější AOPK výsledek nemutuje již publikovaný snímek. Odznačení, opětovný výběr, souběžní odběratelé i obnovení zachovávají správnou geometrii a nejvýše dva pracovníky. Do trvalé cache vstupují pouze dokončené výsledky bez chyb.
+- Stejná skutečná zahrada 1641 má ve stručné kartě i analýze 79 pro jabloň a 75 pro hrušeň. Přepnutí druhu nemění dostupnost dat. Cizí geometrický klíč je odmítnutý.
+- Odstraněny nápis „Otevřená data“ v hlavičce, krajské hranice včetně nepoužívané geometrie GISCO a tlačítko celé obrazovky. Návrat na ČR má skutečný obrys ze stávajícího Natural Earth souboru.
+- Legenda ani rozbalená nápověda nepřekrývá měřítko. Na mobilu s detailem končí legenda přibližně na y=270 a měřítko začíná na y=287. Bez horizontálního přetečení.
+- Nastavení obsahuje klávesnicí i dotykem ovladatelnou volbu světlého/tmavého režimu. Obnovení stránky zachovává téma i parcelu. Samostatný klíč `moje-sady-theme` nemění uživatelská data.
+- Analýzu zavře okolní plocha, křížek i Escape. Ověřeno na desktopu i mobilu; změna ovoce a záložek uvnitř ji nezavře. Tažení musí začít i skončit na pozadí, takže tažení z obsahu není pokynem k zavření.
+
+Nové `test:regional-status`, `test:regional-lifecycle` a `test:theme`: PASS. Regionální test na pěti skutečných parcelách, porovnání dostupnosti na 46 skutečných geometriích, kontrola distribuovaných dat, TypeScript a produkční build: PASS. Datový balík zůstává 6 346 094 B, bez nových datových zdrojů. Build nemá varování o nadměrném chunku.
+
+Aktuální snímky: [světlá karta](docs/qa/data-status-desktop.jpg), [tmavá mapa](docs/qa/dark-mode-desktop.jpg), [tmavý mobil](docs/qa/dark-mode-mobile.jpg), [tmavá analýza](docs/qa/dark-analysis-desktop.jpg).
+
 Ověřeno 14. 11. 2026. Větev `codex/real-parcels-data-coverage` vychází z `origin/master` (`c5e934f`, sloučený redesign Moje Sady). Produkční build je otevřený v integrovaném prohlížeči na http://127.0.0.1:5181/. Nasazení dál používá statický Vite výstup s relativním base pro GitHub Pages.
 
 ## Výsledek

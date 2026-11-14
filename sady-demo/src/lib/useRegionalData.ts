@@ -25,23 +25,31 @@ export function useRegionalData(areas: AnalysisArea[], wantedIds: string[]) {
     ].filter(
       (area) =>
         records[geometryKey(area.geometry)]?.status !== "ready" ||
+        records[geometryKey(area.geometry)]?.data?.protectionPending ||
         forceKey === geometryKey(area.geometry),
     );
     const worker = async () => {
       while (active && todo.length) {
         const area = todo.shift()!,
           key = geometryKey(area.geometry);
-        setRecords((previous) => ({
-          ...previous,
-          [key]: { status: "loading", data: null },
-        }));
+        // Reattaching a partially completed shared request keeps the usable core
+        // visible; selection changes must not turn a computed index back to loading.
+        if(records[key]?.status!=="ready"||forceKey===key)
+          setRecords((previous) => ({
+            ...previous,
+            [key]: { status: "loading", data: null },
+          }));
         try {
           const data = await loadRegionalData(
             area.geometry,
             controller.signal,
             forceKey === key,
+            (data) => {
+              if(active&&data.key===key)
+                setRecords(previous=>({...previous,[key]:{status:"ready",data}}));
+            },
           );
-          if (active)
+          if (active&&data.key===key)
             setRecords((previous) => ({
               ...previous,
               [key]: { status: "ready", data },

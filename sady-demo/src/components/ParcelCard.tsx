@@ -24,6 +24,7 @@ import type {
   SuitabilityResult,
 } from "../lib/types";
 import OpenDataPanel from "./OpenDataPanel";
+import { AnalysisDataStatus } from "./ui";
 
 export interface ParcelCardProps {
   area: AnalysisArea;
@@ -124,7 +125,6 @@ export default function ParcelCard(props: ParcelCardProps) {
       : area.cadastral
         ? "Parcela ČÚZK · skutečná data"
         : "Pracovní plocha · skutečná data";
-  const loading = area.regional?.status === "loading";
   const rootParcels = [...new Set(area.derivedFrom?.rootCadastralIds ?? [])]
     .filter((value) => /^\d+$/.test(value) && value !== area.cadastral?.id)
     .map((value) => {
@@ -268,23 +268,8 @@ export default function ParcelCard(props: ParcelCardProps) {
             <p className="parcel-score-caption">
               Pro {profile.name.toLocaleLowerCase("cs-CZ")} · regionální index
             </p>
-            {score.overall === null ? (
-              <div className="parcel-risk missing" role="status">
-                <IconAlertTriangle size={18} aria-hidden="true" />
-                <div>
-                  <strong>
-                    {loading ? "Načítám podklady" : "Nedostatek podkladů"}
-                  </strong>
-                  <p>
-                    {shortText(
-                      area.regional?.message ??
-                        score.reasons[0] ??
-                        "Pro spolehlivější hodnocení chybí data.",
-                    )}
-                  </p>
-                </div>
-              </div>
-            ) : mainRisk ? (
+            <AnalysisDataStatus score={score} protectionPending={data?.protectionPending} />
+            {score.overall !== null && (mainRisk ? (
               <div className={`parcel-risk ${mainRisk.severity}`}>
                 <IconAlertTriangle size={18} aria-hidden="true" />
                 <div>
@@ -299,7 +284,7 @@ export default function ParcelCard(props: ParcelCardProps) {
                     "Před výsadbou ověřte podmínky přímo na místě.",
                 )}
               </p>
-            )}
+            ))}
             <div className="parcel-stats">
               <div>
                 <span>Pokrytí BPEJ</span>

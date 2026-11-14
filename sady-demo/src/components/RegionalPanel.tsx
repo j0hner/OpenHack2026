@@ -108,7 +108,9 @@ export default function RegionalPanel({
             )}
             <dt>AOPK – průnik s polygonem</dt>
             <dd>
-              {d.protected === null
+              {d.protectionPending
+                ? "Probíhá ověřování územních omezení."
+                : d.protected === null
                 ? "Neověřeno – zdroj není dostupný."
                 : d.protected.length
                   ? d.protected
@@ -129,7 +131,7 @@ export default function RegionalPanel({
           )}
         </>
       )}
-      {observation.status !== "loading" && (
+      {observation.status !== "loading" && (!d?.protectionPending || d.errors.length>0) && (
         <button type="button" className="btn small" onClick={onRetry}>
           Znovu načíst podklady této plochy
         </button>

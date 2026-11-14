@@ -79,15 +79,6 @@ export const PROVENANCE: ProvenanceRow[] = [
     note: "Orientační celostátní náhled a záložní geometrie při výpadku mapových dlaždic.",
   },
   {
-    indicator: "Hranice krajů",
-    source: "Eurostat GISCO – NUTS 2021",
-    period: "2021",
-    resolution: "1 : 20 000 000",
-    quality: "real",
-    connected: "Lokálně přibalený GeoJSON",
-    note: "Volitelný orientační překryv; neslouží jako filtr pozemků.",
-  },
-  {
     indicator: "Pěstitelské nároky a bodovací pravidla",
     source: "Orientační profily ovocných druhů a pravidla Moje Sady",
     period: "verze modelu v aplikaci",

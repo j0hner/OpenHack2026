@@ -12,6 +12,9 @@ npm run build
 npm run preview
 npm run data:verify
 npm run test:regional
+npm run test:regional-status
+npm run test:regional-lifecycle
+npm run test:theme
 npm run test:geometry
 npm run test:localities
 ```
@@ -43,11 +46,15 @@ Geografické podklady zůstávají skutečnými otevřenými daty i po odstraně
 
 Mimo připravené výřezy se při analýze vybrané plochy BPEJ/AOPK dohledávají prostorově a klima podle souřadnic. ČSÚ poskytuje celostátní statistiky ovoce; referenční cenu lze výslovně převzít v ekonomice.
 
+Stručná karta i detailní analýza používají stejný stav a výsledek. Rozlišují dosud neověřeno, načítání, chybu zdroje a potvrzený nedostatek podkladů. Po načtení BPEJ a klimatu se skóre zobrazí automaticky; pomalejší kontrola územních omezení AOPK se označí jako probíhající a následně výsledek doplní. Dostatek základních podkladů neznamená úplné agronomické a právní ověření ani 100% kvalitu dat.
+
 ## Pracovní geometrie a uložení
 
 Rozdělení používá přímý segment určený dvěma body přes vybraný pozemek. Náhled ukáže skutečné části a výměry; změnu lze potvrdit, zrušit a vrátit. Části mají vlastní ovoce a kořenovou vazbu na původní parcelu. Spojení sjednocuje překryvy, oddělené plochy zachovává jako MultiPolygon. Originály zůstávají uložené; nejde o právní změnu katastru.
 
 Názvy, parcely, pracovní geometrie, druhy ovoce a posledních deset rozdělení jsou uložené v localStorage tohoto prohlížeče. Výsledky prostorové analýzy se cachují podle geometrie, nejvýše 30 záznamů na 7 dní. Nová geometrie získává vlastní podklady, nikoli zkopírované hodnoty rodiče.
+
+V Nastavení lze přepnout světlý a tmavý režim. Volba se ukládá samostatně do `moje-sady-theme`, zachovává uživatelské pozemky a při dalším načtení se použije před vykreslením rozhraní. Detailní analýza se zavírá křížkem, klávesou Escape nebo kliknutím na okolní plochu. Mapa nabízí vrstvy a návrat na celou ČR tlačítkem s jejím obrysem; krajské hranice a tlačítko celé obrazovky jsou odstraněné.
 
 ## Model a omezení
 

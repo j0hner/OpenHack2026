@@ -2,9 +2,12 @@
   position: absolute;
   z-index: 700;
   left: 18px;
-  bottom: 28px;
+  /* Keep the Leaflet scale below the legend, even with its explanation open. */
+  bottom: 54px;
   width: 276px;
   max-width: calc(100% - 92px);
+  max-height: calc(100% - 112px);
+  overflow-y: auto;
   padding: 13px 15px;
   background: rgb(255 255 255 / 97%);
   border: 1px solid #dbe4d6;
@@ -136,7 +139,7 @@
 @media (max-width: 900px) {
   .data-coverage-legend {
     left: 12px;
-    bottom: 18px;
+    bottom: 46px;
     width: 260px;
     padding: 10px 12px;
     max-width: calc(100% - 78px);
@@ -151,7 +154,7 @@
   .map-shell.has-detail .data-coverage-legend {
     left: 12px;
     right: auto;
-    bottom: calc(55dvh + 8px);
+    bottom: calc(55dvh + 46px);
     max-width: calc(100% - 78px);
     max-height: calc(100dvh - 55dvh - 160px);
     overflow-y: auto;

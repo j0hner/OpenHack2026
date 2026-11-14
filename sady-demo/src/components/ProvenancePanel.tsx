@@ -70,10 +70,6 @@ export default function ProvenancePanel({
             záložní náhled mapy.
           </li>
           <li className="small" style={{ color: "var(--ink-soft)" }}>
-            <b>Eurostat GISCO NUTS 2021</b> – lokálně přibalené orientační
-            hranice 14 krajů.
-          </li>
-          <li className="small" style={{ color: "var(--ink-soft)" }}>
             <b>OpenStreetMap a ČÚZK</b> – skutečné mapové podklady a katastrální
             překryv.
           </li>

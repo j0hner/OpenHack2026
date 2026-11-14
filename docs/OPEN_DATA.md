@@ -26,7 +26,6 @@ Rozhraní Moje Sady navíc používá aktuální přibalený seznam **6 254 obc�
 | [ČÚZK Ortofoto ČR](https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer), CC BY 4.0 | Letecké XYZ: `https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer/tile/{z}/{y}/{x}`. OSM nemá vlastní letecký podklad. |
 | [ČÚZK katastrální mapa](https://wms.cuzk.gov.cz/), otevřená prostorová data ČÚZK | `https://services.cuzk.gov.cz/wms/local-km-wms.asp`, WMS 1.1.1, vrstva `KN`, transparentní PNG. Od přiblížení 14. Dočasný náhled z RÚIAN REST s explicitním přidáním; WMS samo nevrací analytickou geometrii. |
 | [Natural Earth](https://www.naturalearthdata.com/about/terms-of-use/), public domain | Zachovaná lokální generalizovaná hranice ČR, měřítko 1:50m, záložní náhled při výpadku dlaždic. |
-| [Eurostat GISCO NUTS 2021](https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics), podmínky GISCO / Eurostat | Zachované lokální orientační hranice 14 krajů; zachována původní atribuce. Samostatné filtry kraje / obce nejsou součástí nového rozhraní. |
 
 ## Co se nestahuje
 
