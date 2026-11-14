@@ -133,10 +133,7 @@ test("desktop parcel detail grows by click and drag, never shrinks below the cur
   expect((await card.boundingBox())!.width).toBeGreaterThanOrEqual(
     dragged.width,
   );
-  await testInfo.attach("desktop-expanded-detail", {
-    body: await page.screenshot(),
-    contentType: "image/png",
-  });
+  await page.screenshot({ path: testInfo.outputPath("desktop-expanded-detail.png") });
   await page
     .getByRole("button", { name: "Zavřít detail pozemku", exact: true })
     .click();
@@ -169,10 +166,7 @@ test("mobile keeps its parcel list control and grows the bottom sheet within the
   expect(expanded.y + expanded.height).toBeLessThanOrEqual(
     map.y + map.height + 1,
   );
-  await testInfo.attach("mobile-expanded-detail", {
-    body: await page.screenshot(),
-    contentType: "image/png",
-  });
+  await page.screenshot({ path: testInfo.outputPath("mobile-expanded-detail.png") });
   await page.setViewportSize({ width: 390, height: 650 });
   const resized = (await card.boundingBox())!;
   const smallerMap = (await page.locator(".map-stage").boundingBox())!;
@@ -291,10 +285,7 @@ test("both themes keep the white apple, while the dark Data header stays padded 
   });
   expect(styles.padding).toBeGreaterThanOrEqual(16);
   expect(styles.radius).toBeGreaterThanOrEqual(8);
-  await testInfo.attach("dark-data-view", {
-    body: await page.screenshot(),
-    contentType: "image/png",
-  });
+  await page.screenshot({ path: testInfo.outputPath("dark-data-view.png") });
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page
