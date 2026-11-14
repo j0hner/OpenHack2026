@@ -24,7 +24,7 @@ import EconomicsPanel from "./components/EconomicsPanel";
 import ProvenancePanel from "./components/ProvenancePanel";
 import MapView from "./map/MapView";
 import { FRUITS, FRUIT_ORDER, economicsForFruit } from "./data/fruitProfiles";
-import { DEFAULT_LAYERS } from "./data/layers";
+import { initialMapLayers, LAYER_SETTINGS_VERSION } from "./lib/mapPreferences";
 import { parcelArea, type ParcelFeature } from "./lib/openData";
 import { lookupCadastralParcel, AdapterError } from "./lib/adapters";
 import {
@@ -145,7 +145,7 @@ export default function App() {
     },
   );
   const [irrigation, setIrrigation] = useState(boot?.irrigation ?? false);
-  const [layers, setLayers] = useState({ ...DEFAULT_LAYERS, ...boot?.layers });
+  const [layers, setLayers] = useState(() => initialMapLayers(boot));
   const [focus, setFocus] = useState<Focus | null>(null);
   const [searchMarker, setSearchMarker] = useState<{
     lat: number;
@@ -236,6 +236,7 @@ export default function App() {
   useEffect(() => {
     saveState({
       modelVersion: "moje-sady-2",
+      layerSettingsVersion: LAYER_SETTINGS_VERSION,
       fruit,
       fruitByArea,
       irrigation,

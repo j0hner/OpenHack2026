@@ -14,6 +14,7 @@ export interface PersistedState {
   fruitByArea?: Record<string, FruitKey>;
   splitHistory?: SplitRecord[];
   modelVersion?: string;
+  layerSettingsVersion?: number;
   /** Read-only compatibility with historical saved state. */
   mode?: "demo" | "custom";
   fruit: FruitKey;

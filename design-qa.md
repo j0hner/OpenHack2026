@@ -2,6 +2,8 @@
 
 final result: passed
 
+Nejnovější ověření větve `codex/parcel-map-filtering` je v [protokolu filtrované mapy a automatických dat](docs/qa/parcel-map-filtering.md). Níže je zachované ověření předchozích úprav.
+
 ## Oprava stavů analýzy a následné úpravy vzhledu
 
 Ověřeno 14. 11. 2026 na stejné větvi. Stručná karta, přehled pozemků, mapa i detailní analýza nyní používají společný výsledek a stav podkladů. „Nedostatek dat“ se zobrazuje až po skutečném potvrzení nedostatečného pokrytí. Neověřený pozemek, probíhající načítání a chyba poskytovatele mají vlastní označení. Dostatek základních vstupů se výslovně ukazuje i při konzervativní kvalitě podkladů 60 %.

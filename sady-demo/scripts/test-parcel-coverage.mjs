@@ -69,12 +69,12 @@ try {
   assert.match(params.get('where'),/druhpozemkukod IN/);
   return Response.json({type:'FeatureCollection',exceededTransferLimit:true,features:Array.from({length:205},(_,i)=>({type:'Feature',properties:{id:10000+i,cisloparcely:String(i),druhpozemkukod:i===0?10:2},geometry}))});
  };
- const request=await q.queryCoverageParcels([14.49,49.99,14.52,50.02],new AbortController().signal);
+ const request=await q.queryCoverageParcels([14.49,49.99,14.52,50.02],new AbortController().signal,{checkData:false});
  assert.equal(request.parcels.length,200);assert.equal(request.truncated,true);
  assert(request.parcels.every(row=>row.coverage.state==='unknown'),'Nové parcely mimo výřezy nemají vymyšlené ani zástupné podklady.');
  assert(request.parcels.every(row=>parcelEligibility(row.feature).allowed));
  assert.equal(calls,2,'Jediný index a jediný ohraničený parcelní dotaz, žádný API fanout.');
- const cached=await q.queryCoverageParcels([14.49,49.99,14.52,50.02],new AbortController().signal);assert.strictEqual(cached,request);assert.equal(calls,2);
+ const cached=await q.queryCoverageParcels([14.49,49.99,14.52,50.02],new AbortController().signal,{checkData:false});assert.strictEqual(cached,request);assert.equal(calls,2);
  const abort=new AbortController();abort.abort();await assert.rejects(q.queryCoverageParcels([14.49,49.99,14.52,50.02],abort.signal),{name:'AbortError'});
  globalThis.fetch=async()=>new Response('{}',{status:503});
  await assert.rejects(q.queryCoverageParcels([14.53,50,14.54,50.01],new AbortController().signal),/HTTP 503/);
@@ -86,7 +86,7 @@ try {
   }
   return new Response('{}',{status:503});
  };
- const fallback=await q.queryCoverageParcels([16.73,48.9396,16.7305,48.9401],new AbortController().signal);
+ const fallback=await q.queryCoverageParcels([16.73,48.9396,16.7305,48.9401],new AbortController().signal,{checkData:false});
  assert.equal(fallbackQueries,1,'Nedostupný lokální soubor nesmí potlačit živý katastr jen proto, že jeho bbox je v indexu.');
  assert.equal(fallback.parcels.length,1);assert.equal(fallback.parcels[0].coverage.state,'unknown');assert(fallback.warning);
  let resolveStarted,resolveResponse;

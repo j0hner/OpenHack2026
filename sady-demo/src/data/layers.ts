@@ -16,7 +16,7 @@ export const MAP_LAYERS: MapLayerDef[] = [
     id: "protected",
     name: "Chráněná území",
     description:
-      "Velko- a maloplošná ZCHÚ, EVL a ptačí oblasti v připravených prostorových výřezech. Podmínky výsadby je nutné ověřit u příslušného orgánu.",
+      "Velko- a maloplošná ZCHÚ, EVL a ptačí oblasti. Celostátní mapová služba AOPK je zobrazená trvale; podmínky výsadby je nutné ověřit u příslušného orgánu.",
     quality: "real",
     usedInModel: false,
     legend: [{ color: "#5c8f3f", label: "Vybrané kategorie ochrany" }],
@@ -42,7 +42,7 @@ export const MAP_LAYERS: MapLayerDef[] = [
 ];
 export const DEFAULT_LAYERS: Record<string, boolean> = {
   bpej: false,
-  protected: false,
+  protected: true,
   suitability: true,
-  coverage: false,
+  coverage: true,
 };

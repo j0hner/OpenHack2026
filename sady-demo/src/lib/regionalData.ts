@@ -50,6 +50,18 @@ interface RegionalRequest {
 const memory=new Map<string,RegionalRequest>();
 const CACHE='sady-regional-geo2';
 const TTL=7*86400000;
+// Automatic map verification can hand its exact core data to a later detailed
+// analysis. It is never persisted as a completed AOPK-checked result.
+const verifiedCore=new Map<string,RegionalData>();
+export function rememberRegionalCore(data:RegionalData){
+ if(data.errors.length||!data.soil||!data.climate)return;
+ if(verifiedCore.size>=300)verifiedCore.delete(verifiedCore.keys().next().value!);
+ verifiedCore.set(data.key,data);
+}
+function existingCore(key:string){
+ const data=verifiedCore.get(key);
+ return data&&Date.now()-Date.parse(data.fetchedAt)<TTL?data:null;
+}
 function cached(key:string):RegionalData|null{
  try{
   localStorage.removeItem('sady-regional-geo1');
@@ -147,9 +159,10 @@ async function load(g:AreaGeometry,signal:AbortSignal,onProgress:RegionalProgres
   for(const id of [0,2,6,7])parts.push(...overlaps(g,await features('https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/'+id,g,signal)));
   return parts;
  }).then(result=>{protectionSettled=true;return result;});
+ const known=refresh?null:existingCore(data.key);
  const [soil,climate]=await Promise.all([
-  attempt('BPEJ',async()=>soilSummary(g,await features('https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28',g,signal,'kod,nazev'))),
-  attempt('Klima',()=>weather(point,signal,refresh)),
+  attempt('BPEJ',async()=>known?.soil??soilSummary(g,await features('https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28',g,signal,'kod,nazev'))),
+  attempt('Klima',async()=>known?.climate??weather(point,signal,refresh)),
  ]);
  const core:RegionalData={...data,soil:soil.value,climate:climate.value,errors:[...soil.errors,...climate.errors]};
  // Never mutate this published snapshot: AOPK is independently appended later.

@@ -1,6 +1,6 @@
 # Moje Sady
 
-Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a volitelný katastrální překryv. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
+Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK, filtrované vektorové parcely RÚIAN a trvalý překryv chráněných území AOPK. Oba podklady jsou omezené na ČR. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
 
 ## Spuštění
 
@@ -15,6 +15,8 @@ npm run test:regional
 npm run test:regional-status
 npm run test:regional-lifecycle
 npm run test:theme
+npm run test:automatic-coverage
+npm run test:map-preferences
 npm run test:geometry
 npm run test:localities
 ```
@@ -34,9 +36,11 @@ Aplikace začíná prázdným seznamem. Syntetické plochy, ilustrační vrstvy 
 
 ## Dostupnost dat v mapě
 
-Ve **Vrstvách** zapněte **Dostupnost dat**. Barvy vyjadřují dostatek podkladů pro regionální index, nikoli vhodnost pro výsadbu. Základními vstupy jsou půda BPEJ, klimatické teploty/mrazy a vláha (srážky/ET0). Minimem je 80 % platného pokrytí BPEJ a 15 úplných let všech potřebných klimatických veličin. Dosud neprověřená parcela zůstává označená jako neprověřená; není vydávána za parcelu bez dat.
+**Dostupnost dat** je ve výchozím nastavení zapnutá. Po přiblížení se viditelné parcely ověřují automaticky bez přidávání do seznamu. Barvy vyjadřují dostatek podkladů pro regionální index, nikoli vhodnost pro výsadbu. Minimem je 80 % platného hodnotitelného pokrytí BPEJ a 15 úplných let teplot, mrazů, srážek a ET0. Vysvětlení barev, průběh a počty jsou u přepínače ve **Vrstvách**; samostatná plovoucí legenda mapu nezakrývá.
 
-Vrstva zpracovává omezený počet skutečných zemědělských parcel v aktuálním výřezu. V pěti připravených oblastech může použít skutečné lokální podklady, jinde se dostupnost upřesní z výsledku analýzy uloženého pozemku. Neprovádí hromadné dvacetileté klimatické požadavky pro každou parcelu v celé republice. Přesné limity a význam barev jsou uvedené v legendě a [dokumentaci dat](docs/OPEN_DATA.md).
+Vrstva zpracovává nejvýše 200 zemědělských parcel od zoomu 14 v pohledu do 8 km úhlopříčky, bez prahu podle výměry. V připravených oblastech využije skutečné místní podklady; jinde sdílí dotaz BPEJ pro celý výřez a klimatické požadavky podle buněk ERA5, nejvýše dva současně. Přesun mapy přeruší zastaralé požadavky. Chyba zdroje má vlastní stav a neznamená potvrzený nedostatek dat. Ověřené podklady lze využít i při následném přidání parcely.
+
+Katastrální hranice se kreslí z filtrovaných polygonů, takže lesy, voda, zastavěné a ostatní plochy nevytvářejí katastrální překryv. Ve Vrstvách lze skrýt zahrady; preference se zachová. Chráněná území jsou zapnutá trvale. Volba **Pouze k pronájmu** je neaktivní, dokud nebude připojen skutečný zdroj nabídek; katastrální parcela sama o sobě není nabídkou pronájmu.
 
 ## Připravená otevřená data
 
@@ -50,7 +54,7 @@ Stručná karta i detailní analýza používají stejný stav a výsledek. Rozl
 
 ## Pracovní geometrie a uložení
 
-Rozdělení používá přímý segment určený dvěma body přes vybraný pozemek. Náhled ukáže skutečné části a výměry; změnu lze potvrdit, zrušit a vrátit. Části mají vlastní ovoce a kořenovou vazbu na původní parcelu. Spojení sjednocuje překryvy, oddělené plochy zachovává jako MultiPolygon. Originály zůstávají uložené; nejde o právní změnu katastru.
+Rozdělení používá přímý segment určený dvěma body přes vybraný pozemek. Náhled ukáže skutečné části a výměry; změnu lze potvrdit, zrušit a vrátit. Části mají vlastní ovoce a kořenovou vazbu na původní parcelu. Spojit lze pouze sousedící pozemky, které po sjednocení tvoří jeden souvislý Polygon; samotný dotyk v bodě ani mezera nestačí. Řetěz sousedících částí funguje. Originály zůstávají uložené; nejde o právní změnu katastru.
 
 Názvy, parcely, pracovní geometrie, druhy ovoce a posledních deset rozdělení jsou uložené v localStorage tohoto prohlížeče. Výsledky prostorové analýzy se cachují podle geometrie, nejvýše 30 záznamů na 7 dní. Nová geometrie získává vlastní podklady, nikoli zkopírované hodnoty rodiče.
 

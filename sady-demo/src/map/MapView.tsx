@@ -4,20 +4,21 @@ import { IconStack2, IconX } from "@tabler/icons-react";
 import {
   BASE_MAPS,
   createBaseLayer,
-  createCadastralLayer,
+  createProtectedLayer,
   type BaseMap,
 } from "./baseLayers";
 import {
-  queryParcels,
   geometryBounds,
   locationIndex,
   loadLocation,
   type ParcelFeature,
 } from "../lib/openData";
-import { representativePoint } from "../lib/regionalData";
+import { geometryKey, representativePoint } from "../lib/regionalData";
 import { areaHa } from "../lib/geo";
 import czechiaGeo from "../data/geo/czechia.json";
 import CzechiaOutlineIcon from "./CzechiaOutlineIcon";
+import { CZECH_BOUNDS, createCountryMask } from "./countryMask";
+import './map-filters.css';
 import { MAP_LAYERS } from "../data/layers";
 import ParcelPreview from "../components/ParcelPreview";
 import { parcelEligibility } from "../lib/parcelEligibility";
@@ -61,10 +62,7 @@ interface MapViewProps {
   onHome: () => void;
   onToggleLayer?: (id: string) => void;
 }
-const CZ_BOUNDS: L.LatLngBoundsExpression = [
-  [48.5, 12],
-  [51.1, 18.9],
-];
+const CZ_BOUNDS = CZECH_BOUNDS;
 const toLatLng = (p: number[]): [number, number] => [p[1], p[0]];
 const escapeHtml = (value: string) =>
   value.replace(
@@ -147,18 +145,22 @@ export default function MapView(props: MapViewProps) {
   const coverageGroupRef = useRef<L.LayerGroup | null>(null);
   const pendingParcelRef = useRef<ParcelFeature | null>(null);
   const overlayGroupsRef = useRef<Record<string, L.LayerGroup>>({});
-  const parcelRequestRef = useRef<AbortController | null>(null);
   const callbacksRef = useRef(props);
   callbacksRef.current = props;
   const layerButtonRef = useRef<HTMLButtonElement | null>(null);
   const [ready, setReady] = useState(false);
   const [baseMap, setBaseMap] = useState<BaseMap>("aerial");
   const [cadastre, setCadastre] = useState(true);
+  const [excludeGardens, setExcludeGardens] = useState(() => {
+    try { return localStorage.getItem('moje-sady-hide-gardens') === 'true'; }
+    catch { return false; }
+  });
   const [layersOpen, setLayersOpen] = useState(false);
   const [zoom, setZoom] = useState(7);
   const [tilesOk, setTilesOk] = useState(true);
   const [parcelStatus, setParcelStatus] = useState("");
   const [layerStatus, setLayerStatus] = useState("");
+  const [protectionStatus, setProtectionStatus] = useState("");
   const [pendingParcel, setPendingParcel] = useState<ParcelFeature | null>(
     null,
   );
@@ -168,27 +170,24 @@ export default function MapView(props: MapViewProps) {
   );
   const coverageEnabled = !!props.layers.coverage;
   const coverage = useParcelCoverage({
-    enabled: coverageEnabled,
+    enabled: cadastre || coverageEnabled,
+    checkData: coverageEnabled,
+    excludeGardens,
     bounds: viewportBounds,
     zoom,
     areas: props.areas,
   });
   const offerParcel = (feature: ParcelFeature) => {
-    parcelRequestRef.current?.abort();
     setLayersOpen(false);
     setParcelStatus("");
+    const eligibility = parcelEligibility(feature);
+    if (!eligibility.allowed || (excludeGardens && eligibility.code === '5')) return;
     const saved = callbacksRef.current.areas.find(
       (area) => area.cadastral?.id === String(feature.properties.id),
     );
     if (saved) {
       setPendingParcel(null);
       callbacksRef.current.onAreaClick(saved.id);
-      return;
-    }
-    const eligibility = parcelEligibility(feature);
-    if (!eligibility.allowed) {
-      setPendingParcel(null);
-      setParcelStatus(eligibility.reason);
       return;
     }
     setPendingParcel(feature);
@@ -198,16 +197,30 @@ export default function MapView(props: MapViewProps) {
   >({});
 
   useEffect(() => {
+    try { localStorage.setItem('moje-sady-hide-gardens', String(excludeGardens)); }
+    catch { /* Filtering also works without persistent storage. */ }
+    if (excludeGardens && pendingParcel && parcelEligibility(pendingParcel).code === '5')
+      setPendingParcel(null);
+  }, [excludeGardens, pendingParcel]);
+
+  useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
       center: [49.83, 15.35],
       zoom: 7,
       minZoom: 6,
       maxZoom: 20,
+      maxBounds: L.latLngBounds(CZ_BOUNDS).pad(.015),
+      maxBoundsViscosity: 1,
       zoomControl: false,
       preferCanvas: false,
     });
     mapRef.current = map;
+    map.createPane('natureProtection');
+    map.getPane('natureProtection')!.style.zIndex = '350';
+    map.createPane('countryMask');
+    map.getPane('countryMask')!.style.zIndex = '385';
+    createCountryMask().addTo(map);
     L.control.zoom({ position: "bottomright" }).addTo(map);
     L.control
       .scale({ position: "bottomleft", imperial: false, maxWidth: 160 })
@@ -227,7 +240,9 @@ export default function MapView(props: MapViewProps) {
     pendingGroupRef.current = L.layerGroup().addTo(map);
     map.createPane("dataCoverage");
     map.getPane("dataCoverage")!.style.zIndex = "390";
-    coverageGroupRef.current = L.layerGroup().addTo(map);
+    coverageGroupRef.current = L.layerGroup([], {
+      attribution: '© <a href="https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/5">ČÚZK / RÚIAN – parcely</a>, CC BY 4.0',
+    }).addTo(map);
     if (country.getBounds().isValid())
       map.fitBounds(country.getBounds(), { padding: [24, 24] });
     map.on("zoomend", () => setZoom(map.getZoom()));
@@ -238,7 +253,6 @@ export default function MapView(props: MapViewProps) {
     map.on("moveend", updateBounds);
     updateBounds();
     map.on("movestart", () => {
-      parcelRequestRef.current?.abort();
       setViewportBounds(null);
       setParcelStatus("");
       setLayersOpen(false);
@@ -270,7 +284,6 @@ export default function MapView(props: MapViewProps) {
     setReady(true);
     return () => {
       resize.disconnect();
-      parcelRequestRef.current?.abort();
       map.remove();
       mapRef.current = null;
     };
@@ -305,63 +318,38 @@ export default function MapView(props: MapViewProps) {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !cadastre) return;
-    const layer = createCadastralLayer().addTo(map);
-    let disposed = false;
-    layer.on("tileerror", () =>
-      setParcelStatus(
-        "Katastrální podklad se nenačetl. Výběr parcely můžete zkusit znovu.",
-      ),
-    );
-    const click = async (event: L.LeafletMouseEvent) => {
-      if (callbacksRef.current.splitMode) return;
-      if (map.getZoom() < 14) {
-        setParcelStatus("Pro výběr parcely mapu více přibližte.");
-        return;
-      }
-      parcelRequestRef.current?.abort();
-      const request = new AbortController();
-      parcelRequestRef.current = request;
-      setPendingParcel(null);
-      setParcelStatus("Načítám parcelu z katastru…");
-      try {
-        const features = await queryParcels(
-          [event.latlng.lng, event.latlng.lat],
-          request.signal,
-        );
-        if (
-          disposed ||
-          request.signal.aborted ||
-          parcelRequestRef.current !== request ||
-          callbacksRef.current.splitMode
-        )
-          return;
-        if (!features.length) {
-          setParcelStatus("Na tomto místě není parcela v dostupných datech.");
-          return;
-        }
-        setParcelStatus("");
-        offerParcel(features[0]);
-      } catch (error) {
-        if (!disposed && !request.signal.aborted)
-          setParcelStatus(
-            error instanceof Error
-              ? error.message
-              : "Parcelu se nepodařilo načíst.",
-          );
-      }
+    if (!map) return;
+    // A transparent national image overlay keeps all four existing protection
+    // datasets visible without loading their geometries into browser memory.
+    const layer = createProtectedLayer();
+    let imageSize = 0;
+    const updateProtectionResolution = () => {
+      // A 512px image for the same 256px map tile retains genuine protected
+      // areas in the mobile country view. Normal zooms keep 256px requests.
+      const nextSize = Math.round(map.getZoom()) <= 6 ? 512 : 256;
+      if (imageSize === nextSize) return;
+      imageSize = nextSize;
+      layer.setParams({ layers: '26,22,14,13', width: imageSize, height: imageSize }, true);
     };
-    map.on("click", click);
+    updateProtectionResolution();
+    // Register before the tile layer's zoom handler so its next tile requests
+    // use the correct resolution without duplicate redraw requests.
+    map.on('zoom', updateProtectionResolution);
+    layer.addTo(map);
+    let errors = 0;
+    layer.on('loading', () => { errors = 0; });
+    layer.on('tileerror', () => {
+      errors++;
+      setProtectionStatus('Chráněná území AOPK se nepodařilo úplně zobrazit. Územní omezení ověřte v analýze pozemku.');
+    });
+    layer.on('load', () => { if (!errors) setProtectionStatus(''); });
     return () => {
-      disposed = true;
-      parcelRequestRef.current?.abort();
-      map.off("click", click);
+      map.off('zoom', updateProtectionResolution);
       map.removeLayer(layer);
     };
-  }, [cadastre, ready]);
+  }, [ready]);
 
   useEffect(() => {
-    parcelRequestRef.current?.abort();
     setPendingParcel(null);
   }, [props.activeId, props.focus?.nonce, props.splitMode]);
 
@@ -407,23 +395,25 @@ export default function MapView(props: MapViewProps) {
     const group = coverageGroupRef.current;
     if (!group) return;
     group.clearLayers();
-    if (!coverageEnabled) return;
+    if ((!cadastre && !coverageEnabled) || zoom < 14) return;
     for (const item of coverage.parcels) {
+      const eligibility = parcelEligibility(item.feature);
+      if (!eligibility.allowed || (excludeGardens && eligibility.code === '5')) continue;
       const style = COVERAGE_STYLES[item.coverage.state];
       const layer = L.geoJSON(item.feature as GeoJSON.GeoJsonObject, {
         pane: "dataCoverage",
         style: {
-          color: style.color,
+          color: coverageEnabled ? style.color : '#e8f0e0',
           weight: 1.5,
           opacity: 0.95,
-          fillColor: style.color,
-          fillOpacity: 0.32,
-          dashArray: item.coverage.state === "unknown" ? "4 3" : undefined,
+          fillColor: coverageEnabled ? style.color : '#8cb16e',
+          fillOpacity: coverageEnabled ? 0.32 : .07,
+          dashArray: coverageEnabled && item.coverage.state === "unknown" ? "4 3" : undefined,
         },
         interactive: !props.splitMode,
       });
       layer.bindTooltip(
-        `<strong>Parcela ${escapeHtml(String(item.feature.properties.cisloparcely))}</strong><br>${escapeHtml(coverageDescription(item.coverage))}`,
+        `<strong>Parcela ${escapeHtml(String(item.feature.properties.cisloparcely))}</strong><br>${escapeHtml(eligibility.landUse)} · ${fmtHa(item.feature.geometry)}${coverageEnabled ? '<br>'+escapeHtml(coverageDescription(item.coverage)) : ''}`,
         { sticky: true, className: "sady-tooltip" },
       );
       layer.on("click", (event: L.LeafletMouseEvent) => {
@@ -432,16 +422,25 @@ export default function MapView(props: MapViewProps) {
       });
       group.addLayer(layer);
     }
-  }, [coverageEnabled, coverage.parcels, props.splitMode, ready]);
+  }, [cadastre, coverageEnabled, coverage.parcels, props.splitMode, excludeGardens, zoom, ready]);
 
   useEffect(() => {
     const group = areaGroupRef.current;
     if (!group) return;
     group.clearLayers();
+    const visibleCoverage = new Map(coverage.parcels.map(item => [geometryKey(item.feature.geometry), item.coverage]));
     for (const area of props.areas) {
+      const eligibility = parcelEligibility(area);
+      if ((!area.derivedFrom && area.cadastral && !eligibility.allowed) ||
+          (excludeGardens && eligibility.code === '5')) continue;
       const active = props.activeId === area.id,
         selected = props.selectedIds.includes(area.id);
-      const availability = coverageEnabled ? coverageFromArea(area) : null;
+      const savedCoverage = coverageFromArea(area);
+      const checked = visibleCoverage.get(geometryKey(area.geometry));
+      const availability = !coverageEnabled ? null : checked &&
+        ['sufficient','insufficient'].includes(checked.state) &&
+        !['sufficient','insufficient'].includes(savedCoverage.state)
+          ? checked : savedCoverage;
       const coverageColor = availability
         ? COVERAGE_STYLES[availability.state].color
         : null;
@@ -475,7 +474,6 @@ export default function MapView(props: MapViewProps) {
       );
       polygon.on("click", (event: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(event);
-        parcelRequestRef.current?.abort();
         setPendingParcel(null);
         setParcelStatus("");
         setLayersOpen(false);
@@ -516,13 +514,15 @@ export default function MapView(props: MapViewProps) {
     props.activeId,
     props.splitMode,
     coverageEnabled,
+    coverage.parcels,
+    excludeGardens,
     zoom,
     ready,
   ]);
 
   useEffect(() => {
     let active = true;
-    const wanted = ["bpej", "protected"].filter((id) => props.layers[id]);
+    const wanted = ["bpej"].filter((id) => props.layers[id]);
     if (!wanted.length) {
       setLayerStatus("");
       return;
@@ -534,10 +534,7 @@ export default function MapView(props: MapViewProps) {
         if (!active) return;
         const next: Record<string, GeoJSON.FeatureCollection> = {};
         for (const id of wanted) {
-          const keys =
-            id === "protected"
-              ? ["protected", "protectedSmall", "natura", "birds"]
-              : [id];
+          const keys = [id];
           next[id] = {
             type: "FeatureCollection",
             features: locations
@@ -573,7 +570,7 @@ export default function MapView(props: MapViewProps) {
     const map = mapRef.current;
     if (!map) return;
     for (const definition of MAP_LAYERS) {
-      if (definition.id === "suitability") continue;
+      if (definition.id === "suitability" || definition.id === 'protected') continue;
       let group = overlayGroupsRef.current[definition.id];
       if (group && map.hasLayer(group)) map.removeLayer(group);
       if (!props.layers[definition.id]) continue;
@@ -582,7 +579,7 @@ export default function MapView(props: MapViewProps) {
         overlayGroupsRef.current[definition.id] = group;
       }
       group.clearLayers();
-      const features = ["bpej", "protected"].includes(definition.id)
+      const features = definition.id === 'bpej'
         ? (realLayers[definition.id]?.features ?? [])
         : definition.features;
       group.addLayer(
@@ -592,6 +589,7 @@ export default function MapView(props: MapViewProps) {
             features,
           } as unknown as GeoJSON.GeoJsonObject,
           {
+            pane: 'natureProtection',
             style: (f) => {
               const color = String(f?.properties?.color ?? "#71965e");
               return f?.geometry?.type === "LineString"
@@ -697,7 +695,6 @@ export default function MapView(props: MapViewProps) {
     map.getContainer().style.cursor = props.splitMode ? "crosshair" : "";
     if (props.splitMode) {
       map.doubleClickZoom.disable();
-      parcelRequestRef.current?.abort();
       setLayersOpen(false);
       setParcelStatus("");
     } else map.doubleClickZoom.enable();
@@ -734,13 +731,6 @@ export default function MapView(props: MapViewProps) {
     }
   }, [props.searchMarker, ready]);
 
-  const home = () => {
-    props.onHome();
-    mapRef.current?.flyToBounds(CZ_BOUNDS, {
-      padding: [24, 24],
-      duration: 0.55,
-    });
-  };
   return (
     <section
       className={`map-shell${props.detailOpen || pendingParcel ? " has-detail" : ""}${pendingParcel ? " has-parcel-preview" : ""}${props.splitMode ? " is-splitting" : ""}`}
@@ -778,7 +768,7 @@ export default function MapView(props: MapViewProps) {
         <button
           type="button"
           className="map-control-button icon-only"
-          onClick={home}
+          onClick={props.onHome}
           title="Zobrazit celou Českou republiku"
           aria-label="Zobrazit celou Českou republiku"
         >
@@ -832,15 +822,22 @@ export default function MapView(props: MapViewProps) {
                 checked={cadastre}
                 onChange={(e) => {
                   setCadastre(e.target.checked);
-                  parcelRequestRef.current?.abort();
                   setPendingParcel(null);
                   setParcelStatus("");
                 }}
               />
               <span>
                 Katastrální parcely{" "}
-                <small>Hranice a výběr od přiblížení 14</small>
+                <small>Zemědělské parcely všech velikostí od přiblížení 14</small>
               </span>
+            </label>
+            <label className="map-layer-check">
+              <input type="checkbox" checked={excludeGardens} onChange={event => setExcludeGardens(event.target.checked)} />
+              <span>Skrýt zahrady<small>Nezobrazovat parcely s druhem pozemku zahrada</small></span>
+            </label>
+            <label className="map-layer-check is-unavailable">
+              <input type="checkbox" disabled aria-describedby="rental-source-note" />
+              <span>Pouze k pronájmu<small id="rental-source-note">Zdroj nabídek pronájmu zatím není připojený.</small></span>
             </label>
             {props.onToggleLayer && (
               <label className="map-layer-check">
@@ -855,9 +852,10 @@ export default function MapView(props: MapViewProps) {
                 </span>
               </label>
             )}
+            <DataCoverageLegend layer={coverage} enabled={coverageEnabled} />
             {props.onToggleLayer &&
               MAP_LAYERS.filter(
-                (d) => d.id !== "suitability" && d.quality !== "unavailable",
+                (d) => d.id !== "suitability" && d.id !== 'protected' && d.quality !== "unavailable",
               ).map((d) => (
                 <label className="map-layer-check" key={d.id}>
                   <input
@@ -871,6 +869,9 @@ export default function MapView(props: MapViewProps) {
                   </span>
                 </label>
               ))}
+            <p className="map-layer-note protection-always-visible">
+              Chráněná území AOPK jsou zobrazená trvale: velko- a maloplošná ZCHÚ, evropsky významné lokality a ptačí oblasti. Nejde o úplné právní posouzení pozemku.
+            </p>
             {cadastre && zoom < 14 && (
               <p className="map-layer-note">
                 Přibližte mapu pro zobrazení a výběr parcel.
@@ -879,7 +880,6 @@ export default function MapView(props: MapViewProps) {
           </div>
         )}
       </div>
-      {coverageEnabled && <DataCoverageLegend layer={coverage} compact={props.detailOpen || !!pendingParcel} />}
       {pendingParcel && !props.splitMode && (
         <ParcelPreview
           feature={pendingParcel}
@@ -924,11 +924,11 @@ export default function MapView(props: MapViewProps) {
           </button>
         </div>
       )}
-      {(!tilesOk || parcelStatus || layerStatus) && (
+      {(!tilesOk || parcelStatus || layerStatus || protectionStatus) && (
         <div className="map-status" role="status">
           {!tilesOk
             ? "Mapový podklad není dostupný. Zkuste ve vrstvách změnit podklad."
-            : parcelStatus || layerStatus}
+            : parcelStatus || layerStatus || protectionStatus}
         </div>
       )}
     </section>

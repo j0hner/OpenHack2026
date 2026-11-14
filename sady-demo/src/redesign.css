@@ -945,6 +945,16 @@ textarea {
   height: 32px;
   min-width: 32px;
 }
+.icon-button[aria-label^="Zavřít"] {
+  background: #edf2e8;
+  border: 1px solid #c6d2be;
+  color: #405d37;
+  box-shadow: 0 1px 2px rgb(25 45 20 / 7%);
+}
+.icon-button[aria-label^="Zavřít"]:hover {
+  background: #dfead6;
+  border-color: #9caf90;
+}
 .parcel-card-location {
   display: flex;
   align-items: center;

@@ -17,6 +17,8 @@
     "test:regional-status": "node scripts/test-regional-status.mjs",
     "test:regional-lifecycle": "node scripts/test-regional-lifecycle.mjs",
     "test:theme": "node scripts/test-theme.mjs",
+    "test:automatic-coverage": "node scripts/test-automatic-coverage.mjs",
+    "test:map-preferences": "node scripts/test-map-preferences.mjs",
     "test:geometry": "node scripts/test-geometry-operations.mjs",
     "test:localities": "node scripts/test-locality-search.mjs",
     "test:parcels": "node scripts/test-parcel-eligibility.mjs",

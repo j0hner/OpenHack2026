@@ -49,7 +49,7 @@ export const emptyCoverageCounts = (): CoverageCounts => ({
   error: 0,
 });
 export const unknownCoverage = (
-  reason = "Podklady této geometrie zatím nejsou ověřené. Přidejte parcelu pro její analýzu.",
+  reason = "Podklady této geometrie zatím nejsou ověřené. Při zapnuté dostupnosti dat probíhá ověření automaticky.",
 ): ParcelCoverage => ({
   state: "unknown",
   soilCoveragePct: null,

@@ -20,6 +20,7 @@ import {
   type CoverageParcel,
   type ParcelCoverage,
 } from "./parcelCoverage";
+import { verifyVisibleCoverage } from "./coverageVerification";
 
 export type CoverageBounds = [number, number, number, number];
 export const COVERAGE_LIMIT = 200;
@@ -29,6 +30,12 @@ export interface CoverageQuery {
   truncated: boolean;
   source: "snapshot" | "live" | "mixed";
   warning: string;
+  checking?: boolean;
+}
+export interface CoverageQueryOptions {
+  excludeGardens?: boolean;
+  checkData?: boolean;
+  onProgress?: (result: CoverageQuery) => void;
 }
 const snapshotCache = new Map<string, ParcelCoverage>();
 const queryCache = new Map<string, { at: number; value: CoverageQuery }>();
@@ -74,9 +81,10 @@ function validFeature(value: unknown): value is ParcelFeature {
 async function liveParcels(
   bounds: CoverageBounds,
   signal: AbortSignal,
+  excludeGardens: boolean,
 ): Promise<{ features: ParcelFeature[]; truncated: boolean }> {
   const p = new URLSearchParams({
-    where: `druhpozemkukod IN (${ELIGIBLE_LAND_USE_CODES.join(",")})`,
+    where: `druhpozemkukod IN (${ELIGIBLE_LAND_USE_CODES.filter(code => !excludeGardens || code !== "5").join(",")})`,
     geometry: bounds.join(","),
     geometryType: "esriGeometryEnvelope",
     inSR: "4326",
@@ -99,6 +107,7 @@ async function liveParcels(
     features: data.features.filter(
       (feature: unknown) =>
         validFeature(feature) &&
+        (!excludeGardens || String(feature.properties.druhpozemkukod) !== "5") &&
         boundsIntersect(geometryBounds(feature.geometry), bounds),
     ),
     truncated:
@@ -106,16 +115,19 @@ async function liveParcels(
   };
 }
 
-/** Only cadastral geometry is fetched live. The layer never fans out weather,
- * BPEJ or AOPK calls per visible parcel; outside factual excerpts it stays unknown. */
+/** Discover filtered vector parcels, then verify their core data in viewport
+ * batches. Merely inspecting a parcel never adds it to the user's saved list. */
 export async function queryCoverageParcels(
   bounds: CoverageBounds,
   signal: AbortSignal,
+  options: CoverageQueryOptions = {},
 ): Promise<CoverageQuery> {
   checkAbort(signal);
   const extentError = coverageExtentMessage(bounds, COVERAGE_MIN_ZOOM);
   if (extentError) throw Error(extentError);
-  const key = bounds.map((v) => v.toFixed(6)).join(",");
+  const excludeGardens = options.excludeGardens ?? false;
+  const checkData = options.checkData ?? true;
+  const key = bounds.map((v) => v.toFixed(6)).join(",") + `|gardens:${!excludeGardens}|data:${checkData}`;
   const hit = queryCache.get(key);
   if (hit && Date.now() - hit.at < 120_000) return hit.value;
   let entries: Awaited<ReturnType<typeof locationIndex>> = [];
@@ -146,6 +158,7 @@ export async function queryCoverageParcels(
           ...(parcels.features.filter(
             (f) =>
               validFeature(f) &&
+              (!excludeGardens || String(f.properties.druhpozemkukod) !== "5") &&
               boundsIntersect(geometryBounds(f.geometry), bounds),
           ) as ParcelFeature[]),
         );
@@ -164,7 +177,7 @@ export async function queryCoverageParcels(
     remoteTruncated = false;
   if (!coveredLocally) {
     try {
-      const result = await liveParcels(bounds, signal);
+      const result = await liveParcels(bounds, signal, excludeGardens);
       live = result.features;
       remoteTruncated = result.truncated;
     } catch (error) {
@@ -225,13 +238,20 @@ export async function queryCoverageParcels(
     if (parcels.length % 12 === 0)
       await new Promise((resolve) => setTimeout(resolve, 0));
   }
-  const value: CoverageQuery = {
+  let value: CoverageQuery = {
     parcels,
     truncated,
     source: coveredLocally ? "snapshot" : local.length ? "mixed" : "live",
     warning,
   };
-  if (!warning) {
+  if (checkData) {
+    const checked = await verifyVisibleCoverage(parcels, signal, progress => {
+      options.onProgress?.({ ...value, parcels: progress, checking: true });
+    });
+    checkAbort(signal);
+    value = { ...value, parcels: checked, checking: false };
+  }
+  if (!warning && !value.parcels.some(item => item.coverage.state === "error" || item.coverage.state === "loading")) {
     if (queryCache.size >= 12)
       queryCache.delete(queryCache.keys().next().value!);
     queryCache.set(key, { at: Date.now(), value });

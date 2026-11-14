@@ -26,7 +26,7 @@ export const PROVENANCE: ProvenanceRow[] = [
   },
   spatial(
     "Katastrální parcely",
-    "ČÚZK / RÚIAN REST a katastrální WMS",
+    "ČÚZK / RÚIAN REST – filtrované vektorové parcely",
     "parcela",
     "Kliknutí ukáže náhled skutečné parcely; uloží ji až Přidat pozemek. Katastrální druh slouží k vyloučení nezemědělských ploch. Druh pozemku nepotvrzuje povolení výsadby.",
   ),
@@ -62,12 +62,12 @@ export const PROVENANCE: ProvenanceRow[] = [
   },
   {
     indicator: "Mapové podklady",
-    source: "OpenStreetMap, ČÚZK Ortofoto a katastrální mapa",
+    source: "OpenStreetMap, ČÚZK Ortofoto, AOPK WMS",
     period: "dle poskytovatele",
     resolution: "mapové dlaždice / WMS",
     quality: "real",
     connected: "Online mapové podklady",
-    note: "Dva podklady a katastrální překryv bez klíče. Výpadek podkladu není nedostatkem agronomických dat.",
+    note: "Dva podklady s maskou ČR a trvalá ochrana přírody. Parcelní hranice tvoří filtrovaný RÚIAN GeoJSON. Výpadek podkladu není nedostatkem agronomických dat.",
   },
   {
     indicator: "Hranice České republiky",

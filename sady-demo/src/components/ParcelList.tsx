@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   IconSearch,
   IconPlus,
@@ -11,6 +11,7 @@ import {
 import { areaHa } from "../lib/geo";
 import { fmtHa } from "../lib/format";
 import { FRUITS } from "../data/fruitProfiles";
+import { mergeEligibility } from "../lib/geometryOperations";
 import type { AnalysisArea, FruitKey, SuitabilityResult } from "../lib/types";
 interface Props {
   areas: AnalysisArea[];
@@ -27,6 +28,7 @@ interface Props {
   onMerge: (name: string) => void;
 }
 export default function ParcelList(p: Props) {
+  const mergeDescriptionId = useId();
   const [query, setQuery] = useState(""),
     [menu, setMenu] = useState<string | null>(null),
     [edit, setEdit] = useState<string | null>(null),
@@ -43,6 +45,15 @@ export default function ParcelList(p: Props) {
           .includes(query.toLocaleLowerCase("cs")),
       ),
     [p.areas, query],
+  );
+  const mergeStatus = useMemo(
+    () =>
+      mergeEligibility(
+        p.areas
+          .filter((area) => p.selectedIds.includes(area.id))
+          .map((area) => area.geometry),
+      ),
+    [p.areas, p.selectedIds],
   );
   return (
     <aside className="parcel-sidebar" aria-label="Seznam pozemků">
@@ -221,16 +232,21 @@ export default function ParcelList(p: Props) {
               type="button"
               className="btn merge-action"
               onClick={() => setMerge(!merge)}
+              disabled={!mergeStatus.allowed}
+              aria-describedby={mergeDescriptionId}
             >
               <IconLayersIntersect size={17} />
               Spojit vybrané ({p.selectedIds.length})
             </button>
-            {merge && (
+            <p id={mergeDescriptionId} className="merge-eligibility" role="status">
+              {mergeStatus.reason}
+            </p>
+            {merge && mergeStatus.allowed && (
               <form
                 className="inline-editor"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (mergeName.trim()) {
+                  if (mergeStatus.allowed && mergeName.trim()) {
                     p.onMerge(mergeName.trim());
                     setMerge(false);
                   }
