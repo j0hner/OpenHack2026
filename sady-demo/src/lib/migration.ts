@@ -2,6 +2,7 @@ import type { AnalysisArea } from "./types";
 import type { PersistedState, SplitRecord } from "./storage";
 import { normalizeCategoryState } from "./parcelCategories";
 import { normalizeManualInputs } from "./manualInputs";
+import { normalizePlantingPlans } from "./plantingPlan";
 
 const legacySampleId = (id: string) => /^demo(?:-|$)/i.test(id);
 const roots = (area: AnalysisArea) => [
@@ -126,6 +127,11 @@ export function migrateState(
     ),
     parcelCategories: categoryState.categories,
     categoryByArea: categoryState.assignments,
+    plantingPlans: normalizePlantingPlans(state.plantingPlans, [
+      ...keptParcels,
+      ...keptWorking,
+    ]),
+    plantingVisible: state.plantingVisible !== false,
     layers: Object.fromEntries(
       Object.entries(state.layers ?? {}).filter(([id]) =>
         ["bpej", "suitability", "coverage"].includes(id),

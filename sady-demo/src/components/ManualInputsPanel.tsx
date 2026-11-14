@@ -1,6 +1,8 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   MANUAL_FIELDS,
+  MANUAL_FIELD_HELP,
+  manualFieldSources,
   matchingRegionalData,
   normalizeManualInputs,
   parseManualValue,
@@ -8,7 +10,7 @@ import {
   type ManualFieldKey,
   type ManualInputs,
 } from "../lib/manualInputs";
-import type { AnalysisArea } from "../lib/types";
+import type { AnalysisArea, SuitabilityResult } from "../lib/types";
 import "./manual-inputs.css";
 
 type Draft = Record<ManualFieldKey, string>;
@@ -22,12 +24,16 @@ const makeDraft = (input?: ManualInputs): Draft =>
 
 export interface ManualInputsPanelProps {
   area: AnalysisArea;
+  score?: SuitabilityResult;
+  focusNonce?: number;
   /** Full validated object, or undefined to restore original open-data inputs. */
   onChange: (value: ManualInputs | undefined) => void;
 }
 
 export default function ManualInputsPanel({
   area,
+  score,
+  focusNonce = 0,
   onChange,
 }: ManualInputsPanelProps) {
   const input = normalizeManualInputs(area.manualInputs);
@@ -37,11 +43,23 @@ export default function ManualInputsPanel({
     {},
   );
   const [message, setMessage] = useState("");
+  const urgent =
+    score?.overall === null &&
+    (score.dataStatus === "insufficient" || score.dataStatus === "error");
+  const [expanded, setExpanded] = useState(urgent);
+  const panelRef = useRef<HTMLDetailsElement>(null);
   const id = useId(),
     data = matchingRegionalData(area);
   const count = MANUAL_FIELDS.filter(
     ({ key }) => input?.[key] !== undefined,
   ).length;
+  const sources = manualFieldSources(area);
+  const needed = MANUAL_FIELDS.filter(
+    (field) => sources[field.key] === "needed",
+  );
+  const other = MANUAL_FIELDS.filter(
+    (field) => sources[field.key] !== "needed",
+  );
   useEffect(() => {
     const next = normalizeManualInputs(area.manualInputs);
     setDraft(makeDraft(next));
@@ -49,6 +67,29 @@ export default function ManualInputsPanel({
     setErrors({});
   }, [area.id, area.manualInputs]);
   useEffect(() => setMessage(""), [area.id]);
+  useEffect(() => {
+    setExpanded(urgent);
+  }, [area.id]);
+  useEffect(() => {
+    if (urgent) setExpanded(true);
+  }, [urgent]);
+  useEffect(() => {
+    if (!focusNonce) return;
+    setExpanded(true);
+    const frame = requestAnimationFrame(() => {
+      const input =
+        panelRef.current?.querySelector<HTMLInputElement>(
+          'input[data-manual-needed="true"]',
+        ) ?? panelRef.current?.querySelector<HTMLInputElement>("input");
+      let details = input?.closest("details");
+      while (details && details !== panelRef.current) {
+        details.open = true;
+        details = details.parentElement?.closest("details") ?? null;
+      }
+      input?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [area.id, focusNonce]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -93,15 +134,93 @@ export default function ManualInputsPanel({
       ? `Regionální podklad: ${observed.value.toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} · ${observed.years} skutečných let.`
       : "Pro tuto veličinu chybí nejméně 15 úplných ročních hodnot.";
   };
+  const renderField = (field: (typeof MANUAL_FIELDS)[number]) => {
+    const missing = sources[field.key] === "needed";
+    const origin =
+      input?.[field.key] !== undefined
+        ? "Vlastní údaj"
+        : sources[field.key] === "open-data"
+          ? "Z otevřených dat"
+          : missing
+            ? "Doplňte vlastní údaj"
+            : "Zatím neověřeno";
+    return (
+      <div
+        className={`manual-input-field${missing ? " is-needed" : ""}`}
+        key={field.key}
+      >
+        <div className="manual-input-field-heading">
+          <label htmlFor={`${id}-${field.key}`}>
+            {field.label} <span>{field.unit}</span>
+          </label>
+          <span className={`manual-input-origin ${sources[field.key]}`}>
+            {origin}
+          </span>
+        </div>
+        <input
+          id={`${id}-${field.key}`}
+          type="text"
+          inputMode={field.integer ? "numeric" : "decimal"}
+          value={draft[field.key]}
+          maxLength={24}
+          placeholder={
+            missing
+              ? "Zadejte ověřenou vlastní hodnotu"
+              : "Ponechat automatický podklad"
+          }
+          data-manual-needed={missing}
+          aria-invalid={!!errors[field.key]}
+          aria-describedby={`${id}-${field.key}-base ${id}-${field.key}-help${errors[field.key] ? ` ${id}-${field.key}-error` : ""}`}
+          onChange={(event) =>
+            setDraft((previous) => ({
+              ...previous,
+              [field.key]: event.target.value,
+            }))
+          }
+        />
+        <small id={`${id}-${field.key}-base`}>{baseValue(field.key)}</small>
+        <small className="manual-input-help" id={`${id}-${field.key}-help`}>
+          {MANUAL_FIELD_HELP[field.key]}
+        </small>
+        {errors[field.key] && (
+          <span
+            className="manual-input-error"
+            role="alert"
+            id={`${id}-${field.key}-error`}
+          >
+            {errors[field.key]}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <details className="manual-inputs-panel card">
+    <details
+      ref={panelRef}
+      className={`manual-inputs-panel card${urgent ? " needs-input" : ""}`}
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary>
-        <strong>Vlastní vstupní údaje</strong>
+        <strong>
+          {urgent ? "Doplnění chybějících údajů" : "Vlastní vstupní údaje"}
+        </strong>
         <span className={count ? "badge q-assumption" : "manual-inputs-count"}>
-          {count ? `${count} ručních hodnot` : "Doplnit nebo přepsat"}
+          {urgent && needed.length
+            ? `${needed.length} ${needed.length === 1 ? "údaj" : needed.length < 5 ? "údaje" : "údajů"} k doplnění`
+            : count
+              ? `${count} ručních hodnot`
+              : "Doplnit nebo přepsat"}
         </span>
       </summary>
+      {urgent && (
+        <p className="manual-inputs-priority">
+          {needed.length
+            ? "Začněte zvýrazněnými poli níže. Dostupná data se použijí automaticky a nemusíte je opisovat."
+            : "Společné podklady nestačí. Doplňte vlastní ověřené údaje nebo znovu ověřte zdroje; pouhé potvrzení prázdných polí data nedoplní."}
+        </p>
+      )}
       <p className="manual-inputs-explanation">
         Vyplněná pole mají ve výpočtu přednost. Prázdná převezmou dostupný
         regionální podklad, jinak zůstanou neznámá. Ruční hodnoty jsou neověřený
@@ -115,42 +234,16 @@ export default function ManualInputsPanel({
       </p>
       <form noValidate onSubmit={submit}>
         <div className="manual-inputs-fields">
-          {MANUAL_FIELDS.map((field) => (
-            <div className="manual-input-field" key={field.key}>
-              <label htmlFor={`${id}-${field.key}`}>
-                {field.label} <span>{field.unit}</span>
-              </label>
-              <input
-                id={`${id}-${field.key}`}
-                type="text"
-                inputMode={field.integer ? "numeric" : "decimal"}
-                value={draft[field.key]}
-                maxLength={24}
-                placeholder="Použít otevřená data"
-                aria-invalid={!!errors[field.key]}
-                aria-describedby={`${id}-${field.key}-base${errors[field.key] ? ` ${id}-${field.key}-error` : ""}`}
-                onChange={(event) =>
-                  setDraft((previous) => ({
-                    ...previous,
-                    [field.key]: event.target.value,
-                  }))
-                }
-              />
-              <small id={`${id}-${field.key}-base`}>
-                {baseValue(field.key)}
-              </small>
-              {errors[field.key] && (
-                <span
-                  className="manual-input-error"
-                  role="alert"
-                  id={`${id}-${field.key}-error`}
-                >
-                  {errors[field.key]}
-                </span>
-              )}
-            </div>
-          ))}
+          {(needed.length ? needed : MANUAL_FIELDS).map(renderField)}
         </div>
+        {needed.length > 0 && other.length > 0 && (
+          <details className="manual-other-fields">
+            <summary>
+              Zadané a dostupné údaje ({other.length}) · upravit
+            </summary>
+            <div className="manual-inputs-fields">{other.map(renderField)}</div>
+          </details>
+        )}
         <label className="manual-input-note" htmlFor={`${id}-note`}>
           Zdroj a období vlastních údajů <span>(volitelné)</span>
           <textarea
@@ -164,7 +257,7 @@ export default function ManualInputsPanel({
         </label>
         <div className="manual-input-actions">
           <button type="submit" className="btn primary">
-            Použít ve výpočtu
+            Použít údaje a přepočítat
           </button>
           <button
             type="button"

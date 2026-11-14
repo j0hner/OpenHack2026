@@ -2,7 +2,7 @@
 
 final result: passed
 
-Nejnovější ověření větve `codex/categories-data-cleanup` je v [protokolu kategorií, ručních vstupů a úklidu dat](docs/qa/categories-manual-inputs.md). Předchozí ověření filtrované mapy je v [samostatném protokolu](docs/qa/parcel-map-filtering.md). Níže je zachované historické ověření starších úprav včetně již odstraněných funkcí AOPK a Nastavení.
+Nejnovější ověření větve `codex/orchard-planting` je v [protokolu výsadby a následných úprav rozhraní](docs/qa/planting-planner.md). Předchozí výsledky jsou v [protokolu kategorií a dat](docs/qa/categories-manual-inputs.md) a [filtrované mapy](docs/qa/parcel-map-filtering.md). Níže je zachované historické ověření starších úprav včetně již odstraněných funkcí AOPK, Nastavení a potvrzování mazání.
 
 ## Oprava stavů analýzy a následné úpravy vzhledu
 

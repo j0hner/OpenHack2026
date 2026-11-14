@@ -1,29 +1,82 @@
-import {useId,type ReactNode} from 'react';
-import {IconAlertCircle,IconAlertTriangle,IconCheck,IconDatabaseOff,IconInfoCircle} from '@tabler/icons-react';
-import DataQualityBadge from './DataQualityBadge';
-import type { DataQuality, SuitabilityResult, VerdictClass } from '../lib/types';
+import { useId, type ReactNode } from "react";
+import {
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconCheck,
+  IconDatabaseOff,
+  IconInfoCircle,
+} from "@tabler/icons-react";
+import DataQualityBadge from "./DataQualityBadge";
+import type {
+  DataQuality,
+  SuitabilityResult,
+  VerdictClass,
+} from "../lib/types";
 
 const verdictClassOf = (verdictClass: VerdictClass): string => verdictClass;
 
 export function AnalysisDataStatus({
   score,
+  onComplete,
 }: {
   score: SuitabilityResult;
+  onComplete?: () => void;
 }) {
-  const Icon = score.dataStatus === 'ready' ? IconCheck : IconInfoCircle;
+  const Icon = score.dataStatus === "ready" ? IconCheck : IconInfoCircle;
+  const needsInput =
+    score.dataStatus === "insufficient" || score.dataStatus === "error";
   return (
-    <div className={`analysis-data-status ${score.dataStatus}`} role="status">
+    <div
+      className={`analysis-data-status ${score.dataStatus}${needsInput && onComplete ? " needs-input" : ""}`}
+      role="status"
+    >
       <Icon size={16} aria-hidden="true" />
       <div>
+        {needsInput && onComplete && (
+          <strong>
+            {score.dataStatus === "error"
+              ? "Podklady se nepodařilo ověřit"
+              : "Doplňte podklady pro hodnocení"}
+          </strong>
+        )}
+        {needsInput && onComplete && (
+          <button type="button" className="btn primary" onClick={onComplete}>
+            Doplnit chybějící údaje
+          </button>
+        )}
         <span>{score.dataMessage}</span>
+        {needsInput && onComplete && (
+          <>
+            <p>
+              Máte vlastní půdní nebo klimatické údaje? Doplňte chybějící
+              hodnoty a nechte výsledek přepočítat.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-export function VerdictBadge({ verdictClass, verdict }: { verdictClass: VerdictClass; verdict: string }) {
-  const Icon=verdictClass==='good'?IconCheck:verdictClass==='nodata'?IconDatabaseOff:IconAlertTriangle;
-  return <span className={`badge ${verdictClassOf(verdictClass)}`}><Icon size={14} aria-hidden="true" />{verdict}</span>;
+export function VerdictBadge({
+  verdictClass,
+  verdict,
+}: {
+  verdictClass: VerdictClass;
+  verdict: string;
+}) {
+  const Icon =
+    verdictClass === "good"
+      ? IconCheck
+      : verdictClass === "nodata"
+        ? IconDatabaseOff
+        : IconAlertTriangle;
+  return (
+    <span className={`badge ${verdictClassOf(verdictClass)}`}>
+      <Icon size={14} aria-hidden="true" />
+      {verdict}
+    </span>
+  );
 }
 
 export function QualityBadge({ quality }: { quality: DataQuality }) {
@@ -42,10 +95,10 @@ export function ScoreGauge({
   caption: string;
 }) {
   const colors: Record<string, string> = {
-    good: '#2f7d4f',
-    caution: '#c19a2f',
-    risk: '#b4513c',
-    nodata: '#8a8f98',
+    good: "#2f7d4f",
+    caution: "#c19a2f",
+    risk: "#b4513c",
+    nodata: "#8a8f98",
   };
   const color = colors[verdictClass] ?? colors.nodata;
   const radius = 38;
@@ -53,9 +106,20 @@ export function ScoreGauge({
   const progress = score == null ? 0 : Math.max(0, Math.min(100, score)) / 100;
 
   return (
-    <div className="gauge" role="img" aria-label={score == null ? verdict : `Skóre ${score} ze 100, ${verdict}`}>
+    <div
+      className="gauge"
+      role="img"
+      aria-label={score == null ? verdict : `Skóre ${score} ze 100, ${verdict}`}
+    >
       <svg width="92" height="92" viewBox="0 0 92 92">
-        <circle cx="46" cy="46" r={radius} fill="none" stroke="#e8ede6" strokeWidth="8" />
+        <circle
+          cx="46"
+          cy="46"
+          r={radius}
+          fill="none"
+          stroke="#e8ede6"
+          strokeWidth="8"
+        />
         <circle
           cx="46"
           cy="46"
@@ -66,7 +130,7 @@ export function ScoreGauge({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - progress)}
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
         />
       </svg>
       <div className="gauge-center">
@@ -86,9 +150,17 @@ export function ScoreGauge({
   );
 }
 
-export function Meter({ value, tone = 'ok' }: { value: number; tone?: 'ok' | 'warn' | 'bad' }) {
+export function Meter({
+  value,
+  tone = "ok",
+}: {
+  value: number;
+  tone?: "ok" | "warn" | "bad";
+}) {
   return (
-    <div className={`meter ${tone === 'warn' ? 'warn' : tone === 'bad' ? 'bad' : ''}`}>
+    <div
+      className={`meter ${tone === "warn" ? "warn" : tone === "bad" ? "bad" : ""}`}
+    >
       <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
     </div>
   );
@@ -113,7 +185,7 @@ export function NumberField({
   onChange: (value: number) => void;
   title?: string;
 }) {
-  const hintId=useId();
+  const hintId = useId();
   return (
     <label className="field">
       <span className="field-label">{label}</span>
@@ -124,7 +196,7 @@ export function NumberField({
           min={min}
           max={max}
           step={step}
-          aria-describedby={title?hintId:undefined}
+          aria-describedby={title ? hintId : undefined}
           onChange={(event) => {
             const next = Number(event.target.value);
             onChange(Number.isFinite(next) ? next : 0);
@@ -132,7 +204,11 @@ export function NumberField({
         />
         <span className="unit">{unit}</span>
       </span>
-      {title&&<span className="field-note" id={hintId}>{title}</span>}
+      {title && (
+        <span className="field-note" id={hintId}>
+          {title}
+        </span>
+      )}
     </label>
   );
 }
@@ -151,8 +227,16 @@ export function Toggle({
   disabled?: boolean;
 }) {
   return (
-    <label className="toggle-row" style={disabled ? { opacity: 0.6 } : undefined}>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={disabled} />
+    <label
+      className="toggle-row"
+      style={disabled ? { opacity: 0.6 } : undefined}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        disabled={disabled}
+      />
       <span className="toggle-text">
         <b>{label}</b>
         {description && <span>{description}</span>}
@@ -161,7 +245,13 @@ export function Toggle({
   );
 }
 
-export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
+export function SectionTitle({
+  children,
+  right,
+}: {
+  children: ReactNode;
+  right?: ReactNode;
+}) {
   return (
     <div className="section-head">
       <div className="section-title">{children}</div>
@@ -170,11 +260,22 @@ export function SectionTitle({ children, right }: { children: ReactNode; right?:
   );
 }
 
-export function Info({ children, kind = 'info' }: { children: ReactNode; kind?: 'info' | 'warn' | 'error' | 'good' }) {
+export function Info({
+  children,
+  kind = "info",
+}: {
+  children: ReactNode;
+  kind?: "info" | "warn" | "error" | "good";
+}) {
   return <div className={`notice ${kind}`}>{children}</div>;
 }
 
-export function severityIcon(severity: 'high' | 'medium' | 'low') {
-  const Icon=severity==='high'?IconAlertTriangle:severity==='medium'?IconAlertCircle:IconInfoCircle;
+export function severityIcon(severity: "high" | "medium" | "low") {
+  const Icon =
+    severity === "high"
+      ? IconAlertTriangle
+      : severity === "medium"
+        ? IconAlertCircle
+        : IconInfoCircle;
   return <Icon size={18} aria-hidden="true" />;
 }

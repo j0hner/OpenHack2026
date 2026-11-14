@@ -86,6 +86,57 @@ export function normalizeManualInputs(raw: unknown): ManualInputs | undefined {
 export const hasManualInputs = (value: unknown): boolean =>
   normalizeManualInputs(value) !== undefined;
 
+export type ManualFieldSource = "manual" | "open-data" | "needed" | "pending";
+/** UI origin of an individual input; never treat a request in progress as a
+ * confirmed gap. This does not alter the scoring/coverage thresholds. */
+export function manualFieldSources(
+  area: AnalysisArea,
+): Record<ManualFieldKey, ManualFieldSource> {
+  const manual = normalizeManualInputs(area.manualInputs),
+    data = matchingRegionalData(area);
+  const soil = data?.soil;
+  const ratedCoverage =
+    soil?.parts.reduce((sum, part) => {
+      const hpj = Number(part.name.slice(1, 3));
+      return (
+        sum +
+        (/^\d{5}$/.test(part.name) && hpj >= 1 && hpj <= 89 ? part.percent : 0)
+      );
+    }, 0) ?? 0;
+  const pending =
+    !area.regional ||
+    area.regional.status === "idle" ||
+    area.regional.status === "loading";
+  return Object.fromEntries(
+    MANUAL_FIELDS.map(({ key }) => [
+      key,
+      manual?.[key] !== undefined
+        ? "manual"
+        : (
+              key === "soilHpj"
+                ? soil?.valid && soil.coveragePct >= 80 && ratedCoverage >= 80
+                : regionalClimateValue(data, key) !== null
+            )
+          ? "open-data"
+          : pending
+            ? "pending"
+            : "needed",
+    ]),
+  ) as Record<ManualFieldKey, ManualFieldSource>;
+}
+
+export const MANUAL_FIELD_HELP: Record<ManualFieldKey, string> = {
+  soilHpj:
+    "HPJ je 2. a 3. číslice BPEJ: např. 00610 → 06. Jednotka má odpovídat celé plánované části.",
+  temperatureMeanC: "Dlouhodobý průměr roční teploty; nejde o dnešní teplotu.",
+  rainfallMm: "Dlouhodobý roční úhrn srážek v mm, nikoli měsíční úhrn.",
+  et0Mm:
+    "Dlouhodobá roční referenční evapotranspirace. Neznámý údaj nenahrazujte nulou.",
+  springFrostDays:
+    "Průměrný počet dnů s minimem pod 0 °C v období březen–květen.",
+  summerDays: "Průměrný počet dnů za rok s maximem alespoň 25 °C.",
+};
+
 export function parseManualValue(
   key: ManualFieldKey,
   text: string,

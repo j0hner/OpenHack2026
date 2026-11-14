@@ -26,20 +26,63 @@
 .parcel-category-manager {
   border: 1px solid var(--line);
   border-radius: 7px;
-  margin-bottom: 10px;
-  padding: 7px 9px;
+  margin: 9px 0 10px;
+  padding: 0 9px;
   color: var(--ink-soft);
   font-size: 10px;
   max-height: 42vh;
   overflow: auto;
   scrollbar-gutter: stable;
+  scroll-padding: 10px;
+  flex-shrink: 0;
 }
 .parcel-category-manager > summary {
-  min-height: 28px;
+  min-height: 32px;
   align-content: center;
   cursor: pointer;
   color: var(--green-700);
   font-weight: 600;
+}
+.parcel-category-manager > summary > small {
+  float: right;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-inline-start: 8px;
+}
+.parcel-category-manager[open] {
+  padding-bottom: 9px;
+}
+.parcel-category-manager .parcel-category-assignment {
+  margin: 10px 0 12px;
+}
+.parcel-category-active-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: -4px 0 8px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  background: var(--green-050);
+  font-size: 10px;
+}
+.parcel-category-active-filter > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.parcel-category-active-filter > button {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  font-size: 18px;
 }
 .category-create {
   display: grid;
@@ -99,8 +142,7 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-.category-help,
-.category-removal p {
+.category-help {
   color: var(--ink-soft);
   font-size: 11px;
   line-height: 1.6;
@@ -131,26 +173,6 @@
 .parcel-bulk-actions > :is(.merge-eligibility, .inline-editor) {
   flex-basis: 100%;
   width: 100%;
-}
-.bulk-delete-confirmation {
-  margin: 8px 0;
-  padding: 10px;
-  border: 1px solid var(--red-line);
-  border-radius: 7px;
-  background: var(--red-bg);
-  color: var(--ink);
-  font-size: 11px;
-}
-.bulk-delete-confirmation p {
-  color: inherit;
-  margin: 0 0 7px;
-}
-.bulk-delete-confirmation ul {
-  max-height: 110px;
-  overflow: auto;
-  margin: 7px 0;
-  padding: 4px 12px 7px 22px;
-  scrollbar-gutter: stable;
 }
 .category-scenarios {
   margin-bottom: 20px;

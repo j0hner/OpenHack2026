@@ -8,6 +8,7 @@ import type {
 import { migrateState } from "./migration";
 import type { ParcelCategory } from "./parcelCategories";
 import type { ManualInputs } from "./manualInputs";
+import type { PlantingPlansByArea } from "./plantingPlan";
 
 // Retain the original key so existing real user parcels survive the upgrade.
 const KEY = "sady-demo-v1";
@@ -20,6 +21,8 @@ export interface PersistedState {
   parcelCategories?: ParcelCategory[];
   categoryByArea?: Record<string, string>;
   manualByArea?: Record<string, ManualInputs>;
+  plantingPlans?: PlantingPlansByArea;
+  plantingVisible?: boolean;
   /** Read-only compatibility with historical saved state. */
   mode?: "demo" | "custom";
   fruit: FruitKey;

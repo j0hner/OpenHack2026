@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   IconSearch,
   IconPlus,
@@ -46,13 +46,9 @@ export default function ParcelList(p: Props) {
     [edit, setEdit] = useState<string | null>(null),
     [draft, setDraft] = useState(""),
     [error, setError] = useState(""),
-    [remove, setRemove] = useState<string | null>(null),
     [merge, setMerge] = useState(false),
     [mergeName, setMergeName] = useState("Spojený pozemek"),
-    [category, setCategory] = useState(ALL_CATEGORIES),
-    [deleteSelection, setDeleteSelection] = useState<string[] | null>(null);
-  const selectionSignature = JSON.stringify(p.selectedIds);
-  useEffect(() => setDeleteSelection(null), [selectionSignature]);
+    [category, setCategory] = useState(ALL_CATEGORIES);
   const scope =
     category === UNASSIGNED_CATEGORY ||
     p.categoryControl?.state.categories.some((item) => item.id === category)
@@ -112,22 +108,30 @@ export default function ParcelList(p: Props) {
       </label>
       {p.categoryControl && (
         <>
-          <label className="parcel-category-filter">
-            Kategorie pozemků
-            <select
-              value={scope}
-              onChange={(event) => setCategory(event.target.value)}
-            >
-              <option value={ALL_CATEGORIES}>Všechny kategorie</option>
-              <option value={UNASSIGNED_CATEGORY}>Bez kategorie</option>
-              {p.categoryControl.state.categories.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <ParcelCategories control={p.categoryControl} />
+          <ParcelCategories
+            control={p.categoryControl}
+            selectedIds={p.selectedIds}
+            scope={scope}
+            onScopeChange={setCategory}
+          />
+          {scope !== ALL_CATEGORIES && (
+            <div className="parcel-category-active-filter">
+              <span>
+                {scope === UNASSIGNED_CATEGORY
+                  ? "Bez kategorie"
+                  : p.categoryControl.state.categories.find(
+                      (item) => item.id === scope,
+                    )?.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCategory(ALL_CATEGORIES)}
+                aria-label="Zrušit filtr kategorie"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </>
       )}
       <div className="saved-parcels">
@@ -135,7 +139,9 @@ export default function ParcelList(p: Props) {
           <div className="list-empty">
             {query
               ? "Žádný pozemek neodpovídá hledání."
-              : "Zatím nemáte přidaný pozemek. Vyhledejte lokalitu a otevřete parcelu v mapě."}
+              : p.areas.length > 0
+                ? "V této kategorii nejsou žádné pozemky."
+                : "Zatím nemáte přidaný pozemek. Vyhledejte lokalitu a otevřete parcelu v mapě."}
           </div>
         )}
         {shown.map((a) => (
@@ -234,7 +240,6 @@ export default function ParcelList(p: Props) {
                     setDraft(a.name);
                     setError("");
                     setMenu(null);
-                    setRemove(null);
                   }}
                 >
                   <IconPencil size={15} />
@@ -243,9 +248,9 @@ export default function ParcelList(p: Props) {
                 <button
                   type="button"
                   onClick={() => {
-                    setRemove(a.id);
                     setMenu(null);
                     setEdit(null);
+                    p.onDelete(a.id);
                   }}
                 >
                   <IconTrash size={15} />
@@ -290,58 +295,10 @@ export default function ParcelList(p: Props) {
                 </div>
               </form>
             )}
-            {remove === a.id && (
-              <div className="inline-editor">
-                <p>Smazat pozemek z této aplikace? Katastr se nezmění.</p>
-                <button
-                  type="button"
-                  className="btn danger small"
-                  onClick={() => {
-                    p.onDelete(a.id);
-                    setRemove(null);
-                  }}
-                >
-                  Potvrdit smazání
-                </button>
-                <button
-                  type="button"
-                  className="btn small"
-                  onClick={() => setRemove(null)}
-                >
-                  Zrušit
-                </button>
-              </div>
-            )}
           </div>
         ))}
       </div>
       <div className="parcel-list-bottom">
-        {p.selectedIds.length > 0 && p.categoryControl && (
-          <label className="parcel-category-assignment">
-            Zařadit vybrané ({p.selectedIds.length})
-            <select
-              value="__choose__"
-              aria-label="Kategorie vybraných pozemků"
-              onChange={(event) => {
-                if (event.target.value !== "__choose__")
-                  p.categoryControl?.onAssign(
-                    p.selectedIds,
-                    event.target.value || null,
-                  );
-              }}
-            >
-              <option value="__choose__" disabled>
-                Vyberte kategorii…
-              </option>
-              <option value="">Bez kategorie</option>
-              {p.categoryControl.state.categories.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <div className="parcel-bulk-actions">
           {p.selectedIds.length >= 2 && (
             <>
@@ -360,7 +317,11 @@ export default function ParcelList(p: Props) {
                 className={`merge-eligibility${mergeStatus.allowed ? "" : " is-blocked"}`}
                 role="status"
               >
-                {!mergeStatus.allowed && <strong>Spojit lze pouze pozemky, které spolu sousedí.</strong>}
+                {!mergeStatus.allowed && (
+                  <strong>
+                    Spojit lze pouze pozemky, které spolu sousedí.
+                  </strong>
+                )}
                 <span>{mergeStatus.reason}</span>
               </p>
               {merge && mergeStatus.allowed && (
@@ -393,61 +354,22 @@ export default function ParcelList(p: Props) {
             <button
               className="btn danger small"
               type="button"
-              onClick={() => setDeleteSelection([...new Set(p.selectedIds)])}
+              onClick={() => {
+                p.onDeleteSelected?.(
+                  [...new Set(p.selectedIds)].filter((id) =>
+                    p.areas.some((area) => area.id === id),
+                  ),
+                );
+                setMenu(null);
+                setEdit(null);
+                setMerge(false);
+              }}
             >
               <IconTrash size={16} />
               Odstranit vybrané ({p.selectedIds.length})
             </button>
           )}
         </div>
-        {deleteSelection && (
-          <div
-            className="bulk-delete-confirmation"
-            role="group"
-            aria-label="Potvrzení odstranění vybraných pozemků"
-          >
-            <p>
-              Odstranit{" "}
-              {
-                deleteSelection.filter((id) =>
-                  p.areas.some((area) => area.id === id),
-                ).length
-              }{" "}
-              vybraných pozemků z aplikace? Katastr zůstane beze změny.
-            </p>
-            <ul>
-              {deleteSelection
-                .map((id) => p.areas.find((area) => area.id === id))
-                .filter((area): area is AnalysisArea => !!area)
-                .map((area) => (
-                  <li key={area.id}>{area.name}</li>
-                ))}
-            </ul>
-            <div className="category-inline-actions">
-              <button
-                className="btn danger small"
-                type="button"
-                onClick={() => {
-                  p.onDeleteSelected?.(
-                    deleteSelection.filter((id) =>
-                      p.areas.some((area) => area.id === id),
-                    ),
-                  );
-                  setDeleteSelection(null);
-                }}
-              >
-                Potvrdit odstranění vybraných
-              </button>
-              <button
-                className="btn small"
-                type="button"
-                onClick={() => setDeleteSelection(null)}
-              >
-                Zrušit
-              </button>
-            </div>
-          </div>
-        )}
         <p>
           Vyberte pozemek v mapě nebo v seznamu. Zaškrtnutím označíte více ploch
           pro spojení.

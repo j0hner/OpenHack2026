@@ -13,7 +13,6 @@ import {
 import { FRUITS, FRUIT_ORDER } from "../data/fruitProfiles";
 import { areaHa } from "../lib/geo";
 import { fmtHa, fmtInt, fmtNum } from "../lib/format";
-import { computeTreeCount } from "../lib/economics";
 import { cadastralUrl, mean } from "../lib/openData";
 import { validClimateYears } from "../lib/regionalScoring";
 import type {
@@ -25,6 +24,9 @@ import type {
 } from "../lib/types";
 import OpenDataPanel from "./OpenDataPanel";
 import ManualInputsPanel from "./ManualInputsPanel";
+import PlantingPlanPanel, {
+  type PlantingPlanPanelProps,
+} from "./PlantingPlanPanel";
 import type { ManualInputs } from "../lib/manualInputs";
 import {
   officialParcelNumber,
@@ -45,6 +47,8 @@ export interface ParcelCardProps {
   onRetryData: () => void;
   onEconomicsChange: (value: Partial<EconomicsInputs>) => void;
   onManualChange: (value: ManualInputs | undefined) => void;
+  planting?: PlantingPlanPanelProps;
+  plantingMapNonce?: number;
 }
 type Tab = "overview" | "soil" | "climate" | "planting" | "data";
 const TABS: { id: Tab; label: string }[] = [
@@ -88,7 +92,6 @@ export default function ParcelCard(props: ParcelCardProps) {
     score,
     fruit,
     ranking,
-    economicsInputs,
     onFruitChange,
     onClose,
     onSplit,
@@ -99,7 +102,15 @@ export default function ParcelCard(props: ParcelCardProps) {
   const [tab, setTab] = useState<Tab>("overview"),
     id = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [manualFocus, setManualFocus] = useState(0);
+  const openManualInputs = () => {
+    setTab("data");
+    setManualFocus((value) => value + 1);
+  };
   useEffect(() => setTab("overview"), [area.id]);
+  useEffect(() => {
+    if (props.plantingMapNonce) setTab("planting");
+  }, [props.plantingMapNonce]);
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: 0 });
   }, [area.id, tab]);
@@ -291,7 +302,7 @@ export default function ParcelCard(props: ParcelCardProps) {
                 ? "regionální index"
                 : "uživatelský scénář"}
             </p>
-            <AnalysisDataStatus score={score} />
+            <AnalysisDataStatus score={score} onComplete={openManualInputs} />
             {score.overall !== null &&
               (mainRisk ? (
                 <div className={`parcel-risk ${mainRisk.severity}`}>
@@ -330,7 +341,7 @@ export default function ParcelCard(props: ParcelCardProps) {
             <button
               type="button"
               className="link-button"
-              onClick={() => setTab("data")}
+              onClick={openManualInputs}
             >
               Doplnit nebo přepsat vstupy
             </button>
@@ -372,38 +383,12 @@ export default function ParcelCard(props: ParcelCardProps) {
         )}
         {tab === "planting" && (
           <>
-            <div className="parcel-section-heading">
-              <h3>Výsadba: {profile.name}</h3>
-              <span className="parcel-data-kind assumption">
-                Modelový předpoklad
-              </span>
-            </div>
-            <div className="parcel-stats">
-              <div>
-                <span>Rozestup řad × stromů</span>
-                <strong>
-                  {fmtNum(economicsInputs.rowSpacingM)} ×{" "}
-                  {fmtNum(economicsInputs.treeSpacingM)} m
-                </strong>
-              </div>
-              <div>
-                <span>Orientační počet stromů</span>
-                <strong>
-                  {fmtInt(
-                    computeTreeCount(
-                      areaHa(area.geometry),
-                      economicsInputs.usefulSharePct,
-                      economicsInputs.rowSpacingM,
-                      economicsInputs.treeSpacingM,
-                    ),
-                  )}
-                </strong>
-              </div>
-            </div>
-            <p className="parcel-note">
-              Počet vychází z geometrie a zadaného sponu. Rozmístění, ochranná
-              pásma a podnože je třeba ověřit v terénu.
-            </p>
+            {props.planting && (
+              <PlantingPlanPanel
+                key={`${area.id}:${fruit}`}
+                {...props.planting}
+              />
+            )}
             <h3>Porovnání druhů</h3>
             <div className="parcel-fruit-ranking">
               {ordered.map((key) => (
@@ -439,7 +424,12 @@ export default function ParcelCard(props: ParcelCardProps) {
         )}
         {tab === "data" && (
           <>
-            <ManualInputsPanel area={area} onChange={props.onManualChange} />
+            <ManualInputsPanel
+              area={area}
+              score={score}
+              focusNonce={manualFocus}
+              onChange={props.onManualChange}
+            />
             <p className="parcel-note">{area.sourceNote}</p>
             {area.derivedFrom && (
               <p className="parcel-note">

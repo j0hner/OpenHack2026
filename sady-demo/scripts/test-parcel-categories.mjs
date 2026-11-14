@@ -84,7 +84,9 @@ try {
   const noop = () => {};
   const html = renderToStaticMarkup(createElement(ParcelList, { areas: [renamed, separate], scores: {}, fruits: {}, defaultFruit: 'apple', selectedIds: [a.id, separate.id], activeId: null, onSelect: noop, onToggle: noop, onAdd: noop, onRename: noop, onDelete: noop, onMerge: noop, onDeleteSelected: noop, categoryControl: { state, onCreate: noop, onRename: noop, onDelete: noop, onAssign: noop } }));
   assert.match(html, /Parcelní číslo 1641/); assert.match(html, /Odstranit vybrané \(2\)/); assert.match(html, /Spojit vybrané/);
-  assert(!html.includes('Potvrdit odstranění vybraných'), 'Bulk removal initially displays only a request action, never an implicit confirmation.');
+  assert(!html.includes('Potvrdit') && !html.includes('bulk-delete-confirmation'), 'Deletion must not introduce a confirmation step.');
+  assert.match(html, /<details class="parcel-category-manager"><summary>/, 'All category controls belong to one initially collapsed disclosure.');
+  assert(!html.includes('Správa kategorií'), 'Do not duplicate a second category management disclosure.');
   assert.match(html, /Kategorie vybraných pozemků/);
   const summary = renderToStaticMarkup(createElement(CategoryScenarios, { areas: [a, b], state, fruitByArea: fruits, defaultFruit: 'apple', economicsByFruit: inputs, irrigation: true }));
   assert.match(summary, /Scénáře celé kategorie/); assert.match(summary, /Modelové předpoklady/); assert.match(summary, /Konzervativní/); assert.match(summary, /Výsadba A/);

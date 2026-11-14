@@ -3,23 +3,77 @@ import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   createCategory,
   renameCategory,
+  ALL_CATEGORIES,
+  UNASSIGNED_CATEGORY,
   type CategoryControl,
 } from "../lib/parcelCategories";
 import "./parcel-categories.css";
 
 export default function ParcelCategories({
   control,
+  selectedIds = [],
+  scope = ALL_CATEGORIES,
+  onScopeChange,
 }: {
   control: CategoryControl;
+  selectedIds?: string[];
+  scope?: string;
+  onScopeChange?: (scope: string) => void;
 }) {
   const [draft, setDraft] = useState(""),
     [editing, setEditing] = useState<string | null>(null),
     [newName, setNewName] = useState(""),
-    [removing, setRemoving] = useState<string | null>(null),
     [error, setError] = useState("");
   return (
     <details className="parcel-category-manager">
-      <summary>Správa kategorií</summary>
+      <summary>
+        <span>Kategorie</span>
+        <small>{control.state.categories.length || "volitelné"}</small>
+      </summary>
+      {onScopeChange && (
+        <label className="parcel-category-filter">
+          Zobrazit kategorii
+          <select
+            aria-label="Kategorie pozemků"
+            value={scope}
+            onChange={(event) => onScopeChange(event.target.value)}
+          >
+            <option value={ALL_CATEGORIES}>Všechny kategorie</option>
+            <option value={UNASSIGNED_CATEGORY}>Bez kategorie</option>
+            {control.state.categories.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {selectedIds.length > 0 && (
+        <label className="parcel-category-assignment">
+          Zařadit vybrané ({selectedIds.length})
+          <select
+            value="__choose__"
+            aria-label="Kategorie vybraných pozemků"
+            onChange={(event) => {
+              if (event.target.value !== "__choose__")
+                control.onAssign(
+                  [...new Set(selectedIds)],
+                  event.target.value || null,
+                );
+            }}
+          >
+            <option value="__choose__" disabled>
+              Vyberte kategorii…
+            </option>
+            <option value="">Bez kategorie</option>
+            {control.state.categories.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <form
         className="category-create"
         onSubmit={(event) => {
@@ -132,7 +186,6 @@ export default function ParcelCategories({
                   onClick={() => {
                     setEditing(category.id);
                     setNewName(category.name);
-                    setRemoving(null);
                     setError("");
                   }}
                 >
@@ -143,39 +196,12 @@ export default function ParcelCategories({
                   type="button"
                   aria-label={`Odstranit kategorii ${category.name}`}
                   onClick={() => {
-                    setRemoving(category.id);
                     setEditing(null);
+                    control.onDelete(category.id);
                   }}
                 >
                   <IconTrash size={15} />
                 </button>
-              </div>
-            )}
-            {removing === category.id && (
-              <div className="category-removal">
-                <p>
-                  Odstranit kategorii „{category.name}“? Její pozemky zůstanou
-                  uložené bez kategorie.
-                </p>
-                <div className="category-inline-actions">
-                  <button
-                    className="btn danger small"
-                    type="button"
-                    onClick={() => {
-                      control.onDelete(category.id);
-                      setRemoving(null);
-                    }}
-                  >
-                    Odstranit kategorii
-                  </button>
-                  <button
-                    className="btn small"
-                    type="button"
-                    onClick={() => setRemoving(null)}
-                  >
-                    Zrušit
-                  </button>
-                </div>
               </div>
             )}
           </li>

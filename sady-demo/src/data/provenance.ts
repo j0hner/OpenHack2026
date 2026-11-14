@@ -82,6 +82,16 @@ export const PROVENANCE: ProvenanceRow[] = [
     note: "Váhy půda 35 / klima 40 / vláha 25 a převod podmínek na body nejsou odborně validovanou pravděpodobností. Výsadba, spon a péče vyžadují místní odborné ověření.",
   },
   {
+    indicator: "Rozmístění stromů a rozestupy",
+    source:
+      "MENDELU – Výsadbový plán ovocného sadu; geometrická pravidla Moje Sady",
+    period: "odborný podklad ověřen 14. 11. 2026",
+    resolution: "typ výsadby × přesná pracovní geometrie",
+    quality: "assumption",
+    connected: "Volba sponu, porovnání řad a poloh stromů uvnitř pozemku",
+    note: "Odborné rozsahy rozestupů jsou podkladem nastavitelných profilů. Nejde o měřený otevřený dataset ani záruku agronomického optima. Model respektuje otvory a provozní odstupy; sklon, konkrétní podnož a překážky se neověřují.",
+  },
+  {
     indicator: "Ekonomické vstupy a případná podpora",
     source: "Uživatelské vstupy, předvyplněné modelové předpoklady",
     period: "zvolený horizont",

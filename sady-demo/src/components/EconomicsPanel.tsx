@@ -19,6 +19,8 @@ import type {
   FruitKey,
 } from "../lib/types";
 import { NumberField, Toggle } from "./ui";
+import { matchingPlantingPlan } from "../lib/plantingPlan";
+import "./economics-sections.css";
 
 interface Props {
   area: AnalysisArea;
@@ -207,6 +209,7 @@ export default function EconomicsPanel({
   onReset,
 }: Props) {
   const profile = FRUITS[fruit];
+  const plantingPlan = matchingPlantingPlan(area, fruit);
   const result = computeEconomics(area, fruit, inputs, {
     irrigation,
     subsidy: inputs.subsidy,
@@ -244,28 +247,48 @@ export default function EconomicsPanel({
   }));
 
   return (
-    <details className="model-result" key={area.id + fruit}>
-      <summary>
-        Modelový výsledek pro {profile.name.toLocaleLowerCase("cs-CZ")}
-      </summary>
-      <div className="economics-panel analysis-section-content">
-        <details className="card economics-inputs">
-          <summary className="economics-inputs-summary">
-            Upravit vstupy ekonomického scénáře
-          </summary>
+    <div className="economics-workspace" key={area.id + fruit}>
+      <details
+        className="card economics-inputs economics-input-panel"
+        aria-label="Scénář vašeho pozemku"
+      >
+        <summary className="economics-section-summary">
+          <span>Scénář vašeho pozemku</span>
+          <small>Vstupy a předpoklady</small>
+        </summary>
+        <div className="economics-section-body">
+          {plantingPlan && (
+            <div
+              className={`notice ${plantingPlan.treeCount ? "info" : "warn"}`}
+            >
+              Náklady používají{" "}
+              <strong>
+                {fmtInt(plantingPlan.treeCount)} stromů z geometrického plánu
+              </strong>{" "}
+              při sponu {plantingPlan.settings.rowSpacingM} ×{" "}
+              {plantingPlan.settings.treeSpacingM} m. Spon a odsazení změňte ve
+              Výsadbě. Výnos v t/ha celé parcely je samostatný uživatelský
+              předpoklad; rozmístění stromů jej neověřuje ani automaticky
+              nezvyšuje.
+              {plantingPlan.treeCount === 0 &&
+                " Plán bez stromů má nulové tržby z ovoce."}
+            </div>
+          )}
           <div className="card-title">
-            <span>Vstupy výpočtu</span>
+            <span>Vstupní předpoklady</span>
             <button type="button" className="link-button" onClick={onReset}>
               Výchozí hodnoty
             </button>
           </div>
 
           <div className="notice" style={{ marginBottom: 10 }}>
-            Ekonomika vychází z výměry {fmtHa(areaHa)}, sponu{" "}
-            {inputs.rowSpacingM} × {inputs.treeSpacingM} m a využití{" "}
-            {inputs.usefulSharePct} % plochy. Náklady, ceny a budoucí výnos jsou
-            vstupy scénáře, nikoli měřený výnos tohoto pozemku. Cenu lze převzít
-            z referencí ČSÚ v záložce Data.
+            Ekonomika vychází z výměry {fmtHa(areaHa)}
+            {plantingPlan
+              ? ` a ${fmtInt(plantingPlan.treeCount)} stromů skutečně umístěných v návrhu podle hranic plochy.`
+              : `, sponu ${inputs.rowSpacingM} × ${inputs.treeSpacingM} m a využití ${inputs.usefulSharePct} % plochy.`}{" "}
+            Náklady, ceny a budoucí výnos jsou vstupy scénáře, nikoli měřený
+            výnos tohoto pozemku. Cenu lze převzít z referencí ČSÚ v záložce
+            Data.
           </div>
 
           <div className="form-grid">
@@ -446,264 +469,283 @@ export default function EconomicsPanel({
               Přepínač je proto vypnutý.
             </div>
           )}
-        </details>
-
-        <div className="card economics-result-card">
-          <div className="card-title">
-            <span>Modelový výsledek pro {profile.name.toLowerCase()}</span>
-            <span className="hint">{fmtInt(result.treeCount)} stromů</span>
-          </div>
-
-          <div className="summary-grid">
-            <div className="metric">
-              <div className="label">Počáteční investice</div>
-              <div className="value">{fmtKcShort(result.investment.total)}</div>
-              <div className="sub">
-                včetně{" "}
-                {inputs.landMode === "purchase"
-                  ? "koupě pozemku"
-                  : "výsadby a oplocení"}
-              </div>
-            </div>
-            <div className="metric">
-              <div className="label">Roční náklady v plné plodnosti</div>
-              <div className="value">
-                {fmtKcShort(result.annualCostsMature)}
-              </div>
-              <div className="sub">provoz, řez, ochrana, sklizeň</div>
-            </div>
-            <div className={`metric ${result.npv >= 0 ? "good" : "bad"}`}>
-              <div className="label">Čistá současná hodnota (NPV)</div>
-              <div className="value">{fmtKcShort(result.npv)}</div>
-              <div className="sub">
-                při diskontu {fmtNum(inputs.discountRatePct, 1)} %
-              </div>
-            </div>
-            <div className={`metric ${result.paybackYear ? "good" : "warn"}`}>
-              <div className="label">Návratnost investice</div>
-              <div className="value small-value">
-                {result.paybackYear
-                  ? `rok ${result.paybackYear}`
-                  : "v horizontu se nevrátí"}
-              </div>
-              <div className="sub">
-                {result.paybackYear
-                  ? `kumulovaně kladné od ${result.paybackYear}. roku`
-                  : `horizont ${inputs.horizonYears} let`}
-              </div>
-            </div>
-          </div>
-
-          <div className="inline-note">
-            NPV je dnešní hodnota budoucích peněžních toků po odečtení
-            investice. Kladná hodnota při zvolené diskontní sazbě znamená, že se
-            investice v horizontu vrátí; není to zaručený zisk.
-          </div>
-
-          <div className="breakdown" style={{ marginTop: 10 }}>
-            <div className="breakdown-row">
-              <span>
-                Stromy ({fmtInt(result.treeCount)} ks × sazenice + výsadba)
-              </span>
-              <span>{fmtKc(result.investment.trees)}</span>
-            </div>
-            <div className="breakdown-row">
-              <span>Oplocení</span>
-              <span>{fmtKc(result.investment.fence)}</span>
-            </div>
-            <div className="breakdown-row">
-              <span>Závlaha</span>
-              <span>
-                {result.investment.irrigation > 0
-                  ? fmtKc(result.investment.irrigation)
-                  : "nezahrnuto"}
-              </span>
-            </div>
-            <div className="breakdown-row">
-              <span>Pozemek</span>
-              <span>
-                {result.investment.land > 0
-                  ? fmtKc(result.investment.land)
-                  : "pacht, bez koupě"}
-              </span>
-            </div>
-            <div className="breakdown-row total">
-              <span>Celkem</span>
-              <span>{fmtKc(result.investment.total)}</span>
-            </div>
-          </div>
-
-          {result.subsidyTotal > 0 && (
-            <div className="notice good" style={{ marginTop: 9 }}>
-              Modelová podpora {fmtKc(result.subsidyTotal)} je zahrnutá v 1.
-              roce. Jde o potenciální podporu, nikoli o přiznanou dotaci.
-            </div>
-          )}
         </div>
-
-        <div className="card">
-          <div className="card-title">
-            <span>Peněžní toky</span>
-            <span className="hint">včetně let před plnou plodností</span>
-          </div>
-          <div className="chart-wrap">
-            <AnnualFlowChart flows={result.flows} />
-            <div className="chart-legend">
-              <span>
-                <span
-                  className="chart-swatch"
-                  style={{ background: "#3d9465" }}
-                />{" "}
-                kladný roční tok
-              </span>
-              <span>
-                <span
-                  className="chart-swatch"
-                  style={{ background: "#b4513c" }}
-                />{" "}
-                záporný roční tok
-              </span>
-              <span>
-                <span
-                  className="chart-swatch"
-                  style={{ background: "#b8c9bc" }}
-                />{" "}
-                rok 0 = investice
+      </details>
+      <details
+        className="model-result economics-output-panel"
+        aria-label={`Modelový výsledek pro ${profile.name.toLocaleLowerCase("cs-CZ")}`}
+      >
+        <summary className="economics-section-summary">
+          <span>
+            Modelový výsledek pro {profile.name.toLocaleLowerCase("cs-CZ")}
+          </span>
+          <small>Výpočet ze zadaných předpokladů</small>
+        </summary>
+        <div className="economics-panel analysis-section-content economics-section-body">
+          <div className="card economics-result-card">
+            <div className="card-title">
+              <span>Přehled výsledků</span>
+              <span className="hint">
+                {fmtInt(result.treeCount)} stromů
+                {plantingPlan ? " · podle plánu výsadby" : " · plošný odhad"}
               </span>
             </div>
-          </div>
-          <div className="chart-wrap" style={{ marginTop: 8 }}>
-            <CumulativeChart
-              flows={result.flows}
-              paybackYear={result.paybackYear}
-            />
-            <div className="chart-note">
-              Kumulovaná bilance: součet toků od investice. Průsečík s nulou =
-              návratnost.
-            </div>
-          </div>
-          {result.paybackYear == null && (
-            <div className="notice warn" style={{ marginTop: 9 }}>
-              <strong>
-                Investice se ve zvoleném horizontu {inputs.horizonYears} let
-                nevrátí.
-              </strong>{" "}
-              Zkuste prodloužit horizont, upravit cenu nebo výnos – nebo zvažte
-              jiný druh či menší rozsah výsadby.
-            </div>
-          )}
-        </div>
 
-        <div className="card">
-          <div className="card-title">
-            <span>Scénáře</span>
-            <span className="hint">modelové multiplikátory</span>
-          </div>
-          <div className="scroll-x">
-            <table className="data-table compact">
-              <thead>
-                <tr>
-                  <th>Scénář</th>
-                  <th className="num">Tržby v plné plodnosti</th>
-                  <th className="num">Roční náklady</th>
-                  <th className="num">NPV</th>
-                  <th className="num">Návratnost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scenarioResults.map(({ scenario, result: scenarioResult }) => (
-                  <tr key={scenario.key}>
-                    <td>
-                      {scenario.label}
-                      <div className="tiny muted">{scenario.note}</div>
-                    </td>
-                    <td className="num">
-                      {fmtKcShort(scenarioResult.matureRevenue)}
-                    </td>
-                    <td className="num">
-                      {fmtKcShort(scenarioResult.annualCostsMature)}
-                    </td>
-                    <td
-                      className={`num ${scenarioResult.npv >= 0 ? "" : "warn-text"}`}
-                    >
-                      {fmtKcShort(scenarioResult.npv)}
-                    </td>
-                    <td className="num">
-                      {scenarioResult.paybackYear
-                        ? `rok ${scenarioResult.paybackYear}`
-                        : "nevrátí se"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="inline-note">
-            Scénáře mění výnos, cenu a náklady. Nepředstavují pravděpodobnost
-            ani garanci výsledku.
-          </div>
-        </div>
+            <div className="summary-grid">
+              <div className="metric">
+                <div className="label">Počáteční investice</div>
+                <div className="value">
+                  {fmtKcShort(result.investment.total)}
+                </div>
+                <div className="sub">
+                  včetně{" "}
+                  {inputs.landMode === "purchase"
+                    ? "koupě pozemku"
+                    : "výsadby a oplocení"}
+                </div>
+              </div>
+              <div className="metric">
+                <div className="label">Roční náklady v plné plodnosti</div>
+                <div className="value">
+                  {fmtKcShort(result.annualCostsMature)}
+                </div>
+                <div className="sub">provoz, řez, ochrana, sklizeň</div>
+              </div>
+              <div className={`metric ${result.npv >= 0 ? "good" : "bad"}`}>
+                <div className="label">Čistá současná hodnota (NPV)</div>
+                <div className="value">{fmtKcShort(result.npv)}</div>
+                <div className="sub">
+                  při diskontu {fmtNum(inputs.discountRatePct, 1)} %
+                </div>
+              </div>
+              <div className={`metric ${result.paybackYear ? "good" : "warn"}`}>
+                <div className="label">Návratnost investice</div>
+                <div className="value small-value">
+                  {result.paybackYear
+                    ? `rok ${result.paybackYear}`
+                    : "v horizontu se nevrátí"}
+                </div>
+                <div className="sub">
+                  {result.paybackYear
+                    ? `kumulovaně kladné od ${result.paybackYear}. roku`
+                    : `horizont ${inputs.horizonYears} let`}
+                </div>
+              </div>
+            </div>
 
-        <div className="card">
-          <div className="card-title">
-            <span>Závlaha a podpora</span>
-            <span className="hint">porovnání variant</span>
-          </div>
-          <div className="scroll-x">
-            <table className="data-table compact">
-              <thead>
-                <tr>
-                  <th>Varianta</th>
-                  <th className="num">Investice</th>
-                  <th className="num">Roční náklady</th>
-                  <th className="num">NPV</th>
-                  <th className="num">Návratnost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...irrigationCompare, ...subsidyCompare].map((variant) => (
-                  <tr key={variant.label}>
-                    <td>
-                      {variant.label}
-                      {variant.enabled && variant.label.startsWith("Se") ? (
-                        <div className="tiny muted">modelová varianta</div>
-                      ) : null}
-                    </td>
-                    <td className="num">
-                      {fmtKcShort(variant.result.investment.total)}
-                    </td>
-                    <td className="num">
-                      {fmtKcShort(variant.result.annualCostsMature)}
-                    </td>
-                    <td
-                      className={`num ${variant.result.npv >= 0 ? "" : "warn-text"}`}
-                    >
-                      {fmtKcShort(variant.result.npv)}
-                    </td>
-                    <td className="num">
-                      {variant.result.paybackYear
-                        ? `rok ${variant.result.paybackYear}`
-                        : "nevrátí se"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="inline-note">
-            Závlaha zvyšuje investici a roční náklady. Budoucí výnos bez
-            doložených vstupů automaticky nenavyšujeme. Podpora je modelová
-            částka {fmtKc(inputs.subsidyPerHa)} na hektar, vyžaduje ověření
-            podmínek.
-          </div>
-          {ratio != null && (
             <div className="inline-note">
-              Poměr ročních nákladů k tržbám v plné plodnosti:{" "}
-              {fmtPct(ratio * 100, 0)}.
+              NPV je dnešní hodnota budoucích peněžních toků po odečtení
+              investice. Kladná hodnota při zvolené diskontní sazbě znamená, že
+              se investice v horizontu vrátí; není to zaručený zisk.
             </div>
-          )}
+
+            <div className="breakdown" style={{ marginTop: 10 }}>
+              <div className="breakdown-row">
+                <span>
+                  Stromy ({fmtInt(result.treeCount)} ks × sazenice + výsadba)
+                </span>
+                <span>{fmtKc(result.investment.trees)}</span>
+              </div>
+              <div className="breakdown-row">
+                <span>Oplocení</span>
+                <span>{fmtKc(result.investment.fence)}</span>
+              </div>
+              <div className="breakdown-row">
+                <span>Závlaha</span>
+                <span>
+                  {result.investment.irrigation > 0
+                    ? fmtKc(result.investment.irrigation)
+                    : "nezahrnuto"}
+                </span>
+              </div>
+              <div className="breakdown-row">
+                <span>Pozemek</span>
+                <span>
+                  {result.investment.land > 0
+                    ? fmtKc(result.investment.land)
+                    : "pacht, bez koupě"}
+                </span>
+              </div>
+              <div className="breakdown-row total">
+                <span>Celkem</span>
+                <span>{fmtKc(result.investment.total)}</span>
+              </div>
+            </div>
+
+            {result.subsidyTotal > 0 && (
+              <div className="notice good" style={{ marginTop: 9 }}>
+                Modelová podpora {fmtKc(result.subsidyTotal)} je zahrnutá v 1.
+                roce. Jde o potenciální podporu, nikoli o přiznanou dotaci.
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              <span>Peněžní toky</span>
+              <span className="hint">včetně let před plnou plodností</span>
+            </div>
+            <div className="chart-wrap">
+              <AnnualFlowChart flows={result.flows} />
+              <div className="chart-legend">
+                <span>
+                  <span
+                    className="chart-swatch"
+                    style={{ background: "#3d9465" }}
+                  />{" "}
+                  kladný roční tok
+                </span>
+                <span>
+                  <span
+                    className="chart-swatch"
+                    style={{ background: "#b4513c" }}
+                  />{" "}
+                  záporný roční tok
+                </span>
+                <span>
+                  <span
+                    className="chart-swatch"
+                    style={{ background: "#b8c9bc" }}
+                  />{" "}
+                  rok 0 = investice
+                </span>
+              </div>
+            </div>
+            <div className="chart-wrap" style={{ marginTop: 8 }}>
+              <CumulativeChart
+                flows={result.flows}
+                paybackYear={result.paybackYear}
+              />
+              <div className="chart-note">
+                Kumulovaná bilance: součet toků od investice. Průsečík s nulou =
+                návratnost.
+              </div>
+            </div>
+            {result.paybackYear == null && (
+              <div className="notice warn" style={{ marginTop: 9 }}>
+                <strong>
+                  Investice se ve zvoleném horizontu {inputs.horizonYears} let
+                  nevrátí.
+                </strong>{" "}
+                Zkuste prodloužit horizont, upravit cenu nebo výnos – nebo
+                zvažte jiný druh či menší rozsah výsadby.
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              <span>Scénáře</span>
+              <span className="hint">modelové multiplikátory</span>
+            </div>
+            <div className="scroll-x">
+              <table className="data-table compact">
+                <thead>
+                  <tr>
+                    <th>Scénář</th>
+                    <th className="num">Tržby v plné plodnosti</th>
+                    <th className="num">Roční náklady</th>
+                    <th className="num">NPV</th>
+                    <th className="num">Návratnost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scenarioResults.map(
+                    ({ scenario, result: scenarioResult }) => (
+                      <tr key={scenario.key}>
+                        <td>
+                          {scenario.label}
+                          <div className="tiny muted">{scenario.note}</div>
+                        </td>
+                        <td className="num">
+                          {fmtKcShort(scenarioResult.matureRevenue)}
+                        </td>
+                        <td className="num">
+                          {fmtKcShort(scenarioResult.annualCostsMature)}
+                        </td>
+                        <td
+                          className={`num ${scenarioResult.npv >= 0 ? "" : "warn-text"}`}
+                        >
+                          {fmtKcShort(scenarioResult.npv)}
+                        </td>
+                        <td className="num">
+                          {scenarioResult.paybackYear
+                            ? `rok ${scenarioResult.paybackYear}`
+                            : "nevrátí se"}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="inline-note">
+              Scénáře mění výnos, cenu a náklady. Nepředstavují pravděpodobnost
+              ani garanci výsledku.
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              <span>Závlaha a podpora</span>
+              <span className="hint">porovnání variant</span>
+            </div>
+            <div className="scroll-x">
+              <table className="data-table compact">
+                <thead>
+                  <tr>
+                    <th>Varianta</th>
+                    <th className="num">Investice</th>
+                    <th className="num">Roční náklady</th>
+                    <th className="num">NPV</th>
+                    <th className="num">Návratnost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...irrigationCompare, ...subsidyCompare].map((variant) => (
+                    <tr key={variant.label}>
+                      <td>
+                        {variant.label}
+                        {variant.enabled && variant.label.startsWith("Se") ? (
+                          <div className="tiny muted">modelová varianta</div>
+                        ) : null}
+                      </td>
+                      <td className="num">
+                        {fmtKcShort(variant.result.investment.total)}
+                      </td>
+                      <td className="num">
+                        {fmtKcShort(variant.result.annualCostsMature)}
+                      </td>
+                      <td
+                        className={`num ${variant.result.npv >= 0 ? "" : "warn-text"}`}
+                      >
+                        {fmtKcShort(variant.result.npv)}
+                      </td>
+                      <td className="num">
+                        {variant.result.paybackYear
+                          ? `rok ${variant.result.paybackYear}`
+                          : "nevrátí se"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="inline-note">
+              Závlaha zvyšuje investici a roční náklady. Budoucí výnos bez
+              doložených vstupů automaticky nenavyšujeme. Podpora je modelová
+              částka {fmtKc(inputs.subsidyPerHa)} na hektar, vyžaduje ověření
+              podmínek.
+            </div>
+            {ratio != null && (
+              <div className="inline-note">
+                Poměr ročních nákladů k tržbám v plné plodnosti:{" "}
+                {fmtPct(ratio * 100, 0)}.
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </details>
+      </details>
+    </div>
   );
 }

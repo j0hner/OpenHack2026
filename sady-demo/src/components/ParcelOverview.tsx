@@ -3,6 +3,7 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconArrowsSort,
+  IconFilter,
   IconFilterOff,
   IconSearch,
 } from "@tabler/icons-react";
@@ -59,11 +60,14 @@ export default function ParcelOverview({
     [rows, filters, sort],
   );
   const rangeError = parseParcelOverviewRanges(filters).error;
-  const filteredActive = Object.keys(EMPTY_PARCEL_FILTERS).some(
-    (key) =>
-      filters[key as keyof ParcelOverviewFilters] !==
-      EMPTY_PARCEL_FILTERS[key as keyof ParcelOverviewFilters],
-  );
+  const activeFilterCount = [
+    filters.query.trim() !== "",
+    filters.fruit !== "all",
+    filters.rating !== "all",
+    filters.areaMin !== "" || filters.areaMax !== "",
+    filters.suitabilityMin !== "" || filters.suitabilityMax !== "",
+  ].filter(Boolean).length;
+  const filteredActive = activeFilterCount > 0;
   const change = (patch: Partial<ParcelOverviewFilters>) =>
     setFilters((previous) => ({ ...previous, ...patch }));
   const sortBy = (key: ParcelSortKey) =>
@@ -111,135 +115,146 @@ export default function ParcelOverview({
         Porovnejte uložené pozemky podle výměry, ovoce a vhodnosti. Kliknutím na
         záhlaví tabulky změníte směr řazení.
       </p>
-      <div className="parcel-overview-filters">
-        <label className="field overview-search">
-          <span className="field-label">Hledat pozemek nebo lokalitu</span>
-          <span className="overview-search-input">
-            <IconSearch size={16} aria-hidden="true" />
-            <input
-              type="search"
-              value={filters.query}
-              onChange={(event) => change({ query: event.target.value })}
-              placeholder="Název, parcelní číslo, obec…"
-            />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Ovocný druh</span>
-          <select
-            value={filters.fruit}
-            onChange={(event) =>
-              change({
-                fruit: event.target.value as ParcelOverviewFilters["fruit"],
-              })
-            }
-          >
-            <option value="all">Všechny druhy</option>
-            {FRUIT_ORDER.map((fruit) => (
-              <option key={fruit} value={fruit}>
-                {FRUITS[fruit].name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">Hodnocení</span>
-          <select
-            value={filters.rating}
-            onChange={(event) =>
-              change({
-                rating: event.target.value as ParcelOverviewFilters["rating"],
-                ...(event.target.value === "unrated"
-                  ? { suitabilityMin: "", suitabilityMax: "" }
-                  : {}),
-              })
-            }
-          >
-            <option value="all">Všechny pozemky</option>
-            <option value="rated">Pouze se skóre</option>
-            <option value="unrated">Bez hodnocení</option>
-          </select>
-        </label>
-        <fieldset className="overview-range">
-          <legend>Výměra (ha)</legend>
-          <label>
-            <span>Od</span>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              inputMode="decimal"
-              value={filters.areaMin}
-              onChange={(event) => change({ areaMin: event.target.value })}
-              aria-label="Výměra od (ha)"
-              placeholder="Bez meze"
-              aria-describedby={rangeError ? `${id}-error` : undefined}
-            />
+      <details className="overview-filter-disclosure">
+        <summary>
+          <IconFilter size={16} aria-hidden="true" />
+          <span>Filtr</span>
+          {filteredActive && <small>{activeFilterCount}</small>}
+        </summary>
+        <div className="parcel-overview-filters">
+          <label className="field overview-search">
+            <span className="field-label">Hledat pozemek nebo lokalitu</span>
+            <span className="overview-search-input">
+              <IconSearch size={16} aria-hidden="true" />
+              <input
+                type="search"
+                value={filters.query}
+                onChange={(event) => change({ query: event.target.value })}
+                placeholder="Název, parcelní číslo, obec…"
+              />
+            </span>
           </label>
-          <label>
-            <span>Do</span>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              inputMode="decimal"
-              value={filters.areaMax}
-              onChange={(event) => change({ areaMax: event.target.value })}
-              aria-label="Výměra do (ha)"
-              placeholder="Bez meze"
-              aria-describedby={rangeError ? `${id}-error` : undefined}
-            />
-          </label>
-        </fieldset>
-        <fieldset className="overview-range">
-          <legend>Vhodnost (0–100)</legend>
-          <label>
-            <span>Od</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="1"
-              inputMode="numeric"
-              value={filters.suitabilityMin}
+          <label className="field">
+            <span className="field-label">Ovocný druh</span>
+            <select
+              value={filters.fruit}
               onChange={(event) =>
-                change({ suitabilityMin: event.target.value })
+                change({
+                  fruit: event.target.value as ParcelOverviewFilters["fruit"],
+                })
               }
-              aria-label="Vhodnost od"
-              placeholder="Bez meze"
-              disabled={filters.rating === "unrated"}
-              aria-describedby={rangeError ? `${id}-error` : undefined}
-            />
+            >
+              <option value="all">Všechny druhy</option>
+              {FRUIT_ORDER.map((fruit) => (
+                <option key={fruit} value={fruit}>
+                  {FRUITS[fruit].name}
+                </option>
+              ))}
+            </select>
           </label>
-          <label>
-            <span>Do</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="1"
-              inputMode="numeric"
-              value={filters.suitabilityMax}
+          <label className="field">
+            <span className="field-label">Hodnocení</span>
+            <select
+              value={filters.rating}
               onChange={(event) =>
-                change({ suitabilityMax: event.target.value })
+                change({
+                  rating: event.target.value as ParcelOverviewFilters["rating"],
+                  ...(event.target.value === "unrated"
+                    ? { suitabilityMin: "", suitabilityMax: "" }
+                    : {}),
+                })
               }
-              aria-label="Vhodnost do"
-              placeholder="Bez meze"
-              disabled={filters.rating === "unrated"}
-              aria-describedby={rangeError ? `${id}-error` : undefined}
-            />
+            >
+              <option value="all">Všechny pozemky</option>
+              <option value="rated">Pouze se skóre</option>
+              <option value="unrated">Bez hodnocení</option>
+            </select>
           </label>
-        </fieldset>
-        <button
-          type="button"
-          className="btn overview-reset"
-          disabled={!filteredActive}
-          onClick={() => setFilters({ ...EMPTY_PARCEL_FILTERS })}
-        >
-          <IconFilterOff size={16} />
-          Zrušit filtry
-        </button>
-      </div>
+          <fieldset className="overview-range">
+            <legend>Výměra (ha)</legend>
+            <label>
+              <span>Od</span>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                value={filters.areaMin}
+                onChange={(event) => change({ areaMin: event.target.value })}
+                aria-label="Výměra od (ha)"
+                placeholder="Bez meze"
+                aria-describedby={rangeError ? `${id}-error` : undefined}
+              />
+            </label>
+            <label>
+              <span>Do</span>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                value={filters.areaMax}
+                onChange={(event) => change({ areaMax: event.target.value })}
+                aria-label="Výměra do (ha)"
+                placeholder="Bez meze"
+                aria-describedby={rangeError ? `${id}-error` : undefined}
+              />
+            </label>
+          </fieldset>
+          <fieldset className="overview-range">
+            <legend>Vhodnost (0–100)</legend>
+            <label>
+              <span>Od</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                inputMode="numeric"
+                value={filters.suitabilityMin}
+                onChange={(event) =>
+                  change({ suitabilityMin: event.target.value })
+                }
+                aria-label="Vhodnost od"
+                placeholder="Bez meze"
+                disabled={filters.rating === "unrated"}
+                aria-describedby={rangeError ? `${id}-error` : undefined}
+              />
+            </label>
+            <label>
+              <span>Do</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                inputMode="numeric"
+                value={filters.suitabilityMax}
+                onChange={(event) =>
+                  change({ suitabilityMax: event.target.value })
+                }
+                aria-label="Vhodnost do"
+                placeholder="Bez meze"
+                disabled={filters.rating === "unrated"}
+                aria-describedby={rangeError ? `${id}-error` : undefined}
+              />
+            </label>
+          </fieldset>
+        </div>
+      </details>
+      {filteredActive && (
+        <div className="overview-active-filters">
+          <span>Aktivní filtry: {activeFilterCount}</span>
+          <button
+            type="button"
+            className="btn small overview-reset"
+            onClick={() => setFilters({ ...EMPTY_PARCEL_FILTERS })}
+          >
+            <IconFilterOff size={15} aria-hidden="true" />
+            Zrušit filtry
+          </button>
+        </div>
+      )}
       {rangeError && (
         <p className="overview-filter-error" id={`${id}-error`} role="alert">
           {rangeError}

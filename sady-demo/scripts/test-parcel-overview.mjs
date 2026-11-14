@@ -58,7 +58,10 @@ try {
   assert.equal(invalidScore[0].suitability, null);
   const html = renderToStaticMarkup(createElement(ParcelOverview, { areas, fruitForArea: area => fruitById[area.id], scoreForArea: area => scoreById[area.id], onSelect() {} }));
   assert(html.includes('Bez hodnocení')); assert(html.includes('Načítám podklady')); assert(html.includes('0/100'));
-  assert(html.includes('aria-sort="ascending"')); assert(html.includes('Výměra od (ha)')); assert(html.includes('Zrušit filtry')); assert(html.includes('parc. 1641'));
+  assert(html.includes('aria-sort="ascending"')); assert(html.includes('Výměra od (ha)')); assert(html.includes('parc. 1641'));
+  assert.match(html, /<details class="overview-filter-disclosure"><summary>/, 'Filters must begin in a native collapsed disclosure.');
+  assert(html.includes('>Filtr</span>'));
+  assert(!html.includes('overview-active-filters'), 'An unfiltered table must not take space for a reset bar.');
   const empty = renderToStaticMarkup(createElement(ParcelOverview, { areas: [], fruitForArea: () => 'apple', scoreForArea: () => scoreById[areas[0].id], onSelect() {} }));
   assert(empty.includes('Zatím nemáte uložené pozemky'));
   console.log(JSON.stringify({ checks: 'OK', numericAreaSort: true, czechFruitSort: true, bothDirections: true, stableTies: true, nullScoreDistinctFromZero: true, inclusiveRanges: true, decimalComma: true, invalidRangeErrors: true, renamedParcelSearch: true, emptyState: true }));

@@ -1,5 +1,10 @@
 import OpenDataPanel from "./OpenDataPanel";
+import { useState } from "react";
 import ManualInputsPanel from "./ManualInputsPanel";
+import PlantingPlanPanel, {
+  type PlantingPlanPanelProps,
+} from "./PlantingPlanPanel";
+import { matchingPlantingPlan } from "../lib/plantingPlan";
 import type { ManualInputs } from "../lib/manualInputs";
 import {
   IconAlertTriangle,
@@ -30,9 +35,15 @@ import {
   severityIcon,
 } from "./ui";
 
-export type DetailTab = "prehled" | "doporuceni" | "ekonomika" | "data";
+export type DetailTab =
+  | "prehled"
+  | "doporuceni"
+  | "vysadba"
+  | "ekonomika"
+  | "data";
 
 interface Props {
+  planting?: PlantingPlanPanelProps;
   onRetryData: () => void;
   onManualChange: (value: ManualInputs | undefined) => void;
   area: AnalysisArea;
@@ -61,6 +72,7 @@ const AVAILABILITY_LABEL: Record<Availability, string> = {
 const TABS: { key: DetailTab; label: string }[] = [
   { key: "prehled", label: "Přehled" },
   { key: "doporuceni", label: "Doporučení" },
+  { key: "vysadba", label: "Výsadba" },
   { key: "ekonomika", label: "Ekonomika" },
   { key: "data", label: "Data a nejistoty" },
 ];
@@ -69,6 +81,8 @@ export default function AreaDetail(props: Props) {
   const { area, score, fruit, tab } = props;
   const profile = FRUITS[fruit];
   const areaSize = areaHa(area.geometry);
+  const appliedPlan = matchingPlantingPlan(area, fruit);
+  const [manualFocus, setManualFocus] = useState(0);
 
   const completenessTone =
     score.completeness >= 80 ? "ok" : score.completeness >= 50 ? "warn" : "bad";
@@ -101,9 +115,13 @@ export default function AreaDetail(props: Props) {
             <b>{fmtHa(areaSize)}</b>
           </span>
           <span className="stat-chip">
-            Využitelné{" "}
+            {appliedPlan ? "Stromů v plánu" : "Modelově využitelné"}{" "}
             <b>
-              {fmtHa(areaSize * (props.economicsInputs.usefulSharePct / 100))}
+              {appliedPlan
+                ? appliedPlan.treeCount.toLocaleString("cs-CZ")
+                : fmtHa(
+                    areaSize * (props.economicsInputs.usefulSharePct / 100),
+                  )}
             </b>
           </span>
           <span className="stat-chip">
@@ -211,7 +229,13 @@ export default function AreaDetail(props: Props) {
         </div>
       </div>
 
-      <AnalysisDataStatus score={score} />
+      <AnalysisDataStatus
+        score={score}
+        onComplete={() => {
+          props.onTabChange("data");
+          setManualFocus((value) => value + 1);
+        }}
+      />
 
       <div style={{ marginTop: 9 }}>
         <Toggle
@@ -246,7 +270,12 @@ export default function AreaDetail(props: Props) {
       <div style={{ marginTop: 12 }}>
         {tab === "data" && (
           <>
-            <ManualInputsPanel area={area} onChange={props.onManualChange} />
+            <ManualInputsPanel
+              area={area}
+              score={score}
+              focusNonce={manualFocus}
+              onChange={props.onManualChange}
+            />
             <OpenDataPanel
               area={area}
               fruit={fruit}
@@ -256,6 +285,9 @@ export default function AreaDetail(props: Props) {
           </>
         )}
         {tab === "prehled" && <Overview score={score} area={area} />}
+        {tab === "vysadba" && props.planting && (
+          <PlantingPlanPanel key={`${area.id}:${fruit}`} {...props.planting} />
+        )}
         {tab === "doporuceni" && (
           <RecommendationPanel
             area={area}

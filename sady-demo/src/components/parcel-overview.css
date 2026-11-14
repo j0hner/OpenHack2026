@@ -1,12 +1,51 @@
+.overview-filter-disclosure {
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.overview-filter-disclosure > summary {
+  cursor: pointer;
+  min-height: 40px;
+  padding: 10px 13px;
+  color: var(--green-700);
+  font-size: 12px;
+  font-weight: 600;
+}
+.overview-filter-disclosure > summary > svg {
+  vertical-align: middle;
+  margin-inline-end: 6px;
+}
+.overview-filter-disclosure > summary > small {
+  display: inline-block;
+  min-width: 20px;
+  margin-inline-start: 7px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--green-050);
+  color: var(--ink);
+  font-size: 10px;
+  text-align: center;
+}
+.overview-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
 .parcel-overview-filters {
   display: grid;
   grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(150px, 1fr));
   gap: 12px;
   align-items: end;
   padding: 15px;
-  border: 1px solid var(--line);
+  border-top: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 10px;
+  border-radius: 0 0 9px 9px;
 }
 .parcel-overview-filters .field {
   margin: 0;

@@ -133,3 +133,81 @@ html[data-theme="dark"] .manual-input-note textarea {
 .parcel-card .manual-inputs-panel > summary strong {
   font-size: 11px;
 }
+.analysis-data-status.needs-input,
+html[data-theme="dark"] .analysis-data-status.needs-input {
+  border: 2px solid var(--amber-line);
+  background: var(--amber-bg);
+  color: var(--ink);
+  padding: 12px;
+}
+.analysis-data-status.needs-input > svg {
+  color: var(--amber);
+  flex-shrink: 0;
+}
+.analysis-data-status.needs-input strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 13px;
+}
+.analysis-data-status.needs-input span {
+  display: block;
+  line-height: 1.5;
+}
+.analysis-data-status.needs-input p {
+  margin: 7px 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.analysis-data-status.needs-input .btn {
+  min-height: 40px;
+  white-space: normal;
+  margin: 6px 0 9px;
+}
+.manual-inputs-panel.needs-input {
+  border: 2px solid var(--amber-line);
+}
+.manual-inputs-priority {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 10px 0;
+}
+.manual-input-field.is-needed {
+  border: 1px solid var(--amber-line);
+  background: var(--amber-bg);
+  border-radius: 8px;
+  padding: 10px;
+}
+.manual-input-field-heading {
+  display: grid;
+  gap: 4px;
+}
+.manual-input-origin {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.manual-input-origin.needed {
+  color: var(--amber);
+  font-weight: 600;
+}
+.manual-input-origin.manual {
+  color: var(--green-700);
+}
+.manual-input-help {
+  font-style: normal;
+}
+.manual-other-fields {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 8px;
+}
+.manual-other-fields > summary {
+  font-size: 11px;
+  cursor: pointer;
+  min-height: 34px;
+  align-content: center;
+  color: var(--green-700);
+}

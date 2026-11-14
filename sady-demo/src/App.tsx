@@ -17,6 +17,13 @@ import Dialog from "./components/Dialog";
 import ThemeToggle from "./components/ThemeToggle";
 import CategoryScenarios from "./components/CategoryScenarios";
 import ParcelOverview from "./components/ParcelOverview";
+import type { PlantingPlanPanelProps } from "./components/PlantingPlanPanel";
+import { usePlantingLayout } from "./lib/usePlantingLayout";
+import {
+  matchingPlantingPlan,
+  type AppliedPlantingPlan,
+  type PlantingPlansByArea,
+} from "./lib/plantingPlan";
 import { normalizeManualInputs, type ManualInputs } from "./lib/manualInputs";
 import {
   normalizeCategoryState,
@@ -120,9 +127,10 @@ function restoreWorking(boot: Partial<PersistedState> | null): AnalysisArea[] {
   ];
 }
 const rawSource = (source: AnalysisArea): AnalysisArea => {
-  const { regional, manualInputs, ...rest } = source;
+  const { regional, manualInputs, plantingPlan, ...rest } = source;
   void regional;
   void manualInputs;
+  void plantingPlan;
   return rest;
 };
 
@@ -149,6 +157,13 @@ export default function App() {
   const [manualByArea, setManualByArea] = useState<
     Record<string, ManualInputs>
   >(boot?.manualByArea ?? {});
+  const [plantingPlans, setPlantingPlans] = useState<PlantingPlansByArea>(
+    boot?.plantingPlans ?? {},
+  );
+  const [plantingVisible, setPlantingVisible] = useState(
+    boot?.plantingVisible !== false,
+  );
+  const [plantingMapNonce, setPlantingMapNonce] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>(
     boot?.selectedIds ?? [],
   );
@@ -201,8 +216,17 @@ export default function App() {
           : undefined,
         name: names[a.id] ?? a.name,
         manualInputs: manualByArea[a.id],
+        plantingPlan: plantingPlans[a.id]?.[fruitByArea[a.id] ?? fruit],
       })),
-    [parcels, workingAreas, names, manualByArea],
+    [
+      parcels,
+      workingAreas,
+      names,
+      manualByArea,
+      plantingPlans,
+      fruitByArea,
+      fruit,
+    ],
   );
   const { areas, retry } = useRegionalData(sourceAreas, [
     ...new Set([...selectedIds, ...(activeId ? [activeId] : [])]),
@@ -218,6 +242,13 @@ export default function App() {
   );
   const currentFruit = active ? areaFruit(active.id) : fruit;
   const inputs = economics[currentFruit];
+  const applyPlanting = useCallback((id: string, plan: AppliedPlantingPlan) => {
+    setPlantingPlans((previous) => ({
+      ...previous,
+      [id]: { ...previous[id], [plan.fruit]: plan },
+    }));
+  }, []);
+  const planting = usePlantingLayout(active, currentFruit, applyPlanting);
   const evaluate = useCallback(
     (a: AnalysisArea, f: FruitKey) => scoreRegionalArea(a, f),
     [],
@@ -268,6 +299,8 @@ export default function App() {
       parcelCategories: categoryState.categories,
       categoryByArea: categoryState.assignments,
       manualByArea,
+      plantingPlans,
+      plantingVisible,
       fruit,
       fruitByArea,
       irrigation,
@@ -296,6 +329,8 @@ export default function App() {
     history,
     categoryState,
     manualByArea,
+    plantingPlans,
+    plantingVisible,
   ]);
   useEffect(() => {
     if (!toast) return;
@@ -376,6 +411,11 @@ export default function App() {
         delete next[a.id];
         return next;
       });
+      setPlantingPlans((previous) => {
+        const next = { ...previous };
+        delete next[a.id];
+        return next;
+      });
     }
     setParcels((previous) => [...previous.filter((p) => p.id !== a.id), a]);
     setSelectedIds((ids) => [...new Set([...ids, a.id])]);
@@ -421,6 +461,11 @@ export default function App() {
       ),
     );
     setManualByArea((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) => !removed.has(id)),
+      ),
+    );
+    setPlantingPlans((previous) =>
       Object.fromEntries(
         Object.entries(previous).filter(([id]) => !removed.has(id)),
       ),
@@ -555,6 +600,13 @@ export default function App() {
         ),
       ),
     );
+    setPlantingPlans((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(
+          ([id]) => !record.childIds.includes(id),
+        ),
+      ),
+    );
     setCategoryState((previous) => {
       const assignments = { ...previous.assignments };
       for (const id of record.childIds) delete assignments[id];
@@ -633,6 +685,41 @@ export default function App() {
     if (next === "mapa") setMobileList(false);
   };
   const closeAnalysis = useCallback(() => setView("mapa"), []);
+  const plantingPanelProps: PlantingPlanPanelProps | undefined = active
+    ? {
+        area: active,
+        fruit: currentFruit,
+        applied: matchingPlantingPlan(active, currentFruit),
+        layout: planting.layout,
+        busy: planting.busy,
+        error: planting.error,
+        onGenerate: (settings, profileId) => {
+          setPlantingVisible(true);
+          planting.calculate(settings, profileId);
+        },
+        onClear: () => {
+          planting.clear();
+          setPlantingPlans((previous) => {
+            const next = { ...previous },
+              records = { ...next[active.id] };
+            delete records[currentFruit];
+            if (Object.keys(records).length) next[active.id] = records;
+            else delete next[active.id];
+            return next;
+          });
+        },
+        onShowMap: () => {
+          setView("mapa");
+          setDetailOpen(true);
+          setMobileList(false);
+          setPlantingVisible(true);
+          setPlantingMapNonce((value) => value + 1);
+          setFocus({ bbox: bboxOf(active.geometry), nonce: Date.now() });
+        },
+        showOnMap: plantingVisible,
+        onVisibilityChange: setPlantingVisible,
+      }
+    : undefined;
   const fullDetailProps =
     active && ranking
       ? {
@@ -657,6 +744,7 @@ export default function App() {
           onOpenCompare: () => setView("pozemky"),
           onRetryData: () => retry(active),
           onManualChange,
+          planting: active ? plantingPanelProps : undefined,
         }
       : null;
   return (
@@ -758,6 +846,10 @@ export default function App() {
           layers={layers}
           focus={focus}
           detailOpen={detailOpen && view === "mapa"}
+          plantingLayout={
+            plantingVisible && !splitSourceId ? planting.layout : null
+          }
+          plantingFruit={currentFruit}
           splitMode={!!splitSourceId}
           splitPoints={splitPoints}
           splitPreview={split.parts}
@@ -803,6 +895,8 @@ export default function App() {
                 onRetryData={() => retry(active)}
                 onManualChange={onManualChange}
                 onEconomicsChange={onEconomicsChange}
+                planting={plantingPanelProps}
+                plantingMapNonce={plantingMapNonce}
               />
             </div>
           )}
@@ -990,7 +1084,7 @@ export default function App() {
                     />
                     <section className="individual-scenario">
                       <h2>
-                        Scénář jednotlivého pozemku
+                        Ekonomika pozemku
                         {active ? ` · ${active.name}` : ""}
                       </h2>
                       {active ? (

@@ -125,4 +125,10 @@ Uložený pozemek může mít vlastní reprezentativní HPJ, průměr teploty, s
 
 Tyto údaje jsou uživatelský vstup v localStorage, nikoli nový otevřený dataset. Ručně ovlivněné kategorie mají konzervativní faktor kvality 40 %, ostatní regionální kategorie 60 %. Barva Dostupnosti dat zůstává výhradně podle skutečných otevřených podkladů. Nové části/spojení automaticky nepřebírají ruční hodnoty jiné geometrie. Výpočet zůstává orientační vhodností; pH, humus, hloubka ani předpověď výnosu z něj nevznikají.
 
+Chybějící podklad nyní doprovází přímá výzva k doplnění. Formulář upřednostní neznámé hodnoty, přizná původ každého vstupu a poskytne stručné vysvětlení jednotek. Probíhající načítání se za potvrzenou mezeru nepovažuje.
+
+## Odborný podklad rozmístění stromů
+
+Nový plánovač používá stávající otevřenou geometrii parcel a malý soubor nastavitelných profilů rozestupů podle [MENDELU](https://web2.mendelu.cz/af_291_projekty/files/10/skripta/index.php?I=8&J=0&K=0&N=4). Tento podklad je označený jako odborná reference/modelové nastavení, nikoli jako měřené otevřené údaje. Odborný text se nestahuje do datového balíku, jeho licence se nezaměňuje s CC BY prostorových zdrojů. Rozmístění je odvozený návrh v geometrii, ne nový dataset poloh existujících stromů. Podrobnosti jsou v [PLANTING.md](PLANTING.md).
+
 Barva neoznačuje 60% konzervativní kvalitu regionálního modelu jako procento dostupnosti. Zelené 3/3 nenahrazuje půdní rozbor, pH, humus, mikroklima, záplavy ani právní posouzení. Cache výřezu: nejvýše 12 výsledků na 2 minuty v paměti, průniky nejvýše 1200 geometrií. Barva existující analýzy se použije pouze při shodě klíče celé geometrie.

@@ -63,19 +63,25 @@ Světlý a tmavý režim se přepíná tlačítkem slunce/měsíce v hlavičce; 
 
 ## Kategorie a společné scénáře
 
-V seznamu pozemků lze vytvářet, přejmenovávat a mazat vlastní kategorie. Pozemky se přiřazují jednotlivě přes nabídku nebo hromadně pro označený výběr. Filtr kategorií nemění uložené geometrie. Vedle vlastního názvu se nenápadně zachová skutečné parcelní číslo.
+Volitelné kategorie jsou v seznamu schované v jediném rozbalení **Kategorie**. Uvnitř lze vytvářet, přejmenovávat, mazat, filtrovat a hromadně přiřazovat kategorie; jednotlivé přiřazení je také v nabídce pozemku. Filtr kategorií nemění uložené geometrie. Vedle vlastního názvu se nenápadně zachová skutečné parcelní číslo.
 
 Obrazovka **Scénáře** sčítá investice, tržby, náklady, stromy a peněžní toky celé zvolené kategorie podle ovocného druhu a vstupů jednotlivých pozemků. Návratnost se vypočte ze společného toku. Překryv rodiče a jeho částí souhrn zablokuje. Při rozdělení se členství převede na části; vrácení obnoví původní kategorii. Spojení parcel ze stejné kategorie převede členství na novou plochu, původní parcely zůstanou uložené.
 
-**Odstranit vybrané** vyžaduje potvrzení s počtem a názvy a funguje i pro nesousedící pozemky. Odstraní související výběr, přiřazení a neplatnou historii dělení, aniž smaže samotnou kategorii. Kategorie i členství se ukládají v localStorage.
+**Odstranit vybrané** funguje i pro nesousedící pozemky a maže přímo bez potvrzovacího kroku. Stejně funguje jednotlivé mazání a odstranění kategorie. Odstranění pozemků vyčistí související výběr, přiřazení, plán výsadby a neplatnou historii dělení, aniž smaže samotnou kategorii. Kategorie i členství se ukládají v localStorage.
+
+## Rozmístění stromů
+
+V záložce **Výsadba** lze navrhnout skutečné polohy stromů a řady podle hranic pozemku, sponu a odstupů. Osm profilů pro pět druhů vychází z odborného podkladu MENDELU. Výpočet na pozadí porovná směry/posuny řad, vynechá otvory a provozní rezervy a zobrazí výsledek na mapě; podporuje vlastní spon, ruční orientaci a GeoJSON export. Rozdělené i spojené plochy dostávají vlastní výpočet, bez kopírování bodů rodiče.
+
+Platný počet stromů používá i ekonomika pro sazenice a náklady na strom. Výnos t/ha zůstává uživatelský předpoklad; geometrie jej nepotvrzuje. Nastavení a souhrn se ukládají, body se po obnovení rekonstruují. Podrobnosti, zdroj, výkonnostní limity a omezení jsou v [dokumentaci výsadby](docs/PLANTING.md).
 
 Prověřené návrhy dalšího doplnění dat a způsob jejich napojení jsou v [přehledu DMR 5G, historie ČHMÚ a ALADIN](docs/DATA_CANDIDATES.md); zatím nejsou přidané do modelu.
 
 ## Model a omezení
 
-V detailu pozemku na kartě **Data** (v analýze **Data a nejistoty**) lze doplnit nebo přepsat vstupy vhodnosti: reprezentativní HPJ, průměrnou roční teplotu, srážky, ET0, jarní mrazové dny a letní dny. Prázdné pole používá dostupný otevřený podklad; prázdno nikdy neznamená nulu. Ruční hodnoty vytvářejí označený uživatelský scénář a lze je odstranit pro návrat k otevřeným datům. Nezvyšují dostupnost otevřených dat na mapě a nejsou doplněnou historickou řadou. Platí pro konkrétní uloženou geometrii; nově rozdělené či spojené plochy je automaticky nepřebírají.
+V detailu pozemku na kartě **Data** (v analýze **Data a nejistoty**) lze doplnit nebo přepsat vstupy vhodnosti: reprezentativní HPJ, průměrnou roční teplotu, srážky, ET0, jarní mrazové dny a letní dny. Při potvrzeném nedostatku podkladů nebo chybě zdroje vede výrazné tlačítko rovnou do otevřeného formuláře na první potřebné pole. Chybějící hodnoty jsou nahoře zvýrazněné, dostupné mají přiznaný původ a jsou při doplňování schované v podrobnostech. Prázdné pole používá dostupný otevřený podklad; prázdno nikdy neznamená nulu. Ruční hodnoty vytvářejí označený uživatelský scénář a lze je odstranit pro návrat k otevřeným datům. Nezvyšují dostupnost otevřených dat na mapě a nejsou doplněnou historickou řadou. Platí pro konkrétní uloženou geometrii; nově rozdělené či spojené plochy je automaticky nepřebírají.
 
-Analýzy po otevření navigací čekají na výběr pozemku. Změna pozemku v této obrazovce zachová otevřenou analýzu; výběr jinde otevře mapu. V přehledu Pozemky lze řadit vzestupně i sestupně a kombinovat ovocný druh, výměru, vhodnost a hledání. Nehodnocené pozemky nemají nulové skóre. Celý individuální ekonomický výpočet je sbalený pod **Modelový výsledek pro daný ovocný druh**; vysvětlivka na stránce Scénáře popisuje význam variant.
+Analýzy po otevření navigací čekají na výběr pozemku. Změna pozemku v této obrazovce zachová otevřenou analýzu; výběr jinde otevře mapu. V přehledu Pozemky lze řadit vzestupně i sestupně a kombinovat ovocný druh, výměru, vhodnost a hledání. Ovladače jsou schované pod **Filtr**, aktivní podmínky a reset zůstávají dostupné i po sbalení. Nehodnocené pozemky nemají nulové skóre. **Scénář vašeho pozemku** obsahuje samostatně rozbalitelné vstupy; **Modelový výsledek pro daný ovocný druh** odděleně výsledky a grafy. Vysvětlivka na stránce Scénáře popisuje význam variant.
 
 Skutečná vstupní data se kombinují s explicitními orientačními pěstitelskými pravidly: půda 35 %, klima 40 %, vláha 25 %. Skóre není validovaná pravděpodobnost úspěchu ani předpověď výnosu. Chybějící povinné podklady znamenají **Nedostatek dat**, nikoli příznivý výsledek. Klima patří regionálnímu gridu; pH, humus, mikroklima, Q100 a právní přístup nejsou ověřené.
 

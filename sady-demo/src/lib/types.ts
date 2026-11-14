@@ -82,6 +82,7 @@ export interface AreaLocation {
 }
 
 export interface AnalysisArea {
+  plantingPlan?: import("./plantingPlan").AppliedPlantingPlan;
   /** Unverified user inputs for a planning scenario; never open-data observations. */
   manualInputs?: ManualInputs;
   regional?: {
@@ -106,7 +107,11 @@ export interface AnalysisArea {
   kind: AreaKind;
   landUse: string;
   geometry: AreaGeometry;
-  cadastral?: { id: string; officialAreaM2: number | null; parcelNumber?: string };
+  cadastral?: {
+    id: string;
+    officialAreaM2: number | null;
+    parcelNumber?: string;
+  };
   location: AreaLocation;
   attributes: AreaAttributes;
   availability: AvailabilityMap;
