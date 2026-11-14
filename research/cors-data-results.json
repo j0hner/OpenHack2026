@@ -1,0 +1,131 @@
+{
+  "origin": "https://sady-demo.github.io",
+  "checkedAt": "2026-11-13T16:12:57.246Z",
+  "method": "GET with Origin; not a browser test",
+  "results": [
+    {
+      "name": "ruian-parcel-query",
+      "url": "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/5/query?where=1%3D1&geometry=16.6%2C48.9&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=id,cisloparcely,vymeraparcely,druhpozemkukod,katastralniuzemi&outSR=4326&f=geojson",
+      "finalUrl": "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/5/query?where=1%3D1&geometry=16.6%2C48.9&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=id,cisloparcely,vymeraparcely,druhpozemkukod,katastralniuzemi&outSR=4326&f=geojson",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/geo+json; charset=UTF-8",
+      "bytes": 12736,
+      "truncated": false,
+      "elapsedMs": 199,
+      "bodyPreview": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[16.58670562008869,48.898836322426135],[16.58710548879591,48.897937910572978],[16.587599722794312,48.896836746863769]"
+    },
+    {
+      "name": "ruian-bpej-query",
+      "url": "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28/query?where=1%3D1&geometry=16.6%2C48.9&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson",
+      "finalUrl": "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28/query?where=1%3D1&geometry=16.6%2C48.9&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/geo+json; charset=UTF-8",
+      "bytes": 42,
+      "truncated": false,
+      "elapsedMs": 152,
+      "bodyPreview": "{\"type\":\"FeatureCollection\",\"features\":[]}"
+    },
+    {
+      "name": "lpis-dpb-feature",
+      "url": "https://mze.gov.cz/public/app/wms/plpis_wfs.fcgi?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=LPIS_DPB_UCINNE&SRSNAME=EPSG:5514&BBOX=-600000,-1200000,-599900,-1199900&MAXFEATURES=1",
+      "finalUrl": "https://mze.gov.cz/public/app/wms/plpis_wfs.fcgi?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=LPIS_DPB_UCINNE&SRSNAME=EPSG:5514&BBOX=-600000,-1200000,-599900,-1199900&MAXFEATURES=1",
+      "status": 200,
+      "accessControlAllowOrigin": "*",
+      "accessControlAllowCredentials": null,
+      "contentType": "text/xml",
+      "bytes": 732,
+      "truncated": false,
+      "elapsedMs": 207,
+      "bodyPreview": "<?xml version='1.0' encoding=\"UTF-8\" ?>\n<wfs:FeatureCollection\n   xmlns:ms=\"http://mapserver.gis.umn.edu/mapserver\"\n   xmlns:wfs=\"http://www.opengis.net/wfs\"\n   xmlns:gml=\"http://www.opengis.net/gml\"\n   xmlns:ogc=\"http:/"
+    },
+    {
+      "name": "lpis-bpej-feature",
+      "url": "https://mze.gov.cz/public/app/wms/plpis_wfs.fcgi?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=BPEJ_WFS&SRSNAME=EPSG:5514&BBOX=-600000,-1200000,-599900,-1199900&MAXFEATURES=1",
+      "finalUrl": "https://mze.gov.cz/public/app/wms/plpis_wfs.fcgi?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=BPEJ_WFS&SRSNAME=EPSG:5514&BBOX=-600000,-1200000,-599900,-1199900&MAXFEATURES=1",
+      "status": 200,
+      "accessControlAllowOrigin": "*",
+      "accessControlAllowCredentials": null,
+      "contentType": "text/xml",
+      "bytes": 2996,
+      "truncated": false,
+      "elapsedMs": 304,
+      "bodyPreview": "<?xml version='1.0' encoding=\"UTF-8\" ?>\n<wfs:FeatureCollection\n   xmlns:ms=\"http://mapserver.gis.umn.edu/mapserver\"\n   xmlns:wfs=\"http://www.opengis.net/wfs\"\n   xmlns:gml=\"http://www.opengis.net/gml\"\n   xmlns:ogc=\"http:/"
+    },
+    {
+      "name": "chmi-station-metadata",
+      "url": "https://opendata.chmi.cz/meteorology/climate/historical/metadata/meta1.json",
+      "finalUrl": "https://opendata.chmi.cz/meteorology/climate/historical/metadata/meta1.json",
+      "status": 200,
+      "accessControlAllowOrigin": null,
+      "accessControlAllowCredentials": null,
+      "contentType": "application/json",
+      "bytes": 664127,
+      "truncated": false,
+      "elapsedMs": 126,
+      "bodyPreview": "{\n  \"zaznamID\": \"61319f97-ef3d-8403-e99c-8ed21ca70356\",\n  \"datovyZdrojID\": \"meteorologie\",\n  \"datovyTokID\": \"Open.Data.Metadata\",\n  \"datumVytvoreni\": \"2026-11-06T14:43:19.287Z\",\n  \"verzeDat\": \"1.0\",\n  \"data\":\n{\n \"type\": "
+    },
+    {
+      "name": "chmi-station-daily",
+      "url": "https://opendata.chmi.cz/meteorology/climate/historical/data/daily/dly-0-20000-0-11406.json",
+      "finalUrl": "https://opendata.chmi.cz/meteorology/climate/historical/data/daily/dly-0-20000-0-11406.json",
+      "status": 200,
+      "accessControlAllowOrigin": null,
+      "accessControlAllowCredentials": null,
+      "contentType": "application/json",
+      "bytes": 2101191,
+      "truncated": true,
+      "elapsedMs": 204,
+      "bodyPreview": "{\n  \"zaznamID\": \"c470879e-74d6-b86d-0910-12953366b0b2\",\n  \"datovyZdrojID\": \"meteorologie\",\n  \"datovyTokID\": \"Open.Data.1D\",\n  \"datumVytvoreni\": \"2026-09-04T10:30:13.818Z\",\n  \"verzeDat\": \"1.0\",\n  \"data\":\n{\n \"type\": \"DataC"
+    },
+    {
+      "name": "csu-fruit-data",
+      "url": "https://data.csu.gov.cz/opendata/sady/ZEM03D/distribuce/json",
+      "finalUrl": "https://data.csu.gov.cz/opendata/sady/ZEM03D/distribuce/json",
+      "status": 200,
+      "accessControlAllowOrigin": "*",
+      "accessControlAllowCredentials": null,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 655408,
+      "truncated": false,
+      "elapsedMs": 117,
+      "bodyPreview": "{\n  \"version\" : \"2.0\",\n  \"class\" : \"dataset\",\n  \"href\" : \"https://data.csu.gov.cz/api/dotaz/v1/data/sady/ZEM03D?verze=1&poznamky=true&rozsah=CELY_VYBER&format=JSON_STAT&casPlatnosti=2026-02-25T08%3A00%3A00Z\",\n  \"label\" :"
+    },
+    {
+      "name": "agrifood-price-data",
+      "url": "https://api.tech.ec.europa.eu/agrifood/api/fruitAndVegetable/pricesSupplyChain?memberStateCodes=CZ&years=2025&beginDate=01%2F01%2F2025&endDate=08%2F01%2F2025",
+      "error": "TypeError: fetch failed",
+      "cause": "Error: read ECONNRESET",
+      "elapsedMs": 47689
+    },
+    {
+      "name": "vuv-wfs-capabilities",
+      "url": "https://ags2.vuv.cz/arcgis/services/isvs_voda/isvs_voda/MapServer/WFSServer?SERVICE=WFS&REQUEST=GetCapabilities",
+      "finalUrl": "https://ags2.vuv.cz/arcgis/services/isvs_voda/isvs_voda/MapServer/WFSServer?SERVICE=WFS&REQUEST=GetCapabilities",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "text/xml",
+      "bytes": 29225,
+      "truncated": false,
+      "elapsedMs": 455,
+      "bodyPreview": "<WFS_Capabilities xmlns=\"http://www.opengis.net/wfs/2.0\" xmlns:fes=\"http://www.opengis.net/fes/2.0\" xmlns:ogc=\"http://www.opengis.net/ogc\" xmlns:gml=\"http://www.opengis.net/gml/3.2\" xmlns:ows=\"http://www.opengis.net/ows/"
+    },
+    {
+      "name": "vuv-rest-metadata",
+      "url": "https://ags2.vuv.cz/arcgis/rest/services/isvs_voda/isvs_voda/MapServer?f=json",
+      "finalUrl": "https://ags2.vuv.cz/arcgis/rest/services/isvs_voda/isvs_voda/MapServer?f=json",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/json;charset=UTF-8",
+      "bytes": 5867,
+      "truncated": false,
+      "elapsedMs": 446,
+      "bodyPreview": "{\"currentVersion\":10.91,\"cimVersion\":\"2.9.0\",\"serviceDescription\":\"ISVS\",\"mapName\":\"Layers\",\"description\":\"ISVS\",\"copyrightText\":\"\",\"supportsDynamicLayers\":true,\"layers\":[{\"id\":0,\"name\":\"CHOPAV\",\"parentLayerId\":-1,\"defau"
+    }
+  ]
+}

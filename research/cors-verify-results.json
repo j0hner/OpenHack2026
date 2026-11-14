@@ -1,0 +1,85 @@
+{
+  "origin": "https://sady-demo.github.io",
+  "checkedAt": "2026-11-13T16:14:11.672Z",
+  "method": "GET with Origin; not a browser test",
+  "results": [
+    {
+      "name": "ruian-bpej-area",
+      "url": "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28/query?where=1%3D1&geometry=-600000%2C-1200000%2C-599000%2C-1199000&geometryType=esriGeometryEnvelope&inSR=5514&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultRecordCount=1",
+      "finalUrl": "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28/query?where=1%3D1&geometry=-600000%2C-1200000%2C-599000%2C-1199000&geometryType=esriGeometryEnvelope&inSR=5514&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultRecordCount=1",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/geo+json; charset=UTF-8",
+      "bytes": 19751,
+      "truncated": false,
+      "elapsedMs": 209,
+      "bodyPreview": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":42618,\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[16.658002968712896,48.859011517658708],[16.657964810298662,48.859101068194306],[16.657897476975663,48.859"
+    },
+    {
+      "name": "lpis-dpb-area",
+      "url": "https://mze.gov.cz/public/app/wms/plpis_wfs.fcgi?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=LPIS_DPB_UCINNE&SRSNAME=EPSG:5514&BBOX=-601000,-1201000,-598000,-1198000&MAXFEATURES=1",
+      "finalUrl": "https://mze.gov.cz/public/app/wms/plpis_wfs.fcgi?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=LPIS_DPB_UCINNE&SRSNAME=EPSG:5514&BBOX=-601000,-1201000,-598000,-1198000&MAXFEATURES=1",
+      "status": 200,
+      "accessControlAllowOrigin": "*",
+      "accessControlAllowCredentials": null,
+      "contentType": "text/xml",
+      "bytes": 2519,
+      "truncated": false,
+      "elapsedMs": 328,
+      "bodyPreview": "<?xml version='1.0' encoding=\"UTF-8\" ?>\n<wfs:FeatureCollection\n   xmlns:ms=\"http://mapserver.gis.umn.edu/mapserver\"\n   xmlns:wfs=\"http://www.opengis.net/wfs\"\n   xmlns:gml=\"http://www.opengis.net/gml\"\n   xmlns:ogc=\"http:/"
+    },
+    {
+      "name": "dmr5g-identify-spatialref",
+      "url": "https://ags.cuzk.gov.cz/arcgis2/rest/services/dmr5g/ImageServer/identify?geometry=%7B%22x%22%3A16.6%2C%22y%22%3A48.9%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=false&f=json",
+      "finalUrl": "https://ags.cuzk.gov.cz/arcgis2/rest/services/dmr5g/ImageServer/identify?geometry=%7B%22x%22%3A16.6%2C%22y%22%3A48.9%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=false&f=json",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/json; charset=UTF-8",
+      "bytes": 264,
+      "truncated": false,
+      "elapsedMs": 138,
+      "bodyPreview": "{\"objectId\":0,\"name\":\"Pixel\",\"value\":\"170.096\",\"location\":{\"x\":-602272.20799864305,\"y\":-1193316.2391428445,\"spatialReference\":{\"wkid\":102067,\"latestWkid\":5514,\"vcsWkid\":8357,\"latestVcsWkid\":8357}},\"properties\":null,\"cata"
+    },
+    {
+      "name": "vuv-q100-query",
+      "url": "https://ags2.vuv.cz/arcgis/rest/services/isvs_voda/isvs_voda/MapServer/13/query?where=1%3D1&geometry=16.6%2C48.9&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&f=json",
+      "finalUrl": "https://ags2.vuv.cz/arcgis/rest/services/isvs_voda/isvs_voda/MapServer/13/query?where=1%3D1&geometry=16.6%2C48.9&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&f=json",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/json;charset=UTF-8",
+      "bytes": 1119,
+      "truncated": false,
+      "elapsedMs": 90,
+      "bodyPreview": "{\"displayFieldName\":\"NAZ_TOK\",\"fieldAliases\":{\"OBJECTID\":\"FID\",\"TOK_ID\":\"TOK_ID\",\"NAZ_TOK\":\"NAZ_TOK\",\"IDVT\":\"IDVT\",\"TOKREC_ID\":\"TOKREC_ID\",\"REC_NAZ\":\"REC_NAZ\",\"MAX_UTOKJN\":\"MAX_UTOKJN\",\"Shape_Length\":\"Shape_Length\",\"Shap"
+    },
+    {
+      "name": "aopk-geojson",
+      "url": "https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/0/query?where=1%3D1&geometry=16.5%2C48.8%2C16.6%2C48.9&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultRecordCount=1",
+      "finalUrl": "https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/0/query?where=1%3D1&geometry=16.5%2C48.8%2C16.6%2C48.9&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultRecordCount=1",
+      "status": 200,
+      "accessControlAllowOrigin": "https://sady-demo.github.io",
+      "accessControlAllowCredentials": "true",
+      "contentType": "application/geo+json; charset=UTF-8",
+      "bytes": 61798,
+      "truncated": false,
+      "elapsedMs": 119,
+      "bodyPreview": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":24,\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[16.644738013993557,48.888148127200083],[16.644554584436655,48.888147591162287],[16.644376169183882,48.888164"
+    },
+    {
+      "name": "overpass-roads",
+      "url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A10%5D%3Bway%5Bhighway%5D%28around%3A50%2C48.9%2C16.6%29%3Bout%20geom%3B",
+      "finalUrl": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A10%5D%3Bway%5Bhighway%5D%28around%3A50%2C48.9%2C16.6%29%3Bout%20geom%3B",
+      "status": 406,
+      "accessControlAllowOrigin": null,
+      "accessControlAllowCredentials": null,
+      "contentType": "text/html",
+      "bytes": 156,
+      "truncated": false,
+      "elapsedMs": 87,
+      "bodyPreview": "<html>\r\n<head><title>406 Not Acceptable</title></head>\r\n<body>\r\n<center><h1>406 Not Acceptable</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+    }
+  ]
+}
