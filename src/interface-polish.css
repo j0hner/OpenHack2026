@@ -58,6 +58,8 @@ html[data-theme="dark"] .provenance-panel > .secondary-view-header {
     width: 35px;
     height: 40px;
     padding: 3px;
+    background: #173724;
+    border-color: #244b32;
   }
   .expandable-parcel-detail {
     width: 100%;
