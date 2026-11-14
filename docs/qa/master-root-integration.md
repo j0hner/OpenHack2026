@@ -46,6 +46,8 @@ a neutrálním čekáním při HTTP 429 zůstává součástí aktivního modelu
 - Samostatný `build:sqlite-qa`: PASS, včetně skutečného SQLite Workeru a WASM.
 - Browserové testy jsou připojené k CI: sedm původních API/React průchodů a
   osmý průchod přes viditelné tlačítko s devíti SQLite kontrolami a úklidem.
+  Běží nad společným produkčním buildem v odděleném `dist-browser-tests/`,
+  aby je neukončilo automatické obnovení Vite dev serveru při nalezení nové závislosti.
   Výsledek konkrétního běhu je v GitHub Actions kontrolách integračního PR.
 - Lokální náhled je obnovený na `http://127.0.0.1:5181/` z kořenového `dist/`.
 

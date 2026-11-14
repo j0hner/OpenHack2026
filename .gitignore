@@ -11,6 +11,7 @@ work/
 test-results/
 playwright-report/
 dist-sqlite-qa/
+dist-browser-tests/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm

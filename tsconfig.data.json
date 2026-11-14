@@ -8,6 +8,6 @@
   },
   "include": [
     "src/data/index.ts", "src/data/db/worker.ts", "tests/**/*.ts",
-    "playwright.config.ts", "vite.sqlite-qa.config.ts"
+    "playwright.config.ts", "vite.sqlite-qa.config.ts", "vite.browser-tests.config.ts"
   ]
 }

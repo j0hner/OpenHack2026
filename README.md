@@ -27,7 +27,7 @@ npm run test:localities
 
 Použijte Node.js 24+. Produkční výstup je `dist/`, relativní `base: './'` funguje i v podadresáři GitHub Pages. Běžný build nepotřebuje obnovovat zdrojová data. Jediný instalační lockfile je `package-lock.json`; `node_modules` se neverzuje.
 
-`npm test` spustí všechny aplikační testy v Node.js. `npm run test:sqlite` ověřuje SQLite i hlavní rozhraní přes Playwright; před prvním spuštěním nainstalujte prohlížeč příkazem `npx playwright install chromium`.
+`npm test` spustí všechny aplikační testy v Node.js. `npm run test:sqlite` sestaví oddělený `dist-browser-tests/` a ověří produkční SQLite i hlavní rozhraní přes Playwright; před prvním spuštěním nainstalujte prohlížeč příkazem `npx playwright install chromium`. Používá volný port 5173 a nezasahuje do běžného vývojového serveru.
 
 ## Struktura a nasazení
 
