@@ -1,5 +1,6 @@
 # Moje Sady
 
+Tabule: https://excalidraw.com/#room=1e201f6f911c13cabd8d,-7MJLrhy6w7bKVjpEsktng
 Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a volitelný katastrální překryv. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
 
 ## Spuštění
