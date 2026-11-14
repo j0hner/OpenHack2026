@@ -1,3 +1,82 @@
+/* The supplied white apple stays legible on the dark navigation in both themes. */
+.app-brand > .app-brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 50px;
+  padding: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+.app-brand-mark > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.workspace-panel .provenance-panel > .secondary-view-header {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+html[data-theme="dark"] .provenance-panel > .secondary-view-header {
+  background: var(--surface);
+}
+.expandable-parcel-detail {
+  width: var(--parcel-detail-width, var(--detail-width));
+  height: var(--parcel-detail-height, auto);
+  max-width: calc(100% - 36px);
+}
+.expandable-parcel-detail > .parcel-card {
+  flex: 1 1 auto;
+  max-height: none;
+}
+.expandable-parcel-detail .parcel-card-title {
+  padding-right: 66px;
+}
+.parcel-expand {
+  position: absolute;
+  right: 42px;
+  top: 6px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  touch-action: none;
+  cursor: nwse-resize;
+  user-select: none;
+}
+@media (min-width: 901px) {
+  .header-actions .mobile-parcels-toggle {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .app-brand > .app-brand-mark {
+    width: 35px;
+    height: 40px;
+    padding: 3px;
+  }
+  .expandable-parcel-detail {
+    width: 100%;
+    max-width: 100%;
+  }
+  .expandable-parcel-detail.is-expanded {
+    max-height: calc(100% - 24px);
+  }
+  .expandable-parcel-detail .parcel-card-title {
+    padding-right: 78px;
+  }
+  .parcel-expand {
+    width: 40px;
+    height: 40px;
+    right: 52px;
+    cursor: ns-resize;
+  }
+}
+
 /* Keep the existing outer frames; their inset children own scrolling. */
 .workspace-panel {
   display: flex;

@@ -1,4 +1,5 @@
-import { useId, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   IconSearch,
   IconPlus,
@@ -21,6 +22,7 @@ import {
   type CategoryControl,
 } from "../lib/parcelCategories";
 import ParcelCategories from "./ParcelCategories";
+import Dialog from "./Dialog";
 import "./parcel-categories.css";
 import type { AnalysisArea, FruitKey, SuitabilityResult } from "../lib/types";
 interface Props {
@@ -40,7 +42,8 @@ interface Props {
   categoryControl?: CategoryControl;
 }
 export default function ParcelList(p: Props) {
-  const mergeDescriptionId = useId();
+  const [mergeWarning, setMergeWarning] = useState("");
+  const closeMergeWarning = useCallback(() => setMergeWarning(""), []);
   const [query, setQuery] = useState(""),
     [menu, setMenu] = useState<string | null>(null),
     [edit, setEdit] = useState<string | null>(null),
@@ -305,25 +308,18 @@ export default function ParcelList(p: Props) {
               <button
                 type="button"
                 className="btn merge-action"
-                onClick={() => setMerge(!merge)}
-                disabled={!mergeStatus.allowed}
-                aria-describedby={mergeDescriptionId}
+                onClick={() => {
+                  if (!mergeStatus.allowed) {
+                    setMerge(false);
+                    setMergeWarning(mergeStatus.reason);
+                    return;
+                  }
+                  setMerge(!merge);
+                }}
               >
                 <IconLayersIntersect size={17} />
                 Spojit vybrané ({p.selectedIds.length})
               </button>
-              <p
-                id={mergeDescriptionId}
-                className={`merge-eligibility${mergeStatus.allowed ? "" : " is-blocked"}`}
-                role="status"
-              >
-                {!mergeStatus.allowed && (
-                  <strong>
-                    Spojit lze pouze pozemky, které spolu sousedí.
-                  </strong>
-                )}
-                <span>{mergeStatus.reason}</span>
-              </p>
               {merge && mergeStatus.allowed && (
                 <form
                   className="inline-editor"
@@ -375,6 +371,20 @@ export default function ParcelList(p: Props) {
           pro spojení.
         </p>
       </div>
+      {mergeWarning &&
+        createPortal(
+          <Dialog title="Pozemky nelze spojit" onClose={closeMergeWarning}>
+            <p>{mergeWarning}</p>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={closeMergeWarning}
+            >
+              Rozumím
+            </button>
+          </Dialog>,
+          document.body,
+        )}
     </aside>
   );
 }
