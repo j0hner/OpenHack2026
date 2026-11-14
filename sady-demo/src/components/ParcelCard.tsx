@@ -118,15 +118,12 @@ export default function ParcelCard(props: ParcelCardProps) {
           value && !value.includes("neurčeno") && !value.includes("více území"),
       )
       .join(" · ") || "Lokalita podle polohy v mapě";
-  const dataLabel = !area.regional
-    ? "Demo scénář"
-    : area.kind === "sample"
-      ? "Ukázková geometrie · skutečná data"
-      : area.derivedFrom?.operation === "split"
-        ? "Uživatelská část · skutečná data"
-        : area.cadastral
-          ? "Parcela ČÚZK · skutečná data"
-          : "Pracovní plocha · skutečná data";
+  const dataLabel =
+    area.derivedFrom?.operation === "split"
+      ? "Uživatelská část · skutečná data"
+      : area.cadastral
+        ? "Parcela ČÚZK · skutečná data"
+        : "Pracovní plocha · skutečná data";
   const loading = area.regional?.status === "loading";
   const rootParcels = [...new Set(area.derivedFrom?.rootCadastralIds ?? [])]
     .filter((value) => /^\d+$/.test(value) && value !== area.cadastral?.id)
@@ -184,9 +181,7 @@ export default function ParcelCard(props: ParcelCardProps) {
           </span>
           <strong>{fmtHa(areaHa(area.geometry))}</strong>
         </div>
-        <span className={`parcel-data-kind ${area.regional ? "real" : "demo"}`}>
-          {dataLabel}
-        </span>
+        <span className={"parcel-data-kind real"}>{dataLabel}</span>
       </header>
       <nav
         className="parcel-card-tabs"
@@ -271,8 +266,7 @@ export default function ParcelCard(props: ParcelCardProps) {
               }
             />
             <p className="parcel-score-caption">
-              Pro {profile.name.toLocaleLowerCase("cs-CZ")} ·{" "}
-              {area.regional ? "regionální index" : "modelový scénář"}
+              Pro {profile.name.toLocaleLowerCase("cs-CZ")} · regionální index
             </p>
             {score.overall === null ? (
               <div className="parcel-risk missing" role="status">
@@ -364,7 +358,9 @@ export default function ParcelCard(props: ParcelCardProps) {
           <>
             <div className="parcel-section-heading">
               <h3>Výsadba: {profile.name}</h3>
-              <span className="parcel-data-kind demo">Modelový předpoklad</span>
+              <span className="parcel-data-kind assumption">
+                Modelový předpoklad
+              </span>
             </div>
             <div className="parcel-stats">
               <div>

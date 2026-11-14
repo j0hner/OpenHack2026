@@ -1,6 +1,6 @@
 # Moje Sady
 
-Statická React / TypeScript aplikace pro plánování ovocného sadu. Zdrojový projekt zůstává v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Moje Sady používají tmavě zelenou boční navigaci, světlý seznam pozemků a skutečnou interaktivní mapu. Logo i favicon jsou transparentní PNG exportované z dodaného zdrojového PSD.
+Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a volitelný katastrální překryv. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
 
 ## Spuštění
 
@@ -11,46 +11,53 @@ npm run dev
 npm run build
 npm run preview
 npm run data:verify
+npm run test:regional
+npm run test:geometry
 npm run test:localities
 ```
 
-Node.js 20.19+; pro stahovací skripty doporučen Node.js 22+. Produkční výstup je `sady-demo/dist/`, relativní `base: './'` funguje i v podadresáři GitHub Pages. Build ani prohlížení připravených dat nevyžaduje spuštění stahovacích skriptů.
+Node.js 20.19+; pro stahovací skripty Node.js 22+. Produkční výstup je `sady-demo/dist/`, relativní `base: './'` funguje i v podadresáři GitHub Pages. Běžný build nepotřebuje obnovovat zdrojová data.
 
-## Mapy a skutečné parcely
+## Výběr a přidání pozemku
 
-- Dva podklady: OpenStreetMap a letecké Ortofoto ČÚZK. Katastrální mapa je samostatný průhledný překryv.
-- Přepínač katastrální mapy ČÚZK. Přibližte alespoň na úroveň 14 a klikněte na parcelu: uloží se do seznamu a otevře plovoucí kartu s označením, lokalitou, výměrou, ovocným druhem a výsledkem. Odkaz do oficiálního katastru je dostupný v detailu; není nutný další krok „Přidat parcelu“.
-- Horní našeptávač hledá ve všech 6 254 skutečných obcích a městech ČR. Podporuje vyhledávání bez diakritiky, rozlišení okresy, šipky, Enter, Escape, vymazání a stavy načítání / chyby. Vybraná obec přiblíží mapu na své území. Při psaní se nevolá Nominatim ani jiný externí geokodér. Samostatné filtry kraje a obce jsou odstraněné.
-- Výběr položky v seznamu a výběr v mapě jsou propojené. Detail se otevře až po výběru v zavíratelné plovoucí kartě; na mobilu jako spodní panel. Označený dropdown **Ovocný druh** ovládá hodnocení, výsadbu a související ekonomický scénář. Jednotlivé uživatelské části mohou mít vlastní druh.
-- Skutečné geometrie zachovávají otvory a multipolygony. Výběr parcel, názvy, uživatelské části, zvolené ovoce a ekonomické vstupy se ukládají do localStorage. Kreslení nové vlastní parcely je odstraněné; kreslí se pouze dělicí čára vybraného pozemku.
+1. Vyhledejte obec horním našeptávačem. Pracuje lokálně se skutečnými 6 254 obcemi a městy RÚIAN, rozlišuje okresy a podporuje klávesnici.
+2. Přibližte mapu alespoň na úroveň 14 a klikněte na katastrální parcelu. Zobrazí se pouze dočasný náhled s číslem, druhem, výměrou a oficiálním odkazem.
+3. Teprve tlačítko **Přidat pozemek** uloží parcelu do vašeho seznamu. Zavření nebo jiný výběr nic neukládá. Vyhledání přes parcelní číslo také nejprve nabídne náhled.
+4. V uloženém detailu zvolte ovoce; hodnocení a ekonomika používají stejnou volbu. Pozemky lze pojmenovat, odstranit, rozdělit čárou a spojovat.
+
+Nově lze přidávat zemědělské druhy podle číselníku ČÚZK: orná půda, chmelnice, vinice, zahrada, ovocný sad a trvalý travní porost (kódy 2–8). Lesy, vodní a zastavěné plochy se nenabízejí. Ostatní plochy (14, včetně komunikací) a neurčené druhy aplikace konzervativně odmítá. Přípustný druh není potvrzením povolení výsadby ani dobrou půdní vlastností. Dříve uložené skutečné uživatelské parcely se při aktualizaci samovolně nemažou.
+
+Aplikace začíná prázdným seznamem. Syntetické plochy, ilustrační vrstvy a přepínání do demo režimu jsou odstraněné; migrace vyřadí i staré pracovní části odvozené ze syntetických ploch. Skutečné uživatelské parcely, jejich názvy, ovoce a pracovní geometrie zůstávají zachované. Není přítomný režim kreslení nové vlastní parcely ani samostatné filtry kraje/obce.
+
+## Dostupnost dat v mapě
+
+Ve **Vrstvách** zapněte **Dostupnost dat**. Barvy vyjadřují dostatek podkladů pro regionální index, nikoli vhodnost pro výsadbu. Základními vstupy jsou půda BPEJ, klimatické teploty/mrazy a vláha (srážky/ET0). Minimem je 80 % platného pokrytí BPEJ a 15 úplných let všech potřebných klimatických veličin. Dosud neprověřená parcela zůstává označená jako neprověřená; není vydávána za parcelu bez dat.
+
+Vrstva zpracovává omezený počet skutečných zemědělských parcel v aktuálním výřezu. V pěti připravených oblastech může použít skutečné lokální podklady, jinde se dostupnost upřesní z výsledku analýzy uloženého pozemku. Neprovádí hromadné dvacetileté klimatické požadavky pro každou parcelu v celé republice. Přesné limity a význam barev jsou uvedené v legendě a [dokumentaci dat](docs/OPEN_DATA.md).
 
 ## Připravená otevřená data
 
-Výřezy kolem pěti ukázkových lokalit obsahují 6 538 skutečných parcel, BPEJ, dvacetileté klimatické agregace a vybrané kategorie ochrany přírody. Parcely a analytika mají přibližně 5,8 MB; celý adresář otevřených dat včetně seznamu obcí a metadat přibližně 6,35 MB. Analytické soubory bez parcel mají dohromady přibližně 200 kB. Geometrie parcel se načítají pouze při výběru v dané lokalitě, nikoli při otevření stránky. Mimo výřezy se parcela i analytické podklady dohledávají živě podle souřadnic a geometrie.
+Pět regionálních výřezů obsahuje 6 538 skutečných parcel, BPEJ, klimatické agregace 2005–2024 a vybrané kategorie ochrany přírody. Celý distribuovaný balík včetně seznamu obcí a metadat má přibližně 6,35 MB; analytika bez parcel přibližně 200 kB. Načítání je dělené podle lokality a účelu.
 
-V režimu **Skutečná data** otevřete detailní analýzu a záložku **Data**. Zobrazí skutečné prostorové průniky BPEJ a AOPK, klima lokality a statistiky ČSÚ pro zvolený ovocný druh. Referenční cenu ČSÚ lze výslovně použít v ekonomice. Samostatný seznam obcí má přibližně 565 kB a načítá se až při použití vyhledávání.
+Geografické podklady zůstávají skutečnými otevřenými daty i po odstranění demonstračních scénářů. Staré interní názvy souborů `locations/demo-*.json` jsou kompatibilní identifikátory výřezů; jejich obsah je stažená geografie a klimatická reanalýza, nikoli ilustrační modely. Zdroj, licence, velikost a SHA-256 jsou v `public/data/manifest.json` a [úplném seznamu zdrojů](docs/OPEN_DATA.md).
 
-Úplný [seznam zdrojů, API, licencí a obnovovací postup](docs/OPEN_DATA.md) doplňuje strojový manifest `sady-demo/public/data/manifest.json` s velikostmi a kontrolními součty souborů.
+Mimo připravené výřezy se při analýze vybrané plochy BPEJ/AOPK dohledávají prostorově a klima podle souřadnic. ČSÚ poskytuje celostátní statistiky ovoce; referenční cenu lze výslovně převzít v ekonomice.
 
-## Samostatné pracovní plochy
+## Pracovní geometrie a uložení
 
-U uloženého pozemku lze změnit název nebo jej smazat. Odznačení je oddělené od smazání. Ukázky lze skrýt a obnovit resetem. Názvy, pracovní geometrie, volby ovoce a skryté ukázky přežijí obnovení stránky.
+Rozdělení používá přímý segment určený dvěma body přes vybraný pozemek. Náhled ukáže skutečné části a výměry; změnu lze potvrdit, zrušit a vrátit. Části mají vlastní ovoce a kořenovou vazbu na původní parcelu. Spojení sjednocuje překryvy, oddělené plochy zachovává jako MultiPolygon. Originály zůstávají uložené; nejde o právní změnu katastru.
 
-Akce **Rozdělit pozemek** pracuje s již vybranou geometrií. Uživatel zakreslí přímou dělicí čáru přes pozemek, zkontroluje náhled a výměry částí a rozdělení potvrdí nebo zruší. Čára musí polygon skutečně rozdělit; chybný, příliš krátký nebo tečný řez má srozumitelnou chybu. Potvrzené rozdělení lze vrátit zpět. Části si uchovávají vazbu na původní plochu, dostanou vlastní ID a lze je samostatně vybírat, pojmenovat, smazat a přiřadit jim ovocný druh.
-
-Spojením vybraných ploch vznikne jedna pracovní geometrie bez dvojího započtení překryvů; oddělené části tvoří MultiPolygon. Originály zůstávají uložené. Nové plochy se hodnotí podle vlastní geometrie, nikoli zkopírovanými hodnotami rodiče. Katastrální hranice a vlastnictví se nemění. U rozsáhlých / rozptýlených geometrií se regionální index může odmítnout kvůli nedostatečné reprezentativnosti jednoho klimatického bodu.
+Názvy, parcely, pracovní geometrie, druhy ovoce a posledních deset rozdělení jsou uložené v localStorage tohoto prohlížeče. Výsledky prostorové analýzy se cachují podle geometrie, nejvýše 30 záznamů na 7 dní. Nová geometrie získává vlastní podklady, nikoli zkopírované hodnoty rodiče.
 
 ## Model a omezení
 
-Výchozí režim **Skutečná otevřená data** počítá regionální index i pořadí ovocných druhů z podkladů přiřazených konkrétní geometrii. Půda: plošné podíly BPEJ a orientační pravidla dle skupin HPJ (váha 35 %). Klima: teplota, jarní mrazové a letní dny (40 %). Vláha: srážky a ET0 (25 %). Je potřeba alespoň 80 % platného pokrytí BPEJ a 15 úplných klimatických let. Jinak je celkové skóre **Nedostatek dat**, dostupné kategorie zůstávají viditelné. Index není validovaná pravděpodobnost úspěchu ani předpověď výnosu. Původní označené scénáře lze zvolit v **Nastavení → Režim hodnocení → Označené demo scénáře**.
+Skutečná vstupní data se kombinují s explicitními orientačními pěstitelskými pravidly: půda 35 %, klima 40 %, vláha 25 %. Skóre není validovaná pravděpodobnost úspěchu ani předpověď výnosu. Chybějící povinné podklady znamenají **Nedostatek dat**, nikoli příznivý výsledek. Klima patří regionálnímu gridu; pH, humus, mikroklima, Q100 a právní přístup nejsou ověřené.
 
-Klima je reanalýza pro střed lokality, nikoli měření na parcele. Ceny a sklizně ČSÚ jsou celostátní statistiky; chybějící t/ha zůstává neznámé. Dotace, náklady, budoucí výnos a péče jsou nastavitelné předpoklady. Q100 není připojeno, protože nebyla doložena otevřená distribuční licence VÚV. LPIS, suché a mrazové zóny a příjezdy jsou nadále zřetelně označené ilustrace.
-
-Mapové podklady a živé API potřebují internet. Připravené soubory nejsou závislé na externích API, ale nejde o instalovatelnou offline aplikaci: při prvním načtení musí být dostupný hosting. Výpadky map mají viditelný chybový stav a záložní hranici ČR.
+Ekonomika nadále používá uživatelem upravitelné předpoklady pro náklady, budoucí výnos a potenciální podporu. To jsou plánovací scénáře, nikoli demonstrační parcely nebo měřená otevřená data. Závlaha bez doložených podkladů automaticky nenavyšuje výnos. Živé API a mapy potřebují internet; první načtení vyžaduje dostupný hosting.
 
 ## Ověření
 
-TypeScript a produkční build; `test:regional` ověřuje prostorové přiřazení, klima, chybějící podklady a chyby API; `test:geometry` dělení a sjednocení geometrií; `test:localities` úplnost seznamu obcí, vyhledávání, rozlišení shodných názvů a obnovení načítání po chybě; `data:verify` úplnost klimatu, platnost geometrií, unikátní parcely, datový rozpočet, null hodnoty a SHA-256. Vizuální a interakční kontrola aktuálního rozhraní používá integrovaný prohlížeč Codex: mapu, plovoucí detail, výběr ovoce, dělicí čáru a mobilní rozložení.
+TypeScript a produkční build, testy regionálního skórování na skutečných parcelách, geometrie včetně otvorů/multipolygonů a kořenových vazeb, našeptávače a chyb API, dostupnosti dat, klasifikace pozemků a migrace starého stavu. Kontrola dat ověřuje geometrii, úplnost časových řad, SHA-256 a datový rozpočet. Vizuální a funkční výsledky jsou popsané v [ověřovacím protokolu](design-qa.md).
 
 ## Todo
 
@@ -75,7 +82,7 @@ TypeScript a produkční build; `test:regional` ověřuje prostorové přiřazen
 - [X] Mapa a vrstvy
 - [ ] 
 - [ ] Onboarding stránkou
-- [ ] Vyndat z dema
+- [X] Vyndat z dema
 - [ ]
 - [ ] Local database
 - [ ] Udelat dokumentaci

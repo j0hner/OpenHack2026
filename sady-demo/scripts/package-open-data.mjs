@@ -90,7 +90,7 @@ const datasets=[
  {id:'natural-earth',name:'Natural Earth 1:50m',license:'Public domain',url:'https://www.naturalearthdata.com/about/terms-of-use/',use:'Již přítomná záložní hranice ČR'},
  {id:'gisco',name:'Eurostat GISCO NUTS 2021',license:'Podmínky Eurostat GISCO; zachované původní atribuce',url:'https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics',use:'Již přítomné generalizované hranice krajů'},
 ];
-await save('manifest.json',{preparedAt:new Date().toISOString(),scope:'Pět výřezů kolem ukázkových ploch; nejde o celorepublikovou offline databázi',datasets,files,notes:['Modelové pěstitelské profily a náklady nejsou otevřenými měřenými daty.','Chybějící hodnoty zůstávají null.','Podklady se načítají po jednotlivých lokalitách.']});
+await save('manifest.json',{preparedAt:new Date().toISOString(),scope:'Pět regionálních výřezů skutečných otevřených dat; nejde o celorepublikovou offline databázi',datasets,files,notes:['Modelové pěstitelské profily a náklady nejsou otevřenými měřenými daty.','Chybějící hodnoty zůstávají null.','Podklady se načítají po jednotlivých lokalitách.']});
 const receipts=await cached('downloads.json').catch(()=>read('downloads.json')).catch(()=>null);
 if(receipts){receipts.receipts=receipts.receipts.filter(r=>!r.url.includes('vuv.cz')&&!/dmr5g|terrascope|worldcover|sentinel/i.test(r.url));receipts.note='Částečný protokol posledního běhu stahování; úplné dotazy jsou reprodukovatelné skripty. Nejde o úplný audit všech stažení.';await save('downloads.json',receipts);}
 // Raw nationwide tables remain in the ignored .data-cache directory.

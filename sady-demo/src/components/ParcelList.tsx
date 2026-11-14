@@ -74,7 +74,7 @@ export default function ParcelList(p: Props) {
           <div className="list-empty">
             {query
               ? "Žádný pozemek neodpovídá hledání."
-              : "Vyberte parcelu kliknutím na katastrální mapu."}
+              : "Zatím nemáte přidaný pozemek. Vyhledejte lokalitu a otevřete parcelu v mapě."}
           </div>
         )}
         {shown.map((a) => (
@@ -95,14 +95,10 @@ export default function ParcelList(p: Props) {
               >
                 <IconStack2 size={18} stroke={1.65} />
                 <span>
-                  <strong>{a.name.replace(/^Ukázková plocha /, "")}</strong>
+                  <strong>{a.name}</strong>
                   <small>
                     {fmtHa(areaHa(a.geometry))}
-                    {a.derivedFrom
-                      ? " · uživatelská část"
-                      : a.kind === "sample"
-                        ? " · ukázka"
-                        : ""}
+                    {a.derivedFrom ? " · uživatelská část" : ""}
                   </small>
                   <em>
                     {FRUITS[p.fruits[a.id] ?? p.defaultFruit].name}
@@ -152,7 +148,7 @@ export default function ParcelList(p: Props) {
                   }}
                 >
                   <IconTrash size={15} />
-                  {a.kind === "sample" ? "Skrýt ukázku" : "Smazat pozemek"}
+                  Smazat pozemek
                 </button>
               </div>
             )}
@@ -195,11 +191,7 @@ export default function ParcelList(p: Props) {
             )}
             {remove === a.id && (
               <div className="inline-editor">
-                <p>
-                  {a.kind === "sample"
-                    ? "Skrýt ukázku ze seznamu a mapy?"
-                    : "Smazat pozemek z této aplikace? Katastr se nezmění."}
-                </p>
+                <p>Smazat pozemek z této aplikace? Katastr se nezmění.</p>
                 <button
                   type="button"
                   className="btn danger small"
@@ -208,7 +200,7 @@ export default function ParcelList(p: Props) {
                     setRemove(null);
                   }}
                 >
-                  Potvrdit {a.kind === "sample" ? "skrytí" : "smazání"}
+                  Potvrdit smazání
                 </button>
                 <button
                   type="button"

@@ -24,25 +24,25 @@ Rozhraní Moje Sady navíc používá aktuální přibalený seznam **6 254 obc�
 | [OpenStreetMap](https://www.openstreetmap.org/copyright), ODbL 1.0 | `https://tile.openstreetmap.org/{z}/{x}/{y}.png`; online podklad. Dlaždice se nestahují hromadně. Dodržujte [pravidla dlaždic](https://operations.osmfoundation.org/policies/tiles/). Vyhledávání obcí zajišťuje přibalený RÚIAN. |
 | [ČÚZK RÚIAN – obce a města](https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/12), CC BY 4.0 | Našeptávání celého seznamu obcí a měst; okresy z [vrstvy 15](https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/15). REST JSON po 500 záznamech, stabilní řazení dle kódu, ověření počtu a jedinečnosti. Do webu se ukládají pouze názvy, okres, souřadnice, status a bbox, nikoli plné polygony. |
 | [ČÚZK Ortofoto ČR](https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer), CC BY 4.0 | Letecké XYZ: `https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer/tile/{z}/{y}/{x}`. OSM nemá vlastní letecký podklad. |
-| [ČÚZK katastrální mapa](https://wms.cuzk.gov.cz/), otevřená prostorová data ČÚZK | `https://services.cuzk.gov.cz/wms/local-km-wms.asp`, WMS 1.1.1, vrstva `KN`, transparentní PNG. Od přiblížení 14. Popup z RÚIAN REST; WMS samo nevrací analytickou geometrii. |
+| [ČÚZK katastrální mapa](https://wms.cuzk.gov.cz/), otevřená prostorová data ČÚZK | `https://services.cuzk.gov.cz/wms/local-km-wms.asp`, WMS 1.1.1, vrstva `KN`, transparentní PNG. Od přiblížení 14. Dočasný náhled z RÚIAN REST s explicitním přidáním; WMS samo nevrací analytickou geometrii. |
 | [Natural Earth](https://www.naturalearthdata.com/about/terms-of-use/), public domain | Zachovaná lokální generalizovaná hranice ČR, měřítko 1:50m, záložní náhled při výpadku dlaždic. |
 | [Eurostat GISCO NUTS 2021](https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics), podmínky GISCO / Eurostat | Zachované lokální orientační hranice 14 krajů; zachována původní atribuce. Samostatné filtry kraje / obce nejsou součástí nového rozhraní. |
 
 ## Co se nestahuje
 
 - VÚV Q100: veřejná dostupnost REST sama nepotvrzuje otevřenou licenci. [Podmínky HEIS](https://heis.vuv.cz/data/spusteni/popisy/isvs_zapluz.asp) uvádějí souhlas s dalším šířením; Q100 se nedistribuuje a v aplikaci je neověřené.
-- LPIS, měření ČHMÚ, InterSucho, aktuální dotační pravidla a síť právně zajištěných příjezdů nejsou napojené. Původní ilustrační vrstvy jsou označené jako demo. Úplná republika, celá historie denního počasí, velké rastry ani satelitní snímky se do repozitáře nekopírují.
-- Pěstitelské profily, pH / humus pro demo, náklady, budoucí výnos t/ha a dotace jsou předpoklady, nikoli nově získaná otevřená data.
+- LPIS, měření ČHMÚ, InterSucho, aktuální dotační pravidla a síť právně zajištěných příjezdů nejsou napojené. Ilustrační vrstvy jsou odstraněné. Úplná republika, celá historie denního počasí, velké rastry ani satelitní snímky se do repozitáře nekopírují.
+- Pěstitelské požadavky, náklady, budoucí výnos t/ha a dotace jsou upravitelné předpoklady, nikoli měřená otevřená data. pH a humus zůstávají neznámé.
 
 ## Rozsah a výkon
 
-Výřezy kolem středu pěti ukázkových lokalit: Bílany / Kroměříž, Staňkovice, Horní Maršov, Hustopeče a Třebíč. Každý bbox: ±0,006° délky a ±0,004° šířky; přesné souřadnice v `locations-index.json`. Bbox nemusí odpovídat hranici stejnojmenného katastru.
+Skutečné regionální výřezy kolem pěti lokalit: Bílany / Kroměříž, Staňkovice, Horní Maršov, Hustopeče a Třebíč. Každý bbox: ±0,006° délky a ±0,004° šířky; přesné souřadnice v `locations-index.json`. Bbox nemusí odpovídat hranici stejnojmenného katastru.
 
 - 6 538 parcel; plné geometrie po lokalitách v `locations/*-parcels.json`.
 - Analytické podklady v `locations/*.json`, přibližně 200 kB dohromady. Parcely + analytika přibližně 5,8 MB před gzip.
 - Celý adresář distribuovaných otevřených dat včetně seznamu 6 254 obcí a metadat má přibližně 6,35 MB před gzip. Načítání je rozdělené podle účelu a lokality.
-- BPEJ / AOPK jsou oříznuté na bbox. AOPK zjednodušena při získání o 0,00002°, parcelní geometrie nezjednodušená. Připravený výřez se použije, jen když **celá plocha** leží uvnitř. Jinde se BPEJ / AOPK dotazují bboxem a oříznou skutečným polygonem; klima se načítá pro bod uvnitř polygonu. Nikdy se nepřiřazuje nejbližší demo profil podle názvu obce.
-- Analytické vrstvy se načítají až při zapnutí nebo otevření detailu. Parcelní soubor až při kliknutí v dané lokalitě. Výsledky fetchů se v rámci relace sdílejí.
+- BPEJ / AOPK jsou oříznuté na bbox. AOPK zjednodušena při získání o 0,00002°, parcelní geometrie nezjednodušená. Připravený výřez se použije, jen když **celá plocha** leží uvnitř. Jinde se BPEJ / AOPK dotazují bboxem a oříznou skutečným polygonem; klima se načítá pro bod uvnitř polygonu. Nikdy se nepřiřazuje profil jiné parcely podle názvu obce.
+- Analytické vrstvy se načítají až při zapnutí nebo otevření detailu. Parcelní soubor až při výběru v dané lokalitě nebo zapnutí vrstvy dostupnosti dat. Výsledky fetchů se v rámci relace sdílejí.
 - `manifest.json`: zdroje, licence, rozsah, velikosti a SHA-256 připravených souborů. `downloads.json` je pouze částečný protokol posledního obnoveného běhu původního stažení, nikoli kompletní audit všech odpovědí.
 - Seznam obcí má samostatný manifest `municipalities-metadata.json`, načítá se až při použití vyhledávání a nepřidává se ke každému analytickému požadavku. Názvy s diakritikou zůstávají zachované; pro vyhledávání se používá odvozený normalizovaný index.
 
@@ -73,13 +73,13 @@ Analytické JSON jsou ze stejného originu jako aplikace, proto při prezentaci 
 
 ## Regionální index zapojený do aplikace
 
-Výchozí režim Skutečná otevřená data používá stejný index v detailu, doporučení druhů, porovnání i barevném zobrazení ploch. Oddělené ukázkové scénáře se volí v Nastavení v poli Režim hodnocení. Změna názvu pozemku ani přesun mapy na jinou obec nesmí změnit zdroje ani skóre původní geometrie.
+Aplikace používá pouze skutečné geografické podklady a stejný regionální index v detailu, doporučení druhů i porovnání. Syntetické demonstrační plochy, ilustrační vrstvy a přepínač demo režimu jsou odstraněné. Ekonomické a agronomické předpoklady zůstávají výslovně označené. Změna názvu pozemku ani přesun mapy na jinou obec nesmí změnit zdroje ani skóre původní geometrie.
 
 1. BPEJ se řeže polygonem (včetně otvorů / multipolygonů), podíly jsou vážené plochou. HPJ je druhá a třetí číslice pětimístného kódu. Skupiny půd odpovídají [popisu VÚMOP](https://mapy.vumop.cz/vrstvy.php); číselné indexy jsou transparentní heuristika Moje Sady, nikoli oficiální body BPEJ nebo měřená chemie. Hodnoty pro HPJ 01–08 / 09–13 / 14–17 / 18–20 / 21–23 / 24–33 / 34–36 / 37–39 / 40–41 / 42–54 / 55–59 / 60–63 / 64–78 / 79–81 / 82–89 jsou 90 / 85 / 80 / 65 / 50 / 70 / 45 / 20 / 30 / 40 / 65 / 60 / 20 / 60 / 35. Kódy neodvozují pH, humus ani skutečnou hloubku.
 2. Klima: průměrná teplota, jarní mrazové dny a letní dny se porovnávají s explicitně modelovými požadavky zvoleného ovocného druhu. Živé dotazy používají ERA5 ~25 km pro období 2005–2024; připravené výřezy mají teploty ERA5-Land ~9 km a srážky / ET0 ERA5 ~25 km. Detail ukazuje skutečné souřadnice gridů a jejich vztah k bodu uvnitř plochy. Nejbližší grid není mikroklima parcely.
 3. Vláha: srážky vůči nároku druhu a deficit P−ET0. Nejde o měření půdní vláhy ani výpočet potřebné závlahy. Souhrnné skóre má váhy půda 35 %, klima 40 %, vláha 25 %. Převody na body, požadavky druhů i váhy jsou orientační předpoklady.
 4. Minimum: platná BPEJ na alespoň 80 % plochy, bez nejednoznačných překryvů, a nejméně 15 úplných let všech potřebných klimatických veličin. Chybějící dny / hodnoty zneplatní rok. Když minimum chybí, souhrnné skóre je null. Kvalita dostupných regionálních / částečných podkladů se konzervativně započte jako 60 % vah; nejde o statistický interval spolehlivosti.
-5. AOPK se hodnotí samostatně jako omezení. Nalezená ochrana přírody může snížit slovní verdikt. Lesní / vodní / zastavěný druh pozemku se neoznačí jako běžně vhodný sad. Q100, právní přístup, pH, humus, škůdci a mikroklima zůstávají neověřené. Terénní a satelitní zdroje byly na přání odstraněné z podkladů, dotazů i distribuovaných dat.
+5. AOPK se hodnotí samostatně jako omezení. Nalezená ochrana přírody může snížit slovní verdikt. Nové lesní / vodní / zastavěné parcely se nenabízejí k přidání. Konzervativně jsou vyřazené i ostatní plochy (včetně komunikací) a neurčený druh pozemku. Q100, právní přístup, pH, humus, škůdci a mikroklima zůstávají neověřené. Terénní a satelitní zdroje byly na přání odstraněné z podkladů, dotazů i distribuovaných dat.
 
 Pro živé dotazy je limit plochy 100 ha a úhlopříčka bboxu 3 km; větší nebo rozptýlený výběr potřebuje rozdělení. Omezení chrání výkon i reprezentativnost jednoho regionálního bodu. JSON výsledky se cachují dle celé geometrie a verze modelu (nikoli názvu / obecního filtru), maximálně 30 výsledků na 7 dní v localStorage. Souběžně běží nejvýše dvě analýzy, odpověď zdroje má timeout, neúplné odpovědi a HTTP 429 se neobcházejí. Neúspěšný podklad se zobrazí jako chyba / chybějící data; tlačítkem lze požadavek opakovat.
 
@@ -88,3 +88,27 @@ Rozdělené a spojené pracovní plochy mají nové ID a plnou geometrii. Nekop�
 V novém rozhraní se rozdělení spouští na vybraném pozemku a provádí přímou dělicí čárou se dvěma konci. Před uložením se zobrazí skutečný geometrický náhled a výměry, následuje potvrzení nebo zrušení a dostupné vrácení rozdělení zpět. Uživatelské části mají samostatnou volbu ovocného druhu a trvalé uložení. Kreslení nové vlastní parcely a samostatné filtry kraje / obce jsou odstraněné.
 
 Ověření: `npm run test:regional`, `npm run test:geometry`, `npm run data:verify`, `npm run build`. Prohlížečové testy ověřily živé CORS, reálnou zemědělskou parcelu, volbu druhu, přejmenování / mazání a persistenci; testy geometrií zahrnují otvory, multipolygony a zachování výměry.
+
+## Výběr parcely bez automatického uložení
+
+Kliknutí na existující parcelu otevře dočasný náhled s údaji ČÚZK a odkazem na oficiální katastr. Uložení provede teprve explicitní tlačítko Přidat pozemek. Do té doby se nemění uložené parcely ani localStorage. Stejná kontrola druhu pozemku platí při vyhledání parcelního čísla.
+
+Kódy druhu pozemku se čtou z RÚIAN, nikoli z barvy mapy: povolené zemědělské druhy 2, 3, 4, 5, 6, 7 a 8; vyloučené jsou lesy 10, voda 11, zastavěné plochy 13 a ostatní plochy 14. Kód 8 je rovněž trvalý travní porost v publikované doméně RÚIAN. Neznámá hodnota není automaticky povolená. Vyloučení ostatních ploch je záměrně konzervativní, protože připravené výřezy neobsahují úplné podrobné způsoby využití; živé RÚIAN může dodat doplňující údaj. Povolená kategorie nedokládá právní možnost převodu na sad.
+
+Skutečné připravené soubory s historickými interními ID `demo-a` až `demo-e` zůstávají otevřenými daty jednotlivých oblastí. Neobsahují odstraněné syntetické uživatelské plochy. Migrace starého stavu odstraní syntetické plochy a jejich potomky, zachová skutečné uživatelské parcely a jejich pracovní části.
+
+## Vrstva Dostupnost dat
+
+Vrstva barví skutečné zemědělské parcely v aktuálním pohledu, včetně dosud nepřidaných parcel. Nejde o vrstvu vhodnosti sadu. Tooltip a dočasný náhled ukazují podíl BPEJ, počet úplných klimatických let z 20 a počet povinných kategorií z 3 (půda, klima, vláha). Ochrana přírody a právní omezení se neposuzují touto barvou.
+
+- Zelená: všechny 3 povinné kategorie mají minimální podklady, stejná podmínka jako souhrnný regionální index.
+- Okrová: prověřené podklady nestačí nebo geometrie přesahuje limit modelu.
+- Šedá s přerušovanou hranicí: dosud neověřeno, nikoli potvrzená absence dat.
+- Modrá: probíhá analýza přesné geometrie.
+- Růžová: ověření selhalo; výpadek API není prohlášen za chybějící podklad.
+
+Povolené přiblížení je 14+, úhlopříčka pohledu nejvýše 8 km a počet zobrazených parcel nejvýše 200. Dosažení limitu je přiznané legendou; další přiblížení poskytne úplnější výřez. Po pohybu mapy se čeká 450 ms a starší požadavky se přerušují. Geometrie se čtou ze skutečných připravených parcel nebo omezeného RÚIAN dotazu podle bboxu. Vypnutí vrstvy práci zastaví.
+
+Pro výpočet barvy se automaticky používají pouze existující skutečné podklady pro přesnou geometrii nebo připravený regionální výřez, který obsahuje celý polygon. Mimo výřezy zůstává stav šedý, dokud neproběhne analýza přidané parcely. Při zapnutí vrstvy se neodesílají hromadné dvacetileté požadavky na ERA5 ani samostatné BPEJ/AOPK dotazy pro stovky parcel.
+
+Barva neoznačuje 60% konzervativní kvalitu regionálního modelu jako procento dostupnosti. Zelené 3/3 nenahrazuje půdní rozbor, pH, humus, mikroklima, záplavy ani právní posouzení. Cache výřezu: nejvýše 12 výsledků na 2 minuty v paměti, průniky nejvýše 1200 geometrií. Barva existující analýzy se použije pouze při shodě klíče celé geometrie.

@@ -1,20 +1,16 @@
-/**
- * Sdílené datové typy demo aplikace SADY.
- * UI, mapová logika, skórovací model i ekonomika pracují s těmito typy,
- * aby bylo možné demo data později nahradit skutečnými adaptéry.
- */
+/** Shared domain types for Moje Sady. Legacy sample kind exists only for migration. */
 
-export type FruitKey = 'apple' | 'pear' | 'plum' | 'cherry' | 'apricot';
+export type FruitKey = "apple" | "pear" | "plum" | "cherry" | "apricot";
 
-export type DataQuality = 'real' | 'precomputed' | 'assumption' | 'demo' | 'unavailable';
+export type DataQuality = "real" | "precomputed" | "assumption" | "unavailable";
 
-export type Availability = 'complete' | 'partial' | 'missing';
+export type Availability = "complete" | "partial" | "missing";
 
-export type CategoryKey = 'soil' | 'climate' | 'water' | 'terrain' | 'access';
+export type CategoryKey = "soil" | "climate" | "water" | "terrain" | "access";
 
-export type VerdictClass = 'good' | 'caution' | 'risk' | 'nodata';
+export type VerdictClass = "good" | "caution" | "risk" | "nodata";
 
-export type AreaKind = 'sample' | 'custom' | 'parcel';
+export type AreaKind = "sample" | "custom" | "parcel";
 
 export interface SoilAttributes {
   bpej: string;
@@ -30,7 +26,7 @@ export interface ClimateAttributes {
   tempAvgC: number;
   rainfallMm: number;
   frostDays: number;
-  frostRisk: 'nízké' | 'střední' | 'vysoké';
+  frostRisk: "nízké" | "střední" | "vysoké";
   heatDays: number;
   note?: string;
 }
@@ -45,8 +41,8 @@ export interface WaterAttributes {
 
 export interface TerrainAttributes {
   slopeDeg: number;
-  aspect: 'S' | 'SV' | 'V' | 'JV' | 'J' | 'JZ' | 'Z' | 'SZ' | 'rovina';
-  erosionRisk: 'nízké' | 'střední' | 'vysoké';
+  aspect: "S" | "SV" | "V" | "JV" | "J" | "JZ" | "Z" | "SZ" | "rovina";
+  erosionRisk: "nízké" | "střední" | "vysoké";
   altitudeM: number;
 }
 
@@ -73,8 +69,10 @@ export interface AreaAttributes {
 
 export type AvailabilityMap = Record<CategoryKey, Availability>;
 
-export type PolygonGeometry = { type: 'Polygon'; coordinates: number[][][] };
-export type AreaGeometry = PolygonGeometry | { type: 'MultiPolygon'; coordinates: number[][][][] };
+export type PolygonGeometry = { type: "Polygon"; coordinates: number[][][] };
+export type AreaGeometry =
+  | PolygonGeometry
+  | { type: "MultiPolygon"; coordinates: number[][][][] };
 
 export interface AreaLocation {
   code?: string;
@@ -85,16 +83,20 @@ export interface AreaLocation {
 }
 
 export interface AnalysisArea {
-  regional?: {status:'loading'|'ready'|'error';data:import('./regionalData').RegionalData|null;message?:string};
+  regional?: {
+    status: "idle" | "loading" | "ready" | "error";
+    data: import("./regionalData").RegionalData | null;
+    message?: string;
+  };
   derivedFrom?: {
-    operation:'split'|'merge';
-    sourceIds:string[];
-    sourceNames:string[];
+    operation: "split" | "merge";
+    sourceIds: string[];
+    sourceNames: string[];
     /** Oldest known source areas, retained when intermediate working areas go away. */
-    rootSourceIds?:string[];
-    rootSourceNames?:string[];
+    rootSourceIds?: string[];
+    rootSourceNames?: string[];
     /** Official ancestors only; never makes a working child an official parcel. */
-    rootCadastralIds?:string[];
+    rootCadastralIds?: string[];
   };
   id: string;
   /** 'A' | 'B' | 'C' u přednačtených ukázek */
@@ -103,7 +105,7 @@ export interface AnalysisArea {
   kind: AreaKind;
   landUse: string;
   geometry: AreaGeometry;
-  cadastral?: {id:string;officialAreaM2:number|null};
+  cadastral?: { id: string; officialAreaM2: number | null };
   location: AreaLocation;
   attributes: AreaAttributes;
   availability: AvailabilityMap;
@@ -119,20 +121,20 @@ export interface CategoryScore {
   weight: number;
   score: number | null;
   availability: Availability;
-  status: 'computed' | 'partial' | 'missing';
+  status: "computed" | "partial" | "missing";
   summary: string;
 }
 
 export interface RiskItem {
   label: string;
   detail: string;
-  severity: 'high' | 'medium' | 'low';
+  severity: "high" | "medium" | "low";
 }
 
 export interface SuitabilityResult {
   fruit: FruitKey;
   overall: number | null;
-  verdict: 'Vhodný' | 'Vhodný s opatřeními' | 'Rizikový' | 'Nedostatek dat';
+  verdict: "Vhodný" | "Vhodný s opatřeními" | "Rizikový" | "Nedostatek dat";
   verdictClass: VerdictClass;
   reasons: string[];
   risks: RiskItem[];
@@ -153,7 +155,7 @@ export interface EconomicsInputs {
   plantingCost: number;
   fenceCostPerM: number;
   irrigationCostPerHa: number;
-  landMode: 'purchase' | 'lease';
+  landMode: "purchase" | "lease";
   landPricePerHa: number;
   leasePerHaYear: number;
   annualCostPerHa: number;
@@ -215,12 +217,12 @@ export interface MapLayerDef {
 }
 
 export interface GeoJSONFeature {
-  type: 'Feature';
+  type: "Feature";
   properties: Record<string, string | number | null>;
   geometry:
-    | { type: 'Polygon'; coordinates: number[][][] }
-    | { type: 'MultiPolygon'; coordinates: number[][][][] }
-    | { type: 'LineString'; coordinates: number[][] };
+    | { type: "Polygon"; coordinates: number[][][] }
+    | { type: "MultiPolygon"; coordinates: number[][][][] }
+    | { type: "LineString"; coordinates: number[][] };
 }
 
 export interface ProvenanceRow {
@@ -240,7 +242,7 @@ export interface RegionEntry {
 }
 
 export interface EconomicsScenarioKey {
-  key: 'conservative' | 'base' | 'favorable';
+  key: "conservative" | "base" | "favorable";
   label: string;
   yieldFactor: number;
   priceFactor: number;
