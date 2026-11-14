@@ -1,6 +1,6 @@
 import {FRUITS} from '../data/fruitProfiles';
 import type {AnalysisArea,CategoryKey,CategoryScore,FruitKey,SuitabilityResult} from './types';
-import type {RegionalData} from './regionalData';
+import {geometryKey, type RegionalData} from './regionalData';
 import {mean} from './openData';
 
 // HPJ ranges follow VÚMOP's soil groups. The numeric suitability values are our
@@ -19,7 +19,9 @@ const fmt=(n:number)=>n.toLocaleString('cs-CZ',{maximumFractionDigits:1});
 export const validClimateYears=(data:RegionalData|null|undefined)=>data?.climate?.years.filter(y=>[y.temperatureMeanC,y.rainfallMm,y.et0Mm,y.springFrostDays,y.summerDays].every(v=>v!==null&&Number.isFinite(v)))??[];
 
 export function scoreRegionalArea(area:AnalysisArea,fruit:FruitKey):SuitabilityResult{
- const data=area.regional?.data,req=FRUITS[fruit].requirements,years=validClimateYears(data);
+ const regional=area.regional;
+ const matching=regional?.data?.key===geometryKey(area.geometry);
+ const data=regional?.status==='ready'&&matching?regional.data:null,req=FRUITS[fruit].requirements,years=validClimateYears(data);
  const raw:Partial<Record<CategoryKey,{score:number;summary:string}>>={};
  const soil=data?.soil;
  if(soil?.valid&&soil.coveragePct>=80){
@@ -35,26 +37,29 @@ export function scoreRegionalArea(area:AnalysisArea,fruit:FruitKey):SuitabilityR
   const deficit=Math.max(0,req.rainfallOptMm-rain),balance=Math.max(0,et-rain);
   raw.water={score:clamp(100-deficit*.22-(balance/Math.max(et,1))*55*(1+(3-req.droughtTolerance)*.15)),summary:`Ø srážky ${fmt(rain)} mm/rok, ET0 ${fmt(et)} mm/rok; P−ET0 = ${fmt(rain-et)} mm. Jde o klimatickou bilanci, nikoli měřenou půdní vláhu ani potřebu závlahy.`};
  }
- const categories:CategoryScore[]=(Object.keys(weights)as CategoryKey[]).filter(key=>weights[key]>0).map(key=>({key,label:labels[key],weight:weights[key],score:raw[key]?.score??null,status:raw[key]?'partial':'missing',availability:raw[key]?'partial':'missing',summary:raw[key]?.summary??(key==='soil'?`BPEJ: ${soil?fmt(soil.coveragePct)+' % pokrytí':'nedostupná'}. Pro půdní index je nutné alespoň 80 % platného pokrytí.`:key==='climate'||key==='water'?`Klima má ${years.length} úplných let; potřebujeme alespoň 15 z období 2005–2024.`:key==='access'?'Právní přístup a sjízdnost cest nejsou ověřené.':'Výškové podklady pro tuto geometrii nejsou dostatečné.')}));
+ const unverifiedSummary=data?null:regional?.status==='loading'?'Probíhá načítání podkladů pro tento pozemek.':!regional||regional.status==='idle'?'Podklady dosud nebyly ověřeny.':'Podklady se nepodařilo načíst nebo ověřit.';
+ const categories:CategoryScore[]=(Object.keys(weights)as CategoryKey[]).filter(key=>weights[key]>0).map(key=>({key,label:labels[key],weight:weights[key],score:raw[key]?.score??null,status:raw[key]?'partial':'missing',availability:raw[key]?'partial':'missing',summary:raw[key]?.summary??unverifiedSummary??(key==='soil'?`BPEJ: ${soil?fmt(soil.coveragePct)+' % pokrytí':'nedostupná'}. Pro půdní index je nutné alespoň 80 % platného pokrytí.`:key==='climate'||key==='water'?`Klima má ${years.length} úplných let; potřebujeme alespoň 15 z období 2005–2024.`:key==='access'?'Právní přístup a sjízdnost cest nejsou ověřené.':'Výškové podklady pro tuto geometrii nejsou dostatečné.')}));
  const available=categories.filter(c=>c.score!==null),availableWeight=available.reduce((s,c)=>s+c.weight,0);
  const completeness=Math.round(availableWeight*.6);
  const enough=!!raw.soil&&!!raw.climate&&!!raw.water&&availableWeight>=70;
  const overall=enough?Math.round(available.reduce((s,c)=>s+c.score!*c.weight,0)/availableWeight):null;
+ const dataStatus:SuitabilityResult['dataStatus']=enough?'ready':regional?.status==='loading'?'loading':!regional||regional.status==='idle'?'idle':regional.status==='error'||!matching||!data||(!data.soil||!data.climate)&&data.errors.length>0?'error':'insufficient';
+ const dataMessage=dataStatus==='ready'?'Dostatek podkladů pro výpočet. BPEJ a klimatická řada odpovídají poloze pozemku.':dataStatus==='loading'?'Načítám půdní a klimatické podklady pro tento pozemek. Výsledek se zobrazí automaticky.':dataStatus==='idle'?'Podklady pro tento pozemek zatím nebyly ověřeny.':dataStatus==='error'?'Podklady se nepodařilo načíst nebo ověřit. Zkuste načtení zopakovat v záložce Data.':'Pro souhrnné skóre chybí alespoň 80 % platného pokrytí BPEJ nebo 15 úplných klimatických let.';
  const constraints=(data?.protected??[]).map(p=>({label:p.name,detail:`Ochrana přírody zasahuje ${fmt(p.percent)} % plochy; podmínky výsadby ověřte u příslušného orgánu.`}));
  const restrictive=['lesní pozemek','vodní plocha','zastavěná plocha a nádvoří'].includes(area.landUse);
  if(restrictive)constraints.push({label:'Druh pozemku',detail:`${area.landUse}: nejde o běžnou zemědělskou plochu pro založení sadu. Vyžaduje samostatné prověření.`});
- let verdict:SuitabilityResult['verdict']=overall===null?'Nedostatek dat':overall>=75?'Vhodný':overall>=55?'Vhodný s opatřeními':'Rizikový';
+ let verdict:SuitabilityResult['verdict']=overall===null?({idle:'Dosud neověřeno',loading:'Načítám podklady',error:'Chyba načítání',insufficient:'Nedostatek dat',ready:'Nedostatek dat'} as const)[dataStatus]:overall>=75?'Vhodný':overall>=55?'Vhodný s opatřeními':'Rizikový';
  if(overall!==null&&available.some(c=>c.score!<30))verdict='Rizikový';
  if(overall!==null&&restrictive)verdict='Rizikový';
  if(verdict==='Vhodný'&&(constraints.length||req.frostSensitivity>=4&&years.some(y=>y.springFrostDays!>=18)))verdict='Vhodný s opatřeními';
  const reasons=available.slice().sort((a,b)=>a.score!-b.score!).map(c=>`${c.label}: ${c.summary}`).slice(0,3);
- if(!enough)reasons.unshift(area.regional?.status==='loading'?'Načítám skutečné podklady pro polohu a polygon pozemku.':'Pro souhrnné skóre chybí dostatečné pokrytí BPEJ nebo úplná klimatická řada.');
+ if(!enough)reasons.unshift(dataMessage);
  while(reasons.length<3)reasons.push(data?.errors[reasons.length-1]??'Chybějící údaje nenahrazujeme profilem jiné lokality.');
  const risks:SuitabilityResult['risks']=available.filter(c=>c.score!<60).map(c=>({label:c.label,detail:c.summary,severity:c.score!<30?'high':'medium'}));
  risks.push({label:'Neověřené vlastnosti parcely',detail:'Chybí půdní rozbor (pH, humus, skutečná hloubka), mikroklima, zdroj závlahy, Q100 a právně zajištěný příjezd.',severity:'medium'});
  for(const c of constraints)risks.push({label:c.label,detail:c.detail,severity:'high'});
  for(const error of data?.errors??[])risks.push({label:'Nedostupný podklad',detail:error,severity:'medium'});
- return {fruit,overall,verdict,verdictClass:verdict==='Nedostatek dat'?'nodata':verdict==='Vhodný'?'good':verdict==='Rizikový'?'risk':'caution',categories,completeness,missing:categories.filter(c=>c.score===null).map(c=>c.label),reasons:reasons.slice(0,3),risks,constraints,
+ return {fruit,overall,dataStatus,dataMessage,verdict,verdictClass:overall===null?'nodata':verdict==='Vhodný'?'good':verdict==='Rizikový'?'risk':'caution',categories,completeness,missing:categories.filter(c=>c.score===null).map(c=>c.label),reasons:reasons.slice(0,3),risks,constraints,
   nextSteps:['Potvrdit půdní vlastnosti rozborem a ověřit hloubku profilu.','Prověřit mikroklima a mrazové kotliny přímo na pozemku.','Ověřit přístup, vodu, záplavy a právní podmínky založení sadu.'],
   assumptions:['Index kombinuje skutečná prostorová data s orientačními pravidly a pěstitelskými profily Moje Sady; nejde o validovanou pravděpodobnost úspěchu ani předpověď výnosu.','Váhy regionálního indexu: půda 35 / klima 40 / vláha 25. Terén a provoz nejsou součástí indexu; chybějící povinný podklad zablokuje celkové skóre.','Půda dle HPJ je pouze orientační screening; klimatické údaje patří gridu širší oblasti, nikoli mikroklimatu parcely.','Úplnost snižujeme na 60 % dostupných vah kvůli regionálním a částečným podkladům. Závlaha v tomto indexu nemění klima ani automaticky nedoplňuje vodu.'],
  };

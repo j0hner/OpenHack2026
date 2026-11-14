@@ -14,11 +14,15 @@ import ParcelList from "./components/ParcelList";
 import ParcelCard from "./components/ParcelCard";
 import LocationSearch from "./components/LocationSearch";
 import Dialog from "./components/Dialog";
+import ThemeSettings from "./components/ThemeSettings";
+import { useTheme } from "./lib/theme";
+import AnalysisBackdrop from "./components/AnalysisBackdrop";
+import ParcelPreview from "./components/ParcelPreview";
+import { parcelEligibility } from "./lib/parcelEligibility";
 import AreaDetail, { type DetailTab } from "./components/AreaDetail";
 import EconomicsPanel from "./components/EconomicsPanel";
 import ProvenancePanel from "./components/ProvenancePanel";
 import MapView from "./map/MapView";
-import { DEMO_AREAS } from "./data/demoAreas";
 import { FRUITS, FRUIT_ORDER, economicsForFruit } from "./data/fruitProfiles";
 import { DEFAULT_LAYERS } from "./data/layers";
 import { parcelArea, type ParcelFeature } from "./lib/openData";
@@ -30,7 +34,6 @@ import {
 } from "./lib/geometryOperations";
 import { useRegionalData } from "./lib/useRegionalData";
 import { scoreRegionalArea } from "./lib/regionalScoring";
-import { scoreArea } from "./lib/scoring";
 import { areaHa, bboxOf } from "./lib/geo";
 import { fmtHa } from "./lib/format";
 import {
@@ -112,8 +115,8 @@ const rawSource = (source: AnalysisArea): AnalysisArea => {
 };
 
 export default function App() {
+  const [theme, setTheme] = useTheme();
   const [boot] = useState(() => loadState());
-  const [mode, setMode] = useState<"demo" | "custom">(boot?.mode ?? "custom");
   const [fruit] = useState<FruitKey>(boot?.fruit ?? "apple");
   const [fruitByArea, setFruitByArea] = useState<Record<string, FruitKey>>(
     boot?.fruitByArea ?? {},
@@ -125,7 +128,6 @@ export default function App() {
   const [names, setNames] = useState<Record<string, string>>(
     boot?.areaNames ?? {},
   );
-  const [hidden, setHidden] = useState<string[]>(boot?.hiddenSampleIds ?? []);
   const [selectedIds, setSelectedIds] = useState<string[]>(
     boot?.selectedIds ?? [],
   );
@@ -144,7 +146,6 @@ export default function App() {
   );
   const [irrigation, setIrrigation] = useState(boot?.irrigation ?? false);
   const [layers, setLayers] = useState({ ...DEFAULT_LAYERS, ...boot?.layers });
-  const [showKraje, setShowKraje] = useState(false);
   const [focus, setFocus] = useState<Focus | null>(null);
   const [searchMarker, setSearchMarker] = useState<{
     lat: number;
@@ -157,6 +158,9 @@ export default function App() {
     [territory, setTerritory] = useState(""),
     [lookupState, setLookupState] = useState(""),
     [lookupError, setLookupError] = useState("");
+  const [lookupPreview, setLookupPreview] = useState<ParcelFeature | null>(
+    null,
+  );
   const [splitSourceId, setSplitSourceId] = useState<string | null>(null),
     [splitPoints, setSplitPoints] = useState<[number, number][]>([]);
   const [history, setHistory] = useState<SplitRecord[]>(
@@ -166,18 +170,15 @@ export default function App() {
   const lookupRequest = useRef(0);
   const sourceAreas = useMemo(
     () =>
-      [
-        ...DEMO_AREAS.filter((a) => !hidden.includes(a.id)),
-        ...parcels,
-        ...workingAreas,
-      ].map((a) => ({ ...a, name: names[a.id] ?? a.name })),
-    [parcels, workingAreas, names, hidden],
+      [...parcels, ...workingAreas].map((a) => ({
+        ...a,
+        name: names[a.id] ?? a.name,
+      })),
+    [parcels, workingAreas, names],
   );
-  const { areas, retry } = useRegionalData(
-    sourceAreas,
-    selectedIds,
-    mode === "custom",
-  );
+  const { areas, retry } = useRegionalData(sourceAreas, [
+    ...new Set([...selectedIds, ...(activeId ? [activeId] : [])]),
+  ]);
   const areaIndex = useMemo(
     () => new Map(areas.map((a) => [a.id, a])),
     [areas],
@@ -190,13 +191,8 @@ export default function App() {
   const currentFruit = active ? areaFruit(active.id) : fruit;
   const inputs = economics[currentFruit];
   const evaluate = useCallback(
-    (a: AnalysisArea, f: FruitKey) =>
-      a.regional
-        ? scoreRegionalArea(a, f)
-        : scoreArea(a, f, {
-            irrigation: irrigation && a.irrigationAvailable !== false,
-          }),
-    [irrigation],
+    (a: AnalysisArea, f: FruitKey) => scoreRegionalArea(a, f),
+    [],
   );
   const scores = useMemo(
     () =>
@@ -239,8 +235,7 @@ export default function App() {
   }, [splitSource?.geometry, splitPoints]);
   useEffect(() => {
     saveState({
-      modelVersion: "moje-sady-1",
-      mode,
+      modelVersion: "moje-sady-2",
       fruit,
       fruitByArea,
       irrigation,
@@ -250,15 +245,12 @@ export default function App() {
       layers,
       economicsByFruit: economics,
       drawnGeometry: null,
-      demoProfileId: null,
       parcels,
       workingAreas,
       areaNames: names,
-      hiddenSampleIds: hidden,
       splitHistory: history,
     });
   }, [
-    mode,
     fruit,
     fruitByArea,
     irrigation,
@@ -269,7 +261,6 @@ export default function App() {
     parcels,
     workingAreas,
     names,
-    hidden,
     history,
   ]);
   useEffect(() => {
@@ -281,6 +272,8 @@ export default function App() {
     lookupRequest.current++;
     setLookupState("");
     setAddOpen(false);
+    setLookupPreview(null);
+    setLookupError("");
   }, []);
   const cancelSplit = useCallback(() => {
     setSplitSourceId(null);
@@ -327,6 +320,11 @@ export default function App() {
     setFocus({ bbox: bboxOf(a.geometry), nonce: Date.now() });
   };
   const addParcel = (feature: ParcelFeature) => {
+    const eligibility = parcelEligibility(feature);
+    if (!eligibility.allowed) {
+      setToast(eligibility.reason);
+      return false;
+    }
     const a = parcelArea(feature);
     setParcels((previous) =>
       [...previous.filter((p) => p.id !== a.id), a].slice(-50),
@@ -335,10 +333,10 @@ export default function App() {
     setActiveId(a.id);
     setDetailOpen(true);
     setView("mapa");
-    setMode("custom");
     setMobileList(false);
     setFocus({ bbox: bboxOf(a.geometry), nonce: Date.now() });
     cancelSplit();
+    return true;
   };
   const onFruitChange = (f: FruitKey) => {
     if (active) setFruitByArea((previous) => ({ ...previous, [active.id]: f }));
@@ -351,11 +349,10 @@ export default function App() {
   const deleteArea = (id: string) => {
     const a = areaIndex.get(id);
     if (!a) return;
-    if (a.kind === "sample") setHidden((ids) => [...new Set([...ids, id])]);
-    else if (a.kind === "parcel")
+    if (a.kind === "parcel")
       setParcels((items) => items.filter((p) => p.id !== id));
     else setWorkingAreas((items) => items.filter((p) => p.id !== id));
-    if (a.kind !== "sample") {
+    {
       setNames((previous) => {
         const next = { ...previous };
         delete next[id];
@@ -373,11 +370,7 @@ export default function App() {
       setDetailOpen(false);
       cancelSplit();
     }
-    setToast(
-      a.kind === "sample"
-        ? "Ukázka je skrytá. Vrátit ji můžete v nastavení."
-        : "Pozemek byl odstraněn z aplikace. Katastr zůstává beze změny.",
-    );
+    setToast("Pozemek byl odstraněn z aplikace. Katastr zůstává beze změny.");
   };
   const startSplit = () => {
     if (!active) return;
@@ -423,7 +416,6 @@ export default function App() {
     setSelectedIds(created.map((a) => a.id));
     setActiveId(created[0].id);
     cancelSplit();
-    setMode("custom");
     setDetailOpen(true);
     setToast(
       `Vznikly ${created.length} uživatelské části. Každé můžete přiřadit vlastní ovocný druh.`,
@@ -439,8 +431,6 @@ export default function App() {
         ? [...kept, source]
         : kept;
     });
-    if (source.kind === "sample")
-      setHidden((ids) => ids.filter((id) => id !== source.id));
     if (source.kind === "parcel")
       setParcels((items) =>
         items.some((a) => a.id === source.id) ? items : [...items, source],
@@ -494,7 +484,6 @@ export default function App() {
       setSelectedIds([created.id]);
       setActiveId(created.id);
       setDetailOpen(true);
-      setMode("custom");
       setView("mapa");
       setFocus({ bbox: bboxOf(created.geometry), nonce: Date.now() });
       setToast("Plochy jsou spojené. Originály zůstávají uložené.");
@@ -507,6 +496,7 @@ export default function App() {
     setView(next);
     if (next === "mapa") setMobileList(false);
   };
+  const closeAnalysis = useCallback(() => setView("mapa"), []);
   const fullDetailProps =
     active && ranking
       ? {
@@ -579,9 +569,6 @@ export default function App() {
           >
             <IconList size={21} />
           </button>
-          <span className={`data-mode ${mode === "demo" ? "demo" : ""}`}>
-            {mode === "demo" ? "Demo scénáře" : "Otevřená data"}
-          </span>
         </div>
       </header>
       <ParcelList
@@ -614,14 +601,12 @@ export default function App() {
           selectedIds={selectedIds}
           activeId={activeId}
           layers={layers}
-          showKraje={showKraje}
           focus={focus}
           detailOpen={detailOpen && view === "mapa"}
           splitMode={!!splitSourceId}
           splitPoints={splitPoints}
           splitPreview={split.parts}
           searchMarker={searchMarker}
-          mode={mode}
           onAreaClick={selectArea}
           onParcelSelect={addParcel}
           onSplitPoint={(point) =>
@@ -643,7 +628,6 @@ export default function App() {
           onToggleLayer={(id) =>
             setLayers((previous) => ({ ...previous, [id]: !previous[id] }))
           }
-          onToggleKraje={() => setShowKraje((v) => !v)}
         />
         {view === "mapa" &&
           detailOpen &&
@@ -756,20 +740,22 @@ export default function App() {
           </div>
         )}
         {view !== "mapa" && (
+          <AnalysisBackdrop enabled={view === "analyzy"} onClose={closeAnalysis}>
           <section className="workspace-panel" aria-label={titles[view]}>
             <div className="workspace-panel-heading">
               <div>
                 <span className="eyebrow">Moje pozemky</span>
                 <h1>{titles[view]}</h1>
               </div>
-              <button
-                className="btn"
-                type="button"
-                onClick={() => setView("mapa")}
-              >
-                <IconMap size={17} />
-                Zpět na mapu
-              </button>
+              {view === "analyzy" ? (
+                <button className="icon-button" type="button" onClick={closeAnalysis} aria-label="Zavřít detailní analýzu" title="Zavřít detailní analýzu">
+                  <IconX size={20} />
+                </button>
+              ) : (
+                <button className="btn" type="button" onClick={() => setView("mapa")}>
+                  <IconMap size={17} /> Zpět na mapu
+                </button>
+              )}
             </div>
             {view === "analyzy" &&
               (fullDetailProps ? (
@@ -841,16 +827,16 @@ export default function App() {
                             <small>
                               {a.derivedFrom
                                 ? "Uživatelská část"
-                                : a.kind === "sample"
-                                  ? "Ukázková geometrie"
-                                  : "Katastrální parcela"}
+                                : a.cadastral
+                                  ? "Katastrální parcela"
+                                  : "Uživatelská plocha"}
                             </small>
                           </td>
                           <td>{fmtHa(areaHa(a.geometry))}</td>
                           <td>{FRUITS[areaFruit(a.id)].name}</td>
                           <td>
                             {scores[a.id].overall === null
-                              ? "Nedostatek dat"
+                              ? scores[a.id].verdict
                               : scores[a.id].overall + "/100"}
                           </td>
                           <td>
@@ -873,44 +859,28 @@ export default function App() {
             )}
             {view === "nastaveni" && (
               <div className="settings-grid">
+                <ThemeSettings theme={theme} onChange={setTheme} />
                 <section className="card">
                   <h2>Podklady hodnocení</h2>
-                  <label className="field">
-                    <span>Režim hodnocení</span>
-                    <select
-                      value={mode}
-                      onChange={(e) =>
-                        setMode(e.target.value as "demo" | "custom")
-                      }
-                    >
-                      <option value="custom">Skutečná otevřená data</option>
-                      <option value="demo">Označené demo scénáře</option>
-                    </select>
-                  </label>
+                  <p>
+                    Hodnocení používá pouze skutečné otevřené podklady přiřazené
+                    geometrií a souřadnicemi pozemku. Chybějící údaje zůstávají
+                    neznámé.
+                  </p>
                   <p className="small">
-                    Skutečné podklady se přiřazují geometrií a souřadnicemi.
-                    Demo scénáře slouží k ukázce modelu. Skóre není
-                    pravděpodobnost úspěchu.
+                    Regionální index kombinuje BPEJ a klimatické řady. Není
+                    pravděpodobností úspěchu. Ekonomické vstupy a pěstitelské
+                    nároky jsou označené modelové předpoklady.
                   </p>
                 </section>
                 <section className="card">
                   <h2>Vaše data</h2>
                   <p>
-                    Názvy, ovocné druhy, uložené parcely, pracovní části a
-                    posledních deset rozdělení se uchovávají pouze v tomto
-                    prohlížeči.
+                    Názvy, ovocné druhy, přidané parcely, uživatelské části a
+                    posledních deset rozdělení se ukládají v tomto prohlížeči.
+                    Kliknutí do mapy otevře náhled; pozemek uloží až tlačítko
+                    Přidat pozemek.
                   </p>
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      setHidden([]);
-                      setToast(
-                        "Ukázkové plochy byly obnovené. Vaše uložené pozemky zůstaly zachované.",
-                      );
-                    }}
-                  >
-                    Obnovit skryté ukázky
-                  </button>
                 </section>
                 <section className="card">
                   <h2>Jak přidat pozemek</h2>
@@ -926,6 +896,7 @@ export default function App() {
               </div>
             )}
           </section>
+          </AnalysisBackdrop>
         )}
       </main>
       {addOpen && (
@@ -934,66 +905,91 @@ export default function App() {
             Vyplňte parcelní číslo a přesný název nebo šestimístný kód
             katastrálního území. Parcelu lze také vybrat přímo v mapě.
           </p>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const request = ++lookupRequest.current;
-              setLookupState("loading");
-              setLookupError("");
-              try {
-                const feature = await lookupCadastralParcel(
-                  parcelNumber,
-                  territory,
-                );
-                if (request !== lookupRequest.current) return;
-                addParcel(feature);
-                setAddOpen(false);
-              } catch (error) {
-                if (request !== lookupRequest.current) return;
-                setLookupError(
-                  error instanceof AdapterError
-                    ? error.message + ". " + error.detail
-                    : error instanceof Error
-                      ? error.message
-                      : "Parcelu se nepodařilo najít.",
-                );
-              } finally {
-                if (request === lookupRequest.current) setLookupState("");
-              }
-            }}
-          >
-            <label className="field">
-              <span>Parcelní číslo</span>
-              <input
-                required
-                placeholder="např. 1234/5"
-                value={parcelNumber}
-                onChange={(e) => setParcelNumber(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Katastrální území nebo jeho kód</span>
-              <input
-                required
-                placeholder="např. Bílany nebo 604038"
-                value={territory}
-                onChange={(e) => setTerritory(e.target.value)}
-              />
-            </label>
-            {lookupError && (
-              <p className="notice error" role="alert">
-                {lookupError}
-              </p>
-            )}
-            <button
-              className="btn primary"
-              disabled={lookupState === "loading"}
+          {!lookupPreview ? (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const request = ++lookupRequest.current;
+                setLookupState("loading");
+                setLookupError("");
+                try {
+                  const feature = await lookupCadastralParcel(
+                    parcelNumber,
+                    territory,
+                  );
+                  if (request !== lookupRequest.current) return;
+                  const eligibility = parcelEligibility(feature);
+                  if (!eligibility.allowed) {
+                    setLookupError(eligibility.reason);
+                    return;
+                  }
+                  setLookupPreview(feature);
+                } catch (error) {
+                  if (request !== lookupRequest.current) return;
+                  setLookupError(
+                    error instanceof AdapterError
+                      ? error.message + ". " + error.detail
+                      : error instanceof Error
+                        ? error.message
+                        : "Parcelu se nepodařilo najít.",
+                  );
+                } finally {
+                  if (request === lookupRequest.current) setLookupState("");
+                }
+              }}
             >
-              {lookupState === "loading"
-                ? "Hledám parcelu…"
-                : "Vyhledat parcelu"}
-            </button>
-          </form>
+              <label className="field">
+                <span>Parcelní číslo</span>
+                <input
+                  required
+                  placeholder="např. 1234/5"
+                  value={parcelNumber}
+                  onChange={(e) => {
+                    lookupRequest.current++;
+                    setLookupState("");
+                    setLookupError("");
+                    setParcelNumber(e.target.value);
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>Katastrální území nebo jeho kód</span>
+                <input
+                  required
+                  placeholder="např. Bílany nebo 604038"
+                  value={territory}
+                  onChange={(e) => {
+                    lookupRequest.current++;
+                    setLookupState("");
+                    setLookupError("");
+                    setTerritory(e.target.value);
+                  }}
+                />
+              </label>
+              {lookupError && (
+                <p className="notice error" role="alert">
+                  {lookupError}
+                </p>
+              )}
+              <button
+                className="btn primary"
+                disabled={lookupState === "loading"}
+              >
+                {lookupState === "loading"
+                  ? "Hledám parcelu…"
+                  : "Vyhledat parcelu"}
+              </button>
+            </form>
+          ) : (
+            <ParcelPreview
+              feature={lookupPreview}
+              embedded
+              onAdd={() => {
+                if (addParcel(lookupPreview)) closeAdd();
+              }}
+              onClose={() => setLookupPreview(null)}
+            />
+          )}
         </Dialog>
       )}
       {toast && (

@@ -1,0 +1,143 @@
+.parcel-preview {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  z-index: 620;
+  left: 18px;
+  top: 18px;
+  width: 335px;
+  max-width: calc(100% - 36px);
+  max-height: calc(100% - 36px);
+  overflow: hidden;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e0e6dc;
+  border-radius: 11px;
+  box-shadow: 0 10px 32px rgb(16 32 20 / 17%);
+  color: #1d2a20;
+}
+.parcel-preview.is-embedded {
+  position: static;
+  max-width: none;
+  width: 100%;
+  max-height: min(420px, calc(100dvh - 240px));
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+.parcel-preview header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.parcel-preview-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+.parcel-preview h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0;
+  font-size: 17px;
+}
+.parcel-preview .icon-button {
+  flex-shrink: 0;
+}
+.parcel-preview-locality {
+  margin: 8px 0 16px;
+  color: #60705d;
+  font-size: 12px;
+}
+.parcel-preview dl {
+  margin: 0;
+}
+.parcel-preview dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #edf1e9;
+}
+.parcel-preview dt {
+  color: #6c7867;
+}
+.parcel-preview dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.parcel-preview-note {
+  padding: 12px;
+  border-radius: 7px;
+  background: #f4f7ef;
+  line-height: 1.5;
+  font-size: 12px;
+}
+.parcel-preview-note.is-blocked {
+  background: #fff4e4;
+  color: #76551e;
+}
+.parcel-preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #3d7038;
+}
+.parcel-preview-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e6dc;
+  background: #fff;
+}
+.parcel-preview-actions .btn {
+  min-height: 42px;
+}
+.parcel-preview-actions .primary {
+  flex: 1;
+}
+.sady-tooltip {
+  max-width: 280px;
+  white-space: normal;
+}
+.parcel-preview-coverage {
+  margin: 12px 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.parcel-preview-coverage p {
+  margin: 5px 0;
+}
+.map-shell.has-parcel-preview ~ .floating-detail,
+.map-stage:has(.has-parcel-preview) > .floating-detail,
+.map-stage:has(.has-parcel-preview) > .map-welcome {
+  visibility: hidden;
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  /* Touch users get the same information in the selectable parcel preview. */
+  .sady-tooltip {
+    display: none;
+  }
+  .parcel-preview:not(.is-embedded) {
+    top: auto;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    max-height: 55dvh;
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+  }
+  .map-shell.has-parcel-preview .leaflet-bottom {
+    bottom: 55dvh;
+  }
+}

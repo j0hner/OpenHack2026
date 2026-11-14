@@ -1,9 +1,32 @@
 import {useId,type ReactNode} from 'react';
 import {IconAlertCircle,IconAlertTriangle,IconCheck,IconDatabaseOff,IconInfoCircle} from '@tabler/icons-react';
 import { QUALITY_LABELS } from '../data/provenance';
-import type { DataQuality, VerdictClass } from '../lib/types';
+import type { DataQuality, SuitabilityResult, VerdictClass } from '../lib/types';
 
 const verdictClassOf = (verdictClass: VerdictClass): string => verdictClass;
+
+export function AnalysisDataStatus({
+  score,
+  protectionPending = false,
+}: {
+  score: SuitabilityResult;
+  protectionPending?: boolean;
+}) {
+  const Icon = score.dataStatus === 'ready' ? IconCheck : IconInfoCircle;
+  return (
+    <div className={`analysis-data-status ${score.dataStatus}`} role="status">
+      <Icon size={16} aria-hidden="true" />
+      <div>
+        <span>{score.dataMessage}</span>
+        {protectionPending && (
+          <small>
+            Doplňuji územní omezení AOPK. Výsledek zatím nezahrnuje jejich kontrolu.
+          </small>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function VerdictBadge({ verdictClass, verdict }: { verdictClass: VerdictClass; verdict: string }) {
   const Icon=verdictClass==='good'?IconCheck:verdictClass==='nodata'?IconDatabaseOff:IconAlertTriangle;

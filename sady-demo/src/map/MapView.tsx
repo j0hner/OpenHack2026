@@ -1,11 +1,6 @@
 import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
-import {
-  IconStack2,
-  IconMaximize,
-  IconHome2,
-  IconX,
-} from "@tabler/icons-react";
+import { IconStack2, IconX } from "@tabler/icons-react";
 import {
   BASE_MAPS,
   createBaseLayer,
@@ -14,6 +9,7 @@ import {
 } from "./baseLayers";
 import {
   queryParcels,
+  geometryBounds,
   locationIndex,
   loadLocation,
   type ParcelFeature,
@@ -21,8 +17,18 @@ import {
 import { representativePoint } from "../lib/regionalData";
 import { areaHa } from "../lib/geo";
 import czechiaGeo from "../data/geo/czechia.json";
-import krajeGeo from "../data/geo/kraje.json";
+import CzechiaOutlineIcon from "./CzechiaOutlineIcon";
 import { MAP_LAYERS } from "../data/layers";
+import ParcelPreview from "../components/ParcelPreview";
+import { parcelEligibility } from "../lib/parcelEligibility";
+import { useParcelCoverage } from "../lib/useParcelCoverage";
+import {
+  COVERAGE_STYLES,
+  coverageDescription,
+  coverageFromArea,
+} from "../lib/parcelCoverage";
+import type { CoverageBounds } from "../lib/coverageData";
+import DataCoverageLegend from "../components/DataCoverageLegend";
 import type {
   AnalysisArea,
   AreaGeometry,
@@ -41,14 +47,12 @@ interface MapViewProps {
   selectedIds: string[];
   activeId: string | null;
   layers: Record<string, boolean>;
-  showKraje: boolean;
   focus: FocusTarget | null;
   detailOpen: boolean;
   splitMode: boolean;
   splitPoints: [number, number][];
   splitPreview: AreaGeometry[] | null;
   searchMarker: { lat: number; lon: number; label: string } | null;
-  mode: "demo" | "custom";
   onAreaClick: (id: string) => void;
   onParcelSelect: (feature: ParcelFeature) => void;
   onSplitPoint: (point: [number, number]) => void;
@@ -56,7 +60,6 @@ interface MapViewProps {
   onCancelSplit: () => void;
   onHome: () => void;
   onToggleLayer?: (id: string) => void;
-  onToggleKraje?: () => void;
 }
 const CZ_BOUNDS: L.LatLngBoundsExpression = [
   [48.5, 12],
@@ -82,15 +85,23 @@ function fitFocus(
   animate = true,
 ) {
   const mobile = window.matchMedia("(max-width: 900px)").matches;
-  const card = map.getContainer().closest(".map-stage")
-    ?.querySelector(".floating-detail")?.getBoundingClientRect();
+  const stage = map.getContainer().closest(".map-stage");
+  const card = (
+    stage?.querySelector(".parcel-preview:not(.is-embedded)") ??
+    stage?.querySelector(".floating-detail")
+  )?.getBoundingClientRect();
   const cardWidth = card?.width ?? 335;
   const left =
     detailOpen && !mobile
       ? Math.min(cardWidth + 36, map.getSize().x - 140)
       : 24;
   const bottom =
-    detailOpen && mobile ? Math.min((card?.height ?? window.innerHeight * .55) + 18, map.getSize().y - 160) : 38;
+    detailOpen && mobile
+      ? Math.min(
+          (card?.height ?? window.innerHeight * 0.55) + 18,
+          map.getSize().y - 160,
+        )
+      : 38;
   const paddingTopLeft: L.PointExpression = [left, 64],
     paddingBottomRight: L.PointExpression = [36, bottom];
   const { bbox, center, zoom } = focus;
@@ -131,8 +142,10 @@ export default function MapView(props: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const countryRef = useRef<L.GeoJSON | null>(null);
   const areaGroupRef = useRef<L.LayerGroup | null>(null);
-  const boundaryGroupRef = useRef<L.LayerGroup | null>(null);
   const splitGroupRef = useRef<L.LayerGroup | null>(null);
+  const pendingGroupRef = useRef<L.LayerGroup | null>(null);
+  const coverageGroupRef = useRef<L.LayerGroup | null>(null);
+  const pendingParcelRef = useRef<ParcelFeature | null>(null);
   const overlayGroupsRef = useRef<Record<string, L.LayerGroup>>({});
   const parcelRequestRef = useRef<AbortController | null>(null);
   const callbacksRef = useRef(props);
@@ -146,7 +159,40 @@ export default function MapView(props: MapViewProps) {
   const [tilesOk, setTilesOk] = useState(true);
   const [parcelStatus, setParcelStatus] = useState("");
   const [layerStatus, setLayerStatus] = useState("");
-  const [controlStatus, setControlStatus] = useState("");
+  const [pendingParcel, setPendingParcel] = useState<ParcelFeature | null>(
+    null,
+  );
+  pendingParcelRef.current = pendingParcel;
+  const [viewportBounds, setViewportBounds] = useState<CoverageBounds | null>(
+    null,
+  );
+  const coverageEnabled = !!props.layers.coverage;
+  const coverage = useParcelCoverage({
+    enabled: coverageEnabled,
+    bounds: viewportBounds,
+    zoom,
+    areas: props.areas,
+  });
+  const offerParcel = (feature: ParcelFeature) => {
+    parcelRequestRef.current?.abort();
+    setLayersOpen(false);
+    setParcelStatus("");
+    const saved = callbacksRef.current.areas.find(
+      (area) => area.cadastral?.id === String(feature.properties.id),
+    );
+    if (saved) {
+      setPendingParcel(null);
+      callbacksRef.current.onAreaClick(saved.id);
+      return;
+    }
+    const eligibility = parcelEligibility(feature);
+    if (!eligibility.allowed) {
+      setPendingParcel(null);
+      setParcelStatus(eligibility.reason);
+      return;
+    }
+    setPendingParcel(feature);
+  };
   const [realLayers, setRealLayers] = useState<
     Record<string, GeoJSON.FeatureCollection>
   >({});
@@ -176,14 +222,24 @@ export default function MapView(props: MapViewProps) {
       interactive: false,
     }).addTo(map);
     countryRef.current = country;
-    boundaryGroupRef.current = L.layerGroup().addTo(map);
     areaGroupRef.current = L.layerGroup().addTo(map);
     splitGroupRef.current = L.layerGroup().addTo(map);
+    pendingGroupRef.current = L.layerGroup().addTo(map);
+    map.createPane("dataCoverage");
+    map.getPane("dataCoverage")!.style.zIndex = "390";
+    coverageGroupRef.current = L.layerGroup().addTo(map);
     if (country.getBounds().isValid())
       map.fitBounds(country.getBounds(), { padding: [24, 24] });
     map.on("zoomend", () => setZoom(map.getZoom()));
+    const updateBounds = () => {
+      const b = map.getBounds();
+      setViewportBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+    };
+    map.on("moveend", updateBounds);
+    updateBounds();
     map.on("movestart", () => {
       parcelRequestRef.current?.abort();
+      setViewportBounds(null);
       setParcelStatus("");
       setLayersOpen(false);
     });
@@ -198,17 +254,22 @@ export default function MapView(props: MapViewProps) {
     const resize = new ResizeObserver(() => {
       map.invalidateSize({ pan: false });
       const current = callbacksRef.current;
-      if (current.focus)
+      if (pendingParcelRef.current)
+        fitFocus(
+          map,
+          { bbox: geometryBounds(pendingParcelRef.current.geometry), nonce: 0 },
+          true,
+          false,
+        );
+      else if (current.focus)
         fitFocus(map, current.focus, current.detailOpen, false);
+      updateBounds();
     });
     resize.observe(containerRef.current);
-    const fullscreen = () => map.invalidateSize({ pan: false });
-    document.addEventListener("fullscreenchange", fullscreen);
     setZoom(map.getZoom());
     setReady(true);
     return () => {
       resize.disconnect();
-      document.removeEventListener("fullscreenchange", fullscreen);
       parcelRequestRef.current?.abort();
       map.remove();
       mapRef.current = null;
@@ -261,6 +322,7 @@ export default function MapView(props: MapViewProps) {
       parcelRequestRef.current?.abort();
       const request = new AbortController();
       parcelRequestRef.current = request;
+      setPendingParcel(null);
       setParcelStatus("Načítám parcelu z katastru…");
       try {
         const features = await queryParcels(
@@ -270,6 +332,7 @@ export default function MapView(props: MapViewProps) {
         if (
           disposed ||
           request.signal.aborted ||
+          parcelRequestRef.current !== request ||
           callbacksRef.current.splitMode
         )
           return;
@@ -278,7 +341,7 @@ export default function MapView(props: MapViewProps) {
           return;
         }
         setParcelStatus("");
-        callbacksRef.current.onParcelSelect(features[0]);
+        offerParcel(features[0]);
       } catch (error) {
         if (!disposed && !request.signal.aborted)
           setParcelStatus(
@@ -298,17 +361,78 @@ export default function MapView(props: MapViewProps) {
   }, [cadastre, ready]);
 
   useEffect(() => {
-    const group = boundaryGroupRef.current;
+    parcelRequestRef.current?.abort();
+    setPendingParcel(null);
+  }, [props.activeId, props.focus?.nonce, props.splitMode]);
+
+  useEffect(() => {
+    const group = pendingGroupRef.current;
     if (!group) return;
     group.clearLayers();
-    if (!props.showKraje) return;
+    if (!pendingParcel || props.splitMode) return;
     group.addLayer(
-      L.geoJSON(krajeGeo as unknown as GeoJSON.GeoJsonObject, {
-        style: { color: "#e2e9de", weight: 0.8, opacity: 0.6, fillOpacity: 0 },
+      L.geoJSON(pendingParcel as GeoJSON.GeoJsonObject, {
+        style: {
+          color: "#f0bd53",
+          weight: 3,
+          dashArray: "7 4",
+          fillColor: "#e4ad3f",
+          fillOpacity: 0.2,
+        },
         interactive: false,
       }),
     );
-  }, [props.showKraje, ready]);
+    if (mapRef.current)
+      fitFocus(
+        mapRef.current,
+        { bbox: geometryBounds(pendingParcel.geometry), nonce: Date.now() },
+        true,
+      );
+  }, [pendingParcel, props.splitMode, ready]);
+
+  useEffect(() => {
+    if (!pendingParcel) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setPendingParcel(null);
+      }
+    };
+    window.addEventListener("keydown", close, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", close, { capture: true });
+  }, [pendingParcel]);
+
+  useEffect(() => {
+    const group = coverageGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+    if (!coverageEnabled) return;
+    for (const item of coverage.parcels) {
+      const style = COVERAGE_STYLES[item.coverage.state];
+      const layer = L.geoJSON(item.feature as GeoJSON.GeoJsonObject, {
+        pane: "dataCoverage",
+        style: {
+          color: style.color,
+          weight: 1.5,
+          opacity: 0.95,
+          fillColor: style.color,
+          fillOpacity: 0.32,
+          dashArray: item.coverage.state === "unknown" ? "4 3" : undefined,
+        },
+        interactive: !props.splitMode,
+      });
+      layer.bindTooltip(
+        `<strong>Parcela ${escapeHtml(String(item.feature.properties.cisloparcely))}</strong><br>${escapeHtml(coverageDescription(item.coverage))}`,
+        { sticky: true, className: "sady-tooltip" },
+      );
+      layer.on("click", (event: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(event);
+        offerParcel(item.feature);
+      });
+      group.addLayer(layer);
+    }
+  }, [coverageEnabled, coverage.parcels, props.splitMode, ready]);
 
   useEffect(() => {
     const group = areaGroupRef.current;
@@ -317,6 +441,10 @@ export default function MapView(props: MapViewProps) {
     for (const area of props.areas) {
       const active = props.activeId === area.id,
         selected = props.selectedIds.includes(area.id);
+      const availability = coverageEnabled ? coverageFromArea(area) : null;
+      const coverageColor = availability
+        ? COVERAGE_STYLES[availability.state].color
+        : null;
       const polygon = L.geoJSON(
         {
           type: "Feature",
@@ -325,11 +453,21 @@ export default function MapView(props: MapViewProps) {
         } as GeoJSON.GeoJsonObject,
         {
           style: {
-            color: active ? "#87e957" : selected ? "#8bcf72" : "#f4f8ef",
+            color: active
+              ? "#87e957"
+              : selected
+                ? "#8bcf72"
+                : (coverageColor ?? "#f4f8ef"),
             weight: active ? 3.5 : selected ? 2.5 : 1.5,
             opacity: 1,
-            fillColor: active ? "#79c943" : "#3e7c38",
-            fillOpacity: active ? 0.26 : selected ? 0.12 : 0.035,
+            fillColor: coverageColor ?? (active ? "#79c943" : "#3e7c38"),
+            fillOpacity: coverageEnabled
+              ? 0.36
+              : active
+                ? 0.26
+                : selected
+                  ? 0.12
+                  : 0.035,
             dashArray: area.derivedFrom ? "6 3" : undefined,
           },
           interactive: !props.splitMode,
@@ -338,13 +476,14 @@ export default function MapView(props: MapViewProps) {
       polygon.on("click", (event: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(event);
         parcelRequestRef.current?.abort();
+        setPendingParcel(null);
         setParcelStatus("");
         setLayersOpen(false);
         callbacksRef.current.onAreaClick(area.id);
       });
       const score = props.scores[area.id];
       polygon.bindTooltip(
-        `<strong>${escapeHtml(area.name)}</strong><br>${escapeHtml(score?.verdict ?? "Zatím nevyhodnoceno")}${score?.overall != null ? " · " + score.overall + "/100" : ""}`,
+        `<strong>${escapeHtml(area.name)}</strong><br>${availability ? escapeHtml(coverageDescription(availability)) : escapeHtml(score?.verdict ?? "Zatím nevyhodnoceno") + (score?.overall != null ? " · " + score.overall + "/100" : "")}`,
         { sticky: true, direction: "top", className: "sady-tooltip" },
       );
       group.addLayer(polygon);
@@ -376,6 +515,7 @@ export default function MapView(props: MapViewProps) {
     props.selectedIds,
     props.activeId,
     props.splitMode,
+    coverageEnabled,
     zoom,
     ready,
   ]);
@@ -483,6 +623,9 @@ export default function MapView(props: MapViewProps) {
     splitGroupRef.current?.eachLayer((layer) => {
       if (layer instanceof L.GeoJSON || layer instanceof L.Path)
         layer.bringToFront();
+    });
+    pendingGroupRef.current?.eachLayer((layer) => {
+      if (layer instanceof L.GeoJSON) layer.bringToFront();
     });
   }, [props.layers, realLayers, props.splitMode, cadastre, ready]);
 
@@ -598,23 +741,9 @@ export default function MapView(props: MapViewProps) {
       duration: 0.55,
     });
   };
-  const fullscreen = async () => {
-    setControlStatus("");
-    const target =
-      containerRef.current?.closest(".map-stage") ??
-      containerRef.current?.parentElement;
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else if (target instanceof HTMLElement) await target.requestFullscreen();
-    } catch {
-      setControlStatus(
-        "Celou obrazovku prohlížeč nepovolil. Mapu lze dál běžně ovládat.",
-      );
-    }
-  };
   return (
     <section
-      className={`map-shell${props.detailOpen ? " has-detail" : ""}${props.splitMode ? " is-splitting" : ""}`}
+      className={`map-shell${props.detailOpen || pendingParcel ? " has-detail" : ""}${pendingParcel ? " has-parcel-preview" : ""}${props.splitMode ? " is-splitting" : ""}`}
       aria-label="Mapa pozemků"
     >
       <div
@@ -653,16 +782,7 @@ export default function MapView(props: MapViewProps) {
           title="Zobrazit celou Českou republiku"
           aria-label="Zobrazit celou Českou republiku"
         >
-          <IconHome2 size={18} stroke={1.7} />
-        </button>
-        <button
-          type="button"
-          className="map-control-button icon-only"
-          onClick={() => void fullscreen()}
-          title="Mapa na celou obrazovku"
-          aria-label="Mapa na celou obrazovku"
-        >
-          <IconMaximize size={18} stroke={1.7} />
+          <CzechiaOutlineIcon />
         </button>
         {layersOpen && (
           <div
@@ -712,6 +832,8 @@ export default function MapView(props: MapViewProps) {
                 checked={cadastre}
                 onChange={(e) => {
                   setCadastre(e.target.checked);
+                  parcelRequestRef.current?.abort();
+                  setPendingParcel(null);
                   setParcelStatus("");
                 }}
               />
@@ -720,14 +842,17 @@ export default function MapView(props: MapViewProps) {
                 <small>Hranice a výběr od přiblížení 14</small>
               </span>
             </label>
-            {props.onToggleKraje && (
+            {props.onToggleLayer && (
               <label className="map-layer-check">
                 <input
                   type="checkbox"
-                  checked={props.showKraje}
-                  onChange={props.onToggleKraje}
+                  checked={coverageEnabled}
+                  onChange={() => props.onToggleLayer?.("coverage")}
                 />
-                <span>Hranice krajů</span>
+                <span>
+                  Dostupnost dat pro parcely
+                  <small>BPEJ, klima a vláha; nejde o vhodnost sadu</small>
+                </span>
               </label>
             )}
             {props.onToggleLayer &&
@@ -742,11 +867,7 @@ export default function MapView(props: MapViewProps) {
                   />
                   <span>
                     {d.name}
-                    <small>
-                      {d.quality === "demo"
-                        ? "Ilustrační demo vrstva"
-                        : "Otevřená data – připravené výřezy"}
-                    </small>
+                    <small>Otevřená data – připravené výřezy</small>
                   </span>
                 </label>
               ))}
@@ -758,6 +879,31 @@ export default function MapView(props: MapViewProps) {
           </div>
         )}
       </div>
+      {coverageEnabled && <DataCoverageLegend layer={coverage} compact={props.detailOpen || !!pendingParcel} />}
+      {pendingParcel && !props.splitMode && (
+        <ParcelPreview
+          feature={pendingParcel}
+          coverage={
+            coverage.parcels.find(
+              (item) =>
+                String(item.feature.properties.id) ===
+                String(pendingParcel.properties.id),
+            )?.coverage
+          }
+          onClose={() => setPendingParcel(null)}
+          onAdd={() => {
+            const eligibility = parcelEligibility(pendingParcel);
+            if (!eligibility.allowed) {
+              setParcelStatus(eligibility.reason);
+              setPendingParcel(null);
+              return;
+            }
+            const feature = pendingParcel;
+            setPendingParcel(null);
+            callbacksRef.current.onParcelSelect(feature);
+          }}
+        />
+      )}
       {props.splitMode && (
         <div className="split-map-instruction" role="status">
           <strong>Rozdělení pozemku</strong>
@@ -778,11 +924,11 @@ export default function MapView(props: MapViewProps) {
           </button>
         </div>
       )}
-      {(!tilesOk || parcelStatus || layerStatus || controlStatus) && (
+      {(!tilesOk || parcelStatus || layerStatus) && (
         <div className="map-status" role="status">
           {!tilesOk
             ? "Mapový podklad není dostupný. Zkuste ve vrstvách změnit podklad."
-            : parcelStatus || layerStatus || controlStatus}
+            : parcelStatus || layerStatus}
         </div>
       )}
     </section>

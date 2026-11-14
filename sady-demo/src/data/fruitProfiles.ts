@@ -3,8 +3,8 @@ import type { EconomicsInputs, FruitKey } from '../lib/types';
 /**
  * Pěstitelské profily ovocných druhů.
  *
- * VŠECHNY hodnoty v tomto souboru jsou MODELOVÉ PŘEDPOKLADY pro demo.
- * Slouží k demonstraci výpočtu, nikoli jako odborné pěstitelské doporučení.
+ * VŠECHNY hodnoty v tomto souboru jsou orientační MODELOVÉ PŘEDPOKLADY.
+ * Slouží ke scénářovým výpočtům, nikoli jako odborné pěstitelské doporučení.
  * Profily jsou záměrně oddělené od UI i od skórovacího modelu, aby je šlo
  * nahradit odborně ověřenými údaji (ÚKZÚZ, VŠÚO Holovousy, MZe) beze změny UI.
  */

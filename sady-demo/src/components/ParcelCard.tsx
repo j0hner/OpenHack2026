@@ -24,6 +24,7 @@ import type {
   SuitabilityResult,
 } from "../lib/types";
 import OpenDataPanel from "./OpenDataPanel";
+import { AnalysisDataStatus } from "./ui";
 
 export interface ParcelCardProps {
   area: AnalysisArea;
@@ -118,16 +119,12 @@ export default function ParcelCard(props: ParcelCardProps) {
           value && !value.includes("neurčeno") && !value.includes("více území"),
       )
       .join(" · ") || "Lokalita podle polohy v mapě";
-  const dataLabel = !area.regional
-    ? "Demo scénář"
-    : area.kind === "sample"
-      ? "Ukázková geometrie · skutečná data"
-      : area.derivedFrom?.operation === "split"
-        ? "Uživatelská část · skutečná data"
-        : area.cadastral
-          ? "Parcela ČÚZK · skutečná data"
-          : "Pracovní plocha · skutečná data";
-  const loading = area.regional?.status === "loading";
+  const dataLabel =
+    area.derivedFrom?.operation === "split"
+      ? "Uživatelská část · skutečná data"
+      : area.cadastral
+        ? "Parcela ČÚZK · skutečná data"
+        : "Pracovní plocha · skutečná data";
   const rootParcels = [...new Set(area.derivedFrom?.rootCadastralIds ?? [])]
     .filter((value) => /^\d+$/.test(value) && value !== area.cadastral?.id)
     .map((value) => {
@@ -184,9 +181,7 @@ export default function ParcelCard(props: ParcelCardProps) {
           </span>
           <strong>{fmtHa(areaHa(area.geometry))}</strong>
         </div>
-        <span className={`parcel-data-kind ${area.regional ? "real" : "demo"}`}>
-          {dataLabel}
-        </span>
+        <span className={"parcel-data-kind real"}>{dataLabel}</span>
       </header>
       <nav
         className="parcel-card-tabs"
@@ -271,26 +266,10 @@ export default function ParcelCard(props: ParcelCardProps) {
               }
             />
             <p className="parcel-score-caption">
-              Pro {profile.name.toLocaleLowerCase("cs-CZ")} ·{" "}
-              {area.regional ? "regionální index" : "modelový scénář"}
+              Pro {profile.name.toLocaleLowerCase("cs-CZ")} · regionální index
             </p>
-            {score.overall === null ? (
-              <div className="parcel-risk missing" role="status">
-                <IconAlertTriangle size={18} aria-hidden="true" />
-                <div>
-                  <strong>
-                    {loading ? "Načítám podklady" : "Nedostatek podkladů"}
-                  </strong>
-                  <p>
-                    {shortText(
-                      area.regional?.message ??
-                        score.reasons[0] ??
-                        "Pro spolehlivější hodnocení chybí data.",
-                    )}
-                  </p>
-                </div>
-              </div>
-            ) : mainRisk ? (
+            <AnalysisDataStatus score={score} protectionPending={data?.protectionPending} />
+            {score.overall !== null && (mainRisk ? (
               <div className={`parcel-risk ${mainRisk.severity}`}>
                 <IconAlertTriangle size={18} aria-hidden="true" />
                 <div>
@@ -305,7 +284,7 @@ export default function ParcelCard(props: ParcelCardProps) {
                     "Před výsadbou ověřte podmínky přímo na místě.",
                 )}
               </p>
-            )}
+            ))}
             <div className="parcel-stats">
               <div>
                 <span>Pokrytí BPEJ</span>
@@ -364,7 +343,9 @@ export default function ParcelCard(props: ParcelCardProps) {
           <>
             <div className="parcel-section-heading">
               <h3>Výsadba: {profile.name}</h3>
-              <span className="parcel-data-kind demo">Modelový předpoklad</span>
+              <span className="parcel-data-kind assumption">
+                Modelový předpoklad
+              </span>
             </div>
             <div className="parcel-stats">
               <div>

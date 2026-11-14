@@ -9,7 +9,7 @@ import type {
 } from './types';
 
 /**
- * EKONOMICKÝ MODEL DEMO
+ * EKONOMICKÝ SCÉNÁŘ
  *
  * Všechny výpočty vycházejí výhradně ze vstupů v panelu Ekonomika.
  * Ceny, výnosy a náklady jsou modelové předpoklady, nikoli nabídky dodavatelů
@@ -85,8 +85,8 @@ export function computeEconomics(
       (options.irrigation ? IRRIGATION_ANNUAL_PER_HA * areaHa : 0),
   );
 
-  const droughtRisk = area.regional ? 0 : area.attributes.water?.droughtRisk ?? 30;
-  const irrigationUpliftPct = options.irrigation ? Math.round(Math.min(18, droughtRisk * 0.18)) : 0;
+  // Irrigation changes costs only; no yield uplift without measured evidence.
+  const irrigationUpliftPct = 0;
 
   const maturityYield = areaHa * inputs.matureYieldTPerHa * scenario.yieldFactor * (1 + irrigationUpliftPct / 100);
   const matureRevenue = Math.round(maturityYield * 1000 * inputs.pricePerKg * scenario.priceFactor);
