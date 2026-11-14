@@ -70,25 +70,24 @@ TypeScript a produkční build, testy regionálního skórování na skutečnýc
 
 - [X] Pridat datasety
 - [ ] Ideální rozložení stromů
-- [ ] Základní info o starání
-- [ ] Regulace
+- [?] Regulace
 - [X] Půda/Lokalita
-- [ ] Nadmořská výška
-- [ ] Kolik bude starání se o stromy cca stát
+- [X] Nadmořská výška
+- [X] Kolik bude starání se o stromy cca stát
 - [ ] Dotace
-- [ ] Kolik bude cca výnos (burza) možnosti nejhůř/nejlíp
+- [X] Kolik bude cca výnos (burza) možnosti nejhůř/nejlíp
 - [X] Různé stromy
 - [ ]
 - [X] Přidávání pozemků do vlastnictví přes katastr
-- [ ] Rozdělování pozemků na části
+- [X] Rozdělování pozemků na části
 - [x] Propojování pozemků
-- [ ] Info o pozemku (základní info, odkaz na katastr)
-- [ ] Info o vedlejších pozemcích pro případnou koupy
+- [X] Info o pozemku (základní info, odkaz na katastr)
+- [X] Info o vedlejších pozemcích pro případnou koupy
 - [x] Jména pozemků
-- [ ] Odstraňování parcel
+- [X] Odstraňování parcel
 - [X] Mapa a vrstvy
 - [ ] 
-- [ ] Onboarding stránkou
+- [X] Onboarding stránkou
 - [X] Vyndat z dema
 - [ ]
 - [ ] Local database
