@@ -24,7 +24,7 @@ const MODEL_PROVENANCE: ProvenanceRow[] = [
     resolution: '1 : 20 000 000',
     quality: 'real',
     connected: 'Ano – lokálně přibalený GeoJSON',
-    note: 'Slouží k výběru oblasti a přiblížení mapy.',
+    note: 'Volitelný orientační překryv hranic v mapě; neslouží jako filtr pozemků.',
   },
   {
     indicator: 'Základní mapa (dlaždice)',
@@ -92,7 +92,7 @@ const MODEL_PROVENANCE: ProvenanceRow[] = [
   },
   {
     indicator: 'Terén, sklon, expozice',
-    source: 'Autorské terénní předpoklady demo scénáře SADY',
+    source: 'Autorské terénní předpoklady demo scénáře Moje Sady',
     period: '2013–2016',
     resolution: '2 × 2 m',
     quality: 'demo',
@@ -157,14 +157,15 @@ const MODEL_PROVENANCE: ProvenanceRow[] = [
 
 const prepared = (indicator:string,source:string,period:string,resolution:string,note:string):ProvenanceRow => ({indicator,source,period,resolution,note,quality:'real',connected:'Připravené výřezy + živé prostorové dotazy pro danou geometrii; vstupy regionálního indexu (AOPK samostatná omezení)'});
 export const PROVENANCE:ProvenanceRow[]=[
- prepared('Katastrální parcely','ČÚZK / RÚIAN REST + katastrální WMS','stav při stažení; živé API průběžně','parcela','Pět lokálních výřezů + živý výběr v celé ČR, popup a odkaz do oficiálního katastru.'),
+ {indicator:'Vyhledání lokality',source:'ČÚZK / RÚIAN – obce a okresy',period:'stav při stažení',resolution:'6 254 obcí a měst',quality:'real',connected:'Přibalený seznam, načítaný až při použití hledání',note:'Našeptávání bez externího geokodéru. Poloha a obálka území slouží k přiblížení mapy, nikoli k hodnocení parcely.'},
+ prepared('Katastrální parcely','ČÚZK / RÚIAN REST + katastrální WMS','stav při stažení; živé API průběžně','parcela','Pět lokálních výřezů + živý výběr v celé ČR, plovoucí detail a odkaz do oficiálního katastru.'),
  prepared('Skutečné jednotky BPEJ','ČÚZK / RÚIAN BPEJ, agendový zdroj SPÚ','stav při stažení','polygon BPEJ','Plošné podíly průnikem; kód BPEJ není půdní rozbor, pH a humus se nedoplňuje.'),
  prepared('Historické klimatické agregace','Copernicus / ECMWF ERA5-Land + ERA5 přes Open-Meteo','2005–2024','teplota ~9 km; srážky / ET0 ~25 km','Reanalýza pro střed lokality, nikoli měření na parcele nebo predikce škod.'),
  prepared('Skutečné průniky s ochranou přírody','AOPK ČR, otevřené vrstvy 0, 2, 6, 7','stav při stažení','ZCHÚ, EVL a ptačí oblasti','Pět výřezů; zjednodušení 0,00002°. Neobsahuje všechna právní omezení ani ochranná pásma.'),
  {...prepared('Sklizeň a referenční ceny','ČSÚ ZEM03D / CEN0203B','2021–2025','ČR, pět ovocných druhů','Skutečná sklizeň a cena, Kč/t převedeno na Kč/kg; chybějící údaje jsou null. Cenu lze výslovně použít v ekonomice.'),connected:'Statické statistiky ČR; žádný odhad výnosu t/ha parcely'},
  {...prepared('Mapové podklady','OpenStreetMap, ČÚZK Ortofoto a katastrální mapa','dle poskytovatele','mapové dlaždice / WMS','Dva podklady a katastrální překryv, bez klíčů.'),connected:'Online mapové podklady'},
  {indicator:'Záplavové riziko Q100',source:'Otevřená distribuční licence neověřena',period:'neověřeno',resolution:'neověřeno',quality:'unavailable',connected:'Nepřipojeno',note:'Data VÚV se nepřibalují. Absence polygonu není nulové riziko.'},
- ...MODEL_PROVENANCE.filter(p=>!['Katastrální parcely a RÚIAN','Záplavová území','Chráněná území','Vegetační a krajinný kontext'].includes(p.indicator)).map(p=>p.quality==='real'?p:{...p,indicator:p.indicator+' (demo model)',note:(p.note??'')+' Tyto předpoklady jsou oddělené od skutečných podkladů.'}),
+ ...MODEL_PROVENANCE.filter(p=>!['Vyhledání lokality','Katastrální parcely a RÚIAN','Záplavová území','Chráněná území','Vegetační a krajinný kontext'].includes(p.indicator)).map(p=>p.quality==='real'?p:{...p,indicator:p.indicator+' (demo model)',note:(p.note??'')+' Tyto předpoklady jsou oddělené od skutečných podkladů.'}),
 ];
 
 export const QUALITY_LABELS: Record<string, { label: string; className: string; hint: string }> = {

@@ -1,4 +1,5 @@
 import OpenDataPanel from './OpenDataPanel';
+import {IconAlertTriangle,IconExternalLink,IconInfoCircle,IconMapPin,IconRulerMeasure} from '@tabler/icons-react';
 import { cadastralUrl } from '../lib/openData';
 import { FRUITS, FRUIT_ORDER } from '../data/fruitProfiles';
 import { PROVENANCE } from '../data/provenance';
@@ -51,60 +52,36 @@ export default function AreaDetail(props: Props) {
   const completenessTone = score.completeness >= 80 ? 'ok' : score.completeness >= 50 ? 'warn' : 'bad';
 
   return (
-    <div>
-      <div className="area-header">
+    <div className="full-analysis-content">
+      <div className="area-header full-analysis-header">
         <div className="eyebrow">
-          {area.kind === 'sample' ? `Ukázková plocha ${area.tag ?? ''}` : area.kind === 'parcel' ? 'Katastrální parcela ČÚZK' : 'Vlastní plocha'}
-          <span className={`badge ${area.regional?'q-real':'q-demo'}`}>{area.regional?'Výpočet ze skutečných podkladů':area.kind==='sample'?'Demo scénář':'Modelový profil'}</span>
+          Detailní analýza
+          <span className={`badge ${area.regional?'q-real':'q-demo'}`}>{area.regional?(area.regional.status==='loading'?'Načítám podklady':score.overall===null?'Skutečné podklady · neúplné':'Skutečná data a orientační model'):'Demo scénář'}</span>
         </div>
         <h2 className="area-title">{area.name}</h2>
         <div className="area-loc">
-          k. ú. {area.location.katastr} · {area.location.obec} · okres {area.location.okres} · {area.location.kraj}
+          <IconMapPin size={16} aria-hidden="true" /> {[area.location.obec,area.location.okres].filter(value=>value&&value!=='neurčeno').join(', ')||`Katastrální území ${area.location.katastr}`}
         </div>
         <div className="area-stats">
-          <span className="stat-chip">
-            Výměra <b>{fmtHa(areaSize)}</b>
-          </span>
-          <span className="stat-chip">
-            Obvod <b>{fmtM(perimeterM(area.geometry))}</b>
-          </span>
+          <span className="stat-chip"><IconRulerMeasure size={16} aria-hidden="true" /> Výměra <b>{fmtHa(areaSize)}</b></span>
           <span className="stat-chip">
             Využitelné <b>{fmtHa(areaSize * (props.economicsInputs.usefulSharePct / 100))}</b>
           </span>
           <span className="stat-chip">
-            Poloha <b>{fmtNum(centerOf(area.geometry)[1], 5)}, {fmtNum(centerOf(area.geometry)[0], 5)}</b>
-          </span>
-          <span className="stat-chip">
             Druh pozemku <b>{area.landUse}</b>
           </span>
-          <span className="stat-chip">
-            Identifikace <b>{area.location.code ?? 'vlastní'}</b>
-          </span>
         </div>
-        {area.cadastral && <p>Evidovaná výměra: {area.cadastral.officialAreaM2?.toLocaleString('cs-CZ') ?? 'neuvedena'} m². <a href={cadastralUrl(area.cadastral.id)} target="_blank" rel="noopener noreferrer">Otevřít oficiální katastr</a></p>}
-        <p className="inline-note">{area.story}</p>
-        <p className="tiny muted" style={{ marginTop: 4 }}>
-          {area.sourceNote}
-        </p>
-
-        <div style={{ marginTop: 10 }}>
-          <div className="tiny muted" style={{ marginBottom: 5, fontWeight: 600 }}>
-            Ovocný druh
-          </div>
-          <div className="fruit-row">
-            {FRUIT_ORDER.map((key) => (
-              <button
-                key={key}
-                type="button"
-                className={`fruit-chip${fruit === key ? ' active' : ''}`}
-                onClick={() => props.onFruitChange(key)}
-              >
-                <span aria-hidden="true">{FRUITS[key].emoji}</span>
-                {FRUITS[key].name}
-              </button>
-            ))}
-          </div>
-        </div>
+        <label className="field analysis-fruit-select"><span className="field-label">Ovocný druh</span><select value={fruit} onChange={event=>props.onFruitChange(event.target.value as FruitKey)}>{FRUIT_ORDER.map(key=><option key={key} value={key}>{FRUITS[key].name}</option>)}</select></label>
+        <details className="analysis-identification">
+          <summary><IconInfoCircle size={17} aria-hidden="true" /> Identifikace a původ plochy</summary>
+          <dl className="kv">
+            <div className="kv-row"><dt>Identifikace</dt><dd>{area.location.code??'Uživatelská plocha'}</dd></div>
+            <div className="kv-row"><dt>Obvod</dt><dd>{fmtM(perimeterM(area.geometry))}</dd></div>
+            <div className="kv-row"><dt>Poloha</dt><dd>{fmtNum(centerOf(area.geometry)[1],5)}, {fmtNum(centerOf(area.geometry)[0],5)}</dd></div>
+          </dl>
+          {area.cadastral&&<p className="small">Evidovaná výměra {area.cadastral.officialAreaM2?.toLocaleString('cs-CZ')??'neuvedena'} m². <a className="analysis-external-link" href={cadastralUrl(area.cadastral.id)} target="_blank" rel="noopener noreferrer">Oficiální katastr <IconExternalLink size={15} aria-hidden="true" /></a></p>}
+          <p className="small">{area.story}</p><p className="tiny muted">{area.sourceNote}</p>
+        </details>
       </div>
 
       <div className={`verdict-card ${score.verdictClass}`} style={{ marginTop: 12 }}>
@@ -166,7 +143,7 @@ export default function AreaDetail(props: Props) {
       </div>
 
       <div style={{ marginTop: 12 }}>
-        {(tab === 'prehled' || tab === 'data' || tab === 'ekonomika') && <OpenDataPanel area={area} fruit={fruit} onEconomicsChange={props.onEconomicsChange} onRetry={props.onRetryData} />}
+        {tab === 'data' && <OpenDataPanel area={area} fruit={fruit} onEconomicsChange={props.onEconomicsChange} onRetry={props.onRetryData} />}
         {tab === 'prehled' && <Overview score={score} area={area} />}
         {tab === 'doporuceni' && (
           <RecommendationPanel
@@ -276,7 +253,7 @@ function Overview({ score, area }: { score: SuitabilityResult; area: AnalysisAre
             {score.constraints.map((item) => (
               <li key={item.label} className="high">
                 <span className="sev" aria-hidden="true">
-                  ▲
+                  <IconAlertTriangle size={18} />
                 </span>
                 <span>
                   <b>{item.label}</b>
@@ -286,8 +263,8 @@ function Overview({ score, area }: { score: SuitabilityResult; area: AnalysisAre
             ))}
           </ul>
         ) : (
-          <div className="notice good">
-            {area.regional?'V připojených kategoriích AOPK není evidovaný průnik, nebo je podklad nedostupný (viz zdroje výše). Záplavy Q100 a další právní omezení zůstávají neověřené.':'V demo podkladech není zjištěný střet. To není potvrzení, že záměr je povolený.'}
+          <div className="notice info">
+            {area.regional?(area.regional.data?.protected===null||!area.regional.data?'Ochrana přírody pro tuto plochu není ověřená.':'Ve čtyřech připojených kategoriích AOPK nebyl nalezen průnik. Záplavy Q100 a další právní omezení zůstávají neověřené.'):'V demo podkladech není zjištěný střet. To není potvrzení, že záměr je povolený.'}
           </div>
         )}
         {constraint?.note && <div className="inline-note">{constraint.note}</div>}
@@ -340,11 +317,11 @@ function Overview({ score, area }: { score: SuitabilityResult; area: AnalysisAre
         <ul className="plain-list">
           {score.assumptions.map((item) => (
             <li key={item} className="small" style={{ color: 'var(--ink-soft)' }}>
-              • {item}
+              {item.replace(/\bSADY\b/g,'Moje Sady')}
             </li>
           ))}
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • Druh pozemku ({area.landUse}) sám o sobě neznamená, že je výsadba sadu povolená.
+            Druh pozemku ({area.landUse}) sám o sobě neznamená, že je výsadba sadu povolená.
           </li>
         </ul>
       </div>
@@ -361,7 +338,7 @@ function DataTab({
   score: SuitabilityResult;
   onOpenProvenance: () => void;
 }) {
-  if(area.regional)return <div className="card"><strong>Podklady pro tuto plochu jsou vypsané výše.</strong><p className="small">{score.categories.map(c=>`${c.label}: ${c.score===null?'nedostupné':c.score+'/100 (částečné podklady)'}`).join(' · ')}</p><ul className="plain-list">{score.assumptions.map(text=><li key={text}>{text}</li>)}</ul><button type="button" className="btn" onClick={onOpenProvenance}>Otevřít zdroje a nejistoty</button></div>;
+  if(area.regional)return <div className="card"><strong>Podklady pro tuto plochu jsou vypsané výše.</strong><p className="small">{score.categories.map(c=>`${c.label}: ${c.score===null?'nedostupné':c.score+'/100 (částečné podklady)'}`).join(' · ')}</p><ul className="plain-list">{score.assumptions.map(text=><li key={text}>{text.replace(/\bSADY\b/g,'Moje Sady')}</li>)}</ul><button type="button" className="btn" onClick={onOpenProvenance}>Otevřít zdroje a nejistoty</button></div>;
   const rows: {
     indicator: string;
     value: string;
@@ -479,7 +456,7 @@ function DataTab({
           <ul className="plain-list">
             {score.missing.map((item) => (
               <li key={item} className="small" style={{ color: 'var(--ink-soft)' }}>
-                • {item} – podklad pro tuto kategorii chybí.
+                {item} – podklad pro tuto kategorii chybí.
               </li>
             ))}
           </ul>
@@ -524,7 +501,7 @@ function DataTab({
         <ul className="plain-list">
           {score.assumptions.map((item) => (
             <li key={item} className="small" style={{ color: 'var(--ink-soft)' }}>
-              • {item}
+              {item.replace(/\bSADY\b/g,'Moje Sady')}
             </li>
           ))}
         </ul>

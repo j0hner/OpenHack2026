@@ -24,15 +24,14 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
   };
 
   return (
-    <div>
-      <div className="area-header" style={{ marginBottom: 12 }}>
+    <div className="provenance-panel analysis-section-content">
+      <div className="area-header secondary-view-header" style={{ marginBottom: 12 }}>
         <div className="eyebrow">
           Data a nejistoty <span className="badge q-real">transparentnost</span>
         </div>
-        <h2 className="area-title">Z čeho vycházíme</h2>
+        <h2 className="area-title">Data, kterým rozumíte</h2>
         <div className="area-loc">
-          Přehled zamýšleného i skutečně napojeného propojení otevřených dat. Stav u každého zdroje popisuje realitu
-          dema – název instituce sám o sobě neznamená, že je zdroj připojený.
+          Moje Sady rozlišují skutečné podklady, modelové předpoklady a ukázkové scénáře. U každého zdroje uvidíte jeho pokrytí i omezení.
         </div>
         <div className="prov-summary" style={{ marginTop: 9 }}>
           <span className="badge q-real">Skutečná data: {counts.real}</span>
@@ -49,20 +48,20 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
         </div>
         <ul className="plain-list">
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • <b>Natural Earth 1:50m</b> – hranice ČR, lokálně přibalený GeoJSON. Funguje i bez internetu.
+            <b>Natural Earth 1:50m</b> – lokálně přibalená hranice ČR pro záložní náhled mapy.
           </li>
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • <b>Eurostat GISCO NUTS 2021</b> – hranice 14 krajů, lokálně přibalené.
+            <b>Eurostat GISCO NUTS 2021</b> – lokálně přibalené orientační hranice 14 krajů.
           </li>
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • <b>OpenStreetMap</b> – podkladové dlaždice mapy, online s automatickým náhradním režimem.
+            <b>OpenStreetMap a ČÚZK</b> – skutečné mapové podklady a katastrální překryv.
           </li>
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • <b>Nominatim / OSM</b> – vyhledání lokality, online dotaz s ošetřením chyby.
+            <b>ČÚZK / RÚIAN</b> – vyhledávání ve všech 6 254 obcích a městech ČR z přibaleného otevřeného seznamu.
           </li>
         </ul>
         <div className="inline-note">
-          Režim Skutečná data počítá regionální index z průniků BPEJ a klimatu ERA5-Land / ERA5. V pěti lokalitách používá připravené výřezy, jinde živé dotazy podle geometrie. AOPK vstupuje do samostatných omezení. ČSÚ poskytuje celostátní ekonomickou referenci. Demo scénáře jsou dostupné odděleně; váhy a agronomické převody zůstávají orientačními pravidly SADY.
+          Režim Skutečná data počítá regionální index z průniků BPEJ a klimatu ERA5-Land / ERA5. V pěti lokalitách používá připravené výřezy, jinde živé dotazy podle geometrie. AOPK vstupuje do samostatných omezení. ČSÚ poskytuje celostátní ekonomickou referenci. Demo scénáře jsou dostupné odděleně; váhy a agronomické převody jsou orientačními pravidly Moje Sady.
         </div>
       </div>
 
@@ -91,7 +90,7 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
             <div className="prov-head">
               <div>
                 <div className="prov-indicator">{row.indicator}</div>
-                <div className="prov-source">{row.source}</div>
+                <div className="prov-source">{row.source.replace(/\bSADY\b/g,'Moje Sady')}</div>
               </div>
               <QualityBadge quality={row.quality} />
             </div>
@@ -103,7 +102,7 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
                 <b>Připojení:</b> {row.connected}
               </span>
             </div>
-            {row.note && <div className="prov-note">{row.note}</div>}
+            {row.note && <div className="prov-note">{row.note.replace(/\bSADY\b/g,'Moje Sady')}</div>}
           </div>
         ))}
 
@@ -113,10 +112,10 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
       </div>
 
       <div className="card">
-        <div className="card-title">Zásady, které demo dodržuje</div>
+        <div className="card-title">Zásady hodnocení</div>
         <ul className="principles">
           {DATA_PRINCIPLES.map((item) => (
-            <li key={item}>{item}</li>
+            <li key={item}>{item.replace(/\bSADY\b/g,'Moje Sady')}</li>
           ))}
         </ul>
       </div>
@@ -135,13 +134,13 @@ export default function ProvenancePanel({ onOpenAnalysis }: { onOpenAnalysis: ()
             <tbody>
               {ADAPTER_SUMMARY.map((adapter) => (
                 <tr key={adapter.name}>
-                  <td>{adapter.name}</td>
+                  <td>{adapter.name.startsWith('Nominatim')?'ČÚZK / RÚIAN – obce a města':adapter.name}</td>
                   <td>
                     <span className={`badge ${adapter.status === 'Napojeno' ? 'good' : 'q-unavailable'}`}>
                       {adapter.status}
                     </span>
                   </td>
-                  <td>{adapter.note}</td>
+                  <td>{adapter.name.startsWith('Nominatim')?'Místní našeptávání z úplného přibaleného seznamu obcí ČR. Při psaní se nevolá externí geokodér.':adapter.note}</td>
                 </tr>
               ))}
             </tbody>

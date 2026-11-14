@@ -1,0 +1,37 @@
+import {createServer} from 'vite';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import assert from 'node:assert/strict';
+const originalFetch=globalThis.fetch;
+const server=await createServer({server:{middlewareMode:true,hmr:false},appType:'custom'});
+try{
+ const {decodeMunicipalities,normalizeLocality,findMunicipalities,municipalityToPlace,loadMunicipalities}=await server.ssrLoadModule('/src/lib/localitySearch.ts');
+ const bytes=await readFile(new URL('../public/data/municipalities.json',import.meta.url));
+ const rows=JSON.parse(bytes),metadata=JSON.parse(await readFile(new URL('../public/data/municipalities-metadata.json',import.meta.url)));
+ assert.equal(createHash('sha256').update(bytes).digest('hex'),metadata.sha256);assert.equal(bytes.length,metadata.bytes);
+ const list=decodeMunicipalities(rows);assert.equal(list.length,metadata.count);assert(list.length>=6200);assert.equal(new Set(list.map(p=>p.code)).size,list.length);assert(bytes.length<1000000);
+ assert.equal(normalizeLocality('  ČESKÉ   BUDĚJOVICE  '),'ceske budejovice');
+ assert.equal(findMunicipalities(list,'ceske budejovice')[0].name,'České Budějovice');
+ assert.equal(findMunicipalities(list,'  PRAHA ')[0].name,'Praha');
+ assert.equal(findMunicipalities(list,'Br')[0].name,'Brno');
+ assert.equal(findMunicipalities(list,'Usti nad labem')[0].name,'Ústí nad Labem');
+ assert.equal(findMunicipalities(list,'p').length,0);assert.equal(findMunicipalities(list,'qzxnonezzq').length,0);
+ const duplicate=list.filter(p=>p.name==='Nová Ves');assert(duplicate.length>5);
+ const chosen=duplicate.at(-1),byDistrict=findMunicipalities(list,`nova ves ${chosen.district}`,30);assert(byDistrict.some(p=>p.code===chosen.code));
+ const toPlace=municipalityToPlace(chosen);assert.equal(toPlace.code,chosen.code);assert(toPlace.label.includes(chosen.district));assert.equal(toPlace.bounds.length,4);assert.equal(toPlace.source,'ČÚZK / RÚIAN');
+ assert.throws(()=>decodeMunicipalities([]));assert.throws(()=>decodeMunicipalities([[500011,'Test','Okres',150,50,2,149,49,151,51]]));assert.throws(()=>decodeMunicipalities([rows[0],rows[0]]));
+ let requests=0;
+ globalThis.fetch=async input=>{assert(String(input).endsWith('/data/municipalities.json'));requests++;return new Response('{}',{status:503});};
+ await assert.rejects(loadMunicipalities(),/HTTP 503/);
+ globalThis.fetch=async()=>{requests++;throw new TypeError('Test network unavailable');};
+ await assert.rejects(loadMunicipalities(),/network unavailable/);
+ globalThis.fetch=async()=>{requests++;return new Response('{invalid json');};
+ await assert.rejects(loadMunicipalities(),SyntaxError);
+ globalThis.fetch=async()=>{requests++;return Response.json([]);};
+ await assert.rejects(loadMunicipalities(),/Seznam obcí je prázdný/);
+ globalThis.fetch=async()=>{requests++;return new Response(bytes,{headers:{'Content-Type':'application/json'}});};
+ const first=loadMunicipalities(),second=loadMunicipalities();assert.strictEqual(first,second,'Souběžné použití sdílí jediný fetch.');
+ const restored=await first;assert.equal(restored.length,metadata.count);
+ assert.strictEqual(loadMunicipalities(),first,'Úspěšný výsledek zůstává v cache.');assert.equal(requests,5,'Po HTTP, síťové i datové chybě musí být možné skutečné opakování.');
+ console.log(JSON.stringify({checks:'OK',municipalities:list.length,bytes:bytes.length,duplicateNamesDisambiguated:duplicate.length,fetchRetry:'HTTP / network / malformed JSON / invalid schema; shared successful cache',keyboardComponent:'root in-app browser QA'}));
+}finally{globalThis.fetch=originalFetch;await server.close();}

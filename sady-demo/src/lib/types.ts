@@ -86,7 +86,16 @@ export interface AreaLocation {
 
 export interface AnalysisArea {
   regional?: {status:'loading'|'ready'|'error';data:import('./regionalData').RegionalData|null;message?:string};
-  derivedFrom?: {operation:'split'|'merge';sourceIds:string[];sourceNames:string[]};
+  derivedFrom?: {
+    operation:'split'|'merge';
+    sourceIds:string[];
+    sourceNames:string[];
+    /** Oldest known source areas, retained when intermediate working areas go away. */
+    rootSourceIds?:string[];
+    rootSourceNames?:string[];
+    /** Official ancestors only; never makes a working child an official parcel. */
+    rootCadastralIds?:string[];
+  };
   id: string;
   /** 'A' | 'B' | 'C' u přednačtených ukázek */
   tag?: string;

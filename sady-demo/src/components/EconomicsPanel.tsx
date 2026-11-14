@@ -52,9 +52,7 @@ function AnnualFlowChart({ flows }: { flows: CashFlowYear[] }) {
             fill={flow.net >= 0 ? '#3d9465' : '#b4513c'}
             opacity={flow.year === 0 ? 0.55 : 0.85}
           >
-            <title>
-              Rok {flow.year}: {fmtKc(flow.net)}
-            </title>
+            <title>{`Rok ${flow.year}: ${fmtKc(flow.net)}`}</title>
           </rect>
         );
       })}
@@ -163,8 +161,9 @@ export default function EconomicsPanel({
   }));
 
   return (
-    <div>
-      <div className="card">
+    <div className="economics-panel analysis-section-content">
+      <details className="card economics-inputs">
+        <summary className="economics-inputs-summary">Upravit vstupy ekonomického scénáře</summary>
         <div className="card-title">
           <span>Vstupy výpočtu</span>
           <button type="button" className="link-button" onClick={onReset}>
@@ -174,7 +173,7 @@ export default function EconomicsPanel({
 
         <div className="notice" style={{ marginBottom: 10 }}>
           Ekonomika vychází z výměry {fmtHa(areaHa)}, sponu {inputs.rowSpacingM} × {inputs.treeSpacingM} m a využití{' '}
-          {inputs.usefulSharePct} % plochy. Všechny ceny a výnosy jsou modelové předpoklady.
+          {inputs.usefulSharePct} % plochy. Náklady, ceny a budoucí výnos jsou vstupy scénáře, nikoli měřený výnos tohoto pozemku. Cenu lze převzít z referencí ČSÚ v záložce Data.
         </div>
 
         <div className="form-grid">
@@ -264,7 +263,7 @@ export default function EconomicsPanel({
             checked={irrigation}
             onChange={onIrrigationChange}
             label="Modelovat závlahu"
-            description="Zvýší investici i roční náklady, zlepší vláhu a výnos. Není potvrzením dostupnosti vody."
+            description={area.regional?'Zvýší investici a provozní náklady. Bez doložených údajů nenavyšujeme budoucí výnos.':'Zvýší investici i roční náklady a modelově upraví výnos. Není potvrzením dostupnosti vody.'}
             disabled={area.irrigationAvailable === false}
           />
           <Toggle
@@ -279,11 +278,11 @@ export default function EconomicsPanel({
             U této plochy není závlaha v demu uvažovaná (chybí ověřený zdroj vody). Přepínač je proto vypnutý.
           </div>
         )}
-      </div>
+      </details>
 
-      <div className="card">
+      <div className="card economics-result-card">
         <div className="card-title">
-          <span>Výsledek pro {profile.name.toLowerCase()}</span>
+          <span>Modelový výsledek pro {profile.name.toLowerCase()}</span>
           <span className="hint">{fmtInt(result.treeCount)} stromů</span>
         </div>
 
@@ -451,8 +450,7 @@ export default function EconomicsPanel({
           </table>
         </div>
         <div className="inline-note">
-          Závlaha zvyšuje investici i roční náklady a modelově zlepšuje výnos podle rizika sucha na ploše
-          (+{result.irrigationUpliftPct} % při zapnuté závlaze). Podpora je modelová částka {fmtKc(inputs.subsidyPerHa)}{' '}
+          Závlaha zvyšuje investici a roční náklady. {area.regional?'Budoucí výnos bez doložených vstupů automaticky nenavyšujeme.':`V demo scénáři může upravit výnos o ${result.irrigationUpliftPct} %.`} Podpora je modelová částka {fmtKc(inputs.subsidyPerHa)}{' '}
           na hektar, vyžaduje ověření podmínek.
         </div>
         {ratio != null && (
