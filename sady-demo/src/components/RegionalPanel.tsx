@@ -58,6 +58,12 @@ export default function RegionalPanel({
                 ? `${d.source === "snapshot" ? "Připravený prostorový výřez" : "Živé otevřené zdroje"} · zpracováno ${new Date(d.fetchedAt).toLocaleDateString("cs-CZ")}`
                 : "Podklady nejsou dostupné."}
       </p>
+      {d?.deferred && !d.climate && (
+        <div className="climate-deferred-note" role="status">
+          <strong>Čekání na klimatická data</strong>
+          <span>{d.deferred.message}</span>
+        </div>
+      )}
       {area.manualInputs && (
         <p className="notice warn">
           Výpočet používá také vlastní vstupy zadané výše. Ty mají přednost před
@@ -99,6 +105,8 @@ export default function RegionalPanel({
                   {fmt(mean(years.map((y) => y.et0Mm)))} mm/rok; jarní mráz{" "}
                   {fmt(mean(years.map((y) => y.springFrostDays)))} dnů/rok.
                 </>
+              ) : d.deferred ? (
+                "Po uvolnění limitu zdroje půjde klimatická data znovu ověřit."
               ) : (
                 "Zdroj nedostupný."
               )}

@@ -131,7 +131,8 @@ export async function queryCoverageParcels(
   const key = coverageBoundsKey(bounds) + `|gardens:${!excludeGardens}|data:${checkData}`;
   const hit = queryCache.get(key);
   const hitHasError = hit?.value.parcels.some(item => item.coverage.state === 'error');
-  if (hit && Date.now() - hit.at < (hitHasError ? 30_000 : 120_000)) return hit.value;
+  const resumeAt = hit ? Math.min(...hit.value.parcels.filter(item => item.coverage.state === 'deferred').map(item => item.coverage.retryAt ?? Infinity)) : Infinity;
+  if (hit && Date.now() < resumeAt && Date.now() - hit.at < (hitHasError ? 30_000 : 120_000)) return hit.value;
   let entries: Awaited<ReturnType<typeof locationIndex>> = [];
   let warning = "";
   try {

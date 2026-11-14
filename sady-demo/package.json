@@ -32,7 +32,9 @@
     "test:coverage": "node scripts/test-parcel-coverage.mjs",
     "test:migration": "node scripts/test-no-demo.mjs",
     "test:map-viewport": "node scripts/test-map-viewport.mjs",
-    "test:regional-climate": "node scripts/test-regional-climate.mjs"
+    "test:regional-climate": "node scripts/test-regional-climate.mjs",
+    "test:coverage-preservation": "node scripts/test-coverage-preservation.mjs",
+    "test:regional-deferred": "node scripts/test-regional-deferred.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",

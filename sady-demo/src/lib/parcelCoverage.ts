@@ -15,6 +15,7 @@ export type CoverageState =
   | "insufficient"
   | "unknown"
   | "loading"
+  | "deferred"
   | "error";
 export interface ParcelCoverage {
   state: CoverageState;
@@ -25,6 +26,7 @@ export interface ParcelCoverage {
   geometrySupported: boolean;
   source: "snapshot" | "analysis" | "unknown";
   reason: string;
+  retryAt?: number;
 }
 export interface CoverageParcel {
   feature: ParcelFeature;
@@ -39,6 +41,7 @@ export const COVERAGE_STYLES: Record<
   insufficient: { color: "#c88b24", label: "Podklady nestačí" },
   unknown: { color: "#7b8794", label: "Dosud neověřeno" },
   loading: { color: "#407cb8", label: "Načítání podkladů" },
+  deferred: { color: "#7b8794", label: "Čeká na klimatická data" },
   error: { color: "#b55365", label: "Chyba ověření" },
 };
 export const emptyCoverageCounts = (): CoverageCounts => ({
@@ -46,6 +49,7 @@ export const emptyCoverageCounts = (): CoverageCounts => ({
   insufficient: 0,
   unknown: 0,
   loading: 0,
+  deferred: 0,
   error: 0,
 });
 export const unknownCoverage = (
@@ -135,6 +139,8 @@ export function coverageFromArea(area: AnalysisArea): ParcelCoverage {
   if (!regional.data || regional.data.key !== geometryKey(area.geometry))
     return unknownCoverage("Dostupná analýza nepatří této přesné geometrii.");
   const coverage = coverageFromData(area.geometry, regional.data);
+  if (coverage.geometrySupported && regional.data.deferred && !regional.data.errors.length && !regional.data.climate)
+    return { ...coverage, state: 'deferred', reason: regional.data.deferred.message, retryAt: regional.data.deferred.retryAt };
   // A network failure is not evidence that the underlying source contains no data.
   if (
     coverage.geometrySupported &&

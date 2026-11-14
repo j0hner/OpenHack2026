@@ -85,7 +85,13 @@ export default function AreaDetail(props: Props) {
   const [manualFocus, setManualFocus] = useState(0);
 
   const completenessTone =
-    score.completeness >= 80 ? "ok" : score.completeness >= 50 ? "warn" : "bad";
+    score.dataStatus === "deferred"
+      ? "neutral"
+      : score.completeness >= 80
+        ? "ok"
+        : score.completeness >= 50
+          ? "warn"
+          : "bad";
 
   return (
     <div className="full-analysis-content">
@@ -221,10 +227,7 @@ export default function AreaDetail(props: Props) {
                 {score.completeness} %
               </span>
             </div>
-            <Meter
-              value={score.completeness}
-              tone={completenessTone as "ok" | "warn" | "bad"}
-            />
+            <Meter value={score.completeness} tone={completenessTone} />
           </div>
         </div>
       </div>
@@ -470,7 +473,9 @@ function Overview({
                   {category.availability !== "complete" && (
                     <span className="badge nodata" style={{ marginLeft: 5 }}>
                       {category.score === null &&
-                      ["idle", "loading", "error"].includes(score.dataStatus)
+                      ["idle", "loading", "error", "deferred"].includes(
+                        score.dataStatus,
+                      )
                         ? score.verdict
                         : AVAILABILITY_LABEL[category.availability]}
                     </span>

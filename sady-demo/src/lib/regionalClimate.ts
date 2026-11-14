@@ -1,4 +1,5 @@
 import { loadLocation, locationIndex } from "./openData";
+import { ClimateRateLimitError } from "./climateLimit";
 import {
   aggregateWeather,
   distanceKm,
@@ -171,7 +172,8 @@ async function request(
   try {
     if (!needed()) throw new DOMException("Aborted", "AbortError");
     const limit = currentLimit();
-    if (limit) throw Error(limitedMessage(limit));
+    if (limit)
+      throw new ClimateRateLimitError(limitedMessage(limit), limit.until);
     const params = new URLSearchParams({
       latitude: String(cell[1]),
       longitude: String(cell[0]),
@@ -202,21 +204,27 @@ async function request(
         : /hour/i.test(reason)
           ? 3600000
           : 60000;
+      const previous = currentLimit();
       providerLimit = {
-        until:
+        until: Math.max(
+          previous?.until ?? 0,
           Number.isFinite(retryAt) && retryAt > Date.now()
             ? retryAt
             : Date.now() + delay,
+        ),
         message: /daily|tomorrow/i.test(reason)
-          ? "Klimatický zdroj vyčerpal denní limit (HTTP 429)."
-          : "Klimatický zdroj dočasně omezil požadavky (HTTP 429).",
+          ? "Čeká se na obnovení denního limitu klimatických dat."
+          : "Čeká se na obnovení limitu klimatických dat.",
       };
       try {
         localStorage.setItem(LIMIT_STORAGE, JSON.stringify(providerLimit));
       } catch {
         /* Optional. */
       }
-      throw Error(limitedMessage(providerLimit));
+      throw new ClimateRateLimitError(
+        limitedMessage(providerLimit),
+        providerLimit.until,
+      );
     }
     if (!response.ok || value.error)
       throw Error(
@@ -263,11 +271,20 @@ export async function loadRegionalClimate(
   if (prepared) return prepared;
   const cell = climateCell(point),
     key = cell.join(",");
-  const cached = memory.get(key) ?? storedClimate(key);
+  const inMemory = memory.get(key);
+  const cached = inMemory && valid(inMemory) ? inMemory : storedClimate(key);
   if (!refresh && cached && valid(cached))
     return { ...cached.data, distanceKm: distanceKm(point, cached.data.grid!) };
   const limit = currentLimit();
-  if (limit) throw Error(limitedMessage(limit));
+  if (limit) {
+    // A forced refresh during quota must keep a previously verified observation.
+    if (cached && valid(cached))
+      return {
+        ...cached.data,
+        distanceKm: distanceKm(point, cached.data.grid!),
+      };
+    throw new ClimateRateLimitError(limitedMessage(limit), limit.until);
+  }
   const failed = failures.get(key);
   if (!refresh && failed && failed.until > Date.now())
     throw Error(limitedMessage(failed));
@@ -306,7 +323,11 @@ export async function loadRegionalClimate(
   const shared = pending.get(key)!;
   shared.subscribers.add(signal);
   try {
-    const result = await subscribe(shared.promise, signal);
+    const result = await subscribe(shared.promise, signal).catch((error) => {
+      if (error instanceof ClimateRateLimitError && cached && valid(cached))
+        return cached.data;
+      throw error;
+    });
     return {
       ...result,
       distanceKm: result.grid ? distanceKm(point, result.grid) : null,

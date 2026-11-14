@@ -31,7 +31,8 @@ export default function DataCoverageLegend({ layer, enabled = true }: {
       <p>
         Zelená vyžaduje alespoň 80 % hodnotitelné BPEJ a 15 úplných klimatických let
         pro půdu, klima a vláhu. Šedá znamená dosud neověřeno; chyba zdroje není
-        potvrzený nedostatek dat.
+        potvrzený nedostatek dat. Při dosažení limitu klimatického API zůstávají
+        ověřené parcely beze změny; ostatní čekají v neutrální šedé barvě.
       </p>
       <p>
         Od přiblížení 14, nejvýše 200 parcel v pohledu do 8 km úhlopříčky.

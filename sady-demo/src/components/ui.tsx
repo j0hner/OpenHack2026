@@ -3,10 +3,12 @@ import {
   IconAlertCircle,
   IconAlertTriangle,
   IconCheck,
+  IconClock,
   IconDatabaseOff,
   IconInfoCircle,
 } from "@tabler/icons-react";
 import DataQualityBadge from "./DataQualityBadge";
+import "./deferred-data.css";
 import type {
   DataQuality,
   SuitabilityResult,
@@ -22,7 +24,12 @@ export function AnalysisDataStatus({
   score: SuitabilityResult;
   onComplete?: () => void;
 }) {
-  const Icon = score.dataStatus === "ready" ? IconCheck : IconInfoCircle;
+  const Icon =
+    score.dataStatus === "ready"
+      ? IconCheck
+      : score.dataStatus === "deferred"
+        ? IconClock
+        : IconInfoCircle;
   const needsInput =
     score.dataStatus === "insufficient" || score.dataStatus === "error";
   return (
@@ -68,9 +75,11 @@ export function VerdictBadge({
   const Icon =
     verdictClass === "good"
       ? IconCheck
-      : verdictClass === "nodata"
-        ? IconDatabaseOff
-        : IconAlertTriangle;
+      : verdict === "Čeká na klimatická data"
+        ? IconClock
+        : verdictClass === "nodata"
+          ? IconDatabaseOff
+          : IconAlertTriangle;
   return (
     <span className={`badge ${verdictClassOf(verdictClass)}`}>
       <Icon size={14} aria-hidden="true" />
@@ -155,11 +164,11 @@ export function Meter({
   tone = "ok",
 }: {
   value: number;
-  tone?: "ok" | "warn" | "bad";
+  tone?: "ok" | "warn" | "bad" | "neutral";
 }) {
   return (
     <div
-      className={`meter ${tone === "warn" ? "warn" : tone === "bad" ? "bad" : ""}`}
+      className={`meter ${tone === "warn" ? "warn" : tone === "bad" ? "bad" : tone === "neutral" ? "neutral" : ""}`}
     >
       <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
     </div>

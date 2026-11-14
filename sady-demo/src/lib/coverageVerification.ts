@@ -10,6 +10,7 @@ import {
 import { geometryBounds, parcelArea } from "./openData";
 import {
   distanceKm,
+  existingRegionalCore,
   geometryKey,
   rememberRegionalCore,
   representativePoint,
@@ -17,6 +18,7 @@ import {
   type RegionalData,
 } from "./regionalData";
 import { climateCellKey, loadRegionalClimate } from "./regionalClimate";
+import { climatePause, type ClimatePause } from './climateLimit';
 
 type SoilCollection = FeatureCollection<Polygon | MultiPolygon>;
 export const COVERAGE_CLIMATE_CONCURRENCY = 2;
@@ -93,6 +95,14 @@ export async function verifyVisibleCoverage(
 ): Promise<CoverageParcel[]> {
   checkAbort(signal);
   const parcels = input.map(item => ({ ...item }));
+  // Changing the viewport (including fitting a planting plan) must not discard
+  // an already verified observation of this exact geometry.
+  for (const item of parcels) {
+    if (item.coverage.state !== 'unknown') continue;
+    const data = existingRegionalCore(geometryKey(item.feature.geometry));
+    if (data?.soil && data.climate && !data.errors.length && !data.deferred)
+      item.coverage = coverageFromArea({ ...parcelArea(item.feature), regional: { status: 'ready', data } });
+  }
   const pending = parcels.filter(item => item.coverage.state === "unknown");
   if (!pending.length) return parcels;
   const supported: CoverageParcel[] = [];
@@ -123,10 +133,10 @@ export async function verifyVisibleCoverage(
     }
   }
   if (!cells.size) { publish(); return parcels; }
-  type Result<T> = { value: T | null; error: string | null };
+  type Result<T> = { value: T | null; error: string | null; deferred?: ClimatePause };
   const attempt = async <T>(task: () => Promise<T>): Promise<Result<T>> => {
     try { return { value: await task(), error: null }; }
-    catch (error) { checkAbort(signal); return { value: null, error: error instanceof Error ? error.message : "Zdroj nedostupný." }; }
+    catch (error) { checkAbort(signal); const deferred = climatePause(error); return deferred ? { value: null, error: null, deferred } : { value: null, error: error instanceof Error ? error.message : "Zdroj nedostupný." }; }
   };
   // Start the single soil job alongside climate jobs, never once per parcel.
   const soilPromise = attempt(() => viewportSoil(supported, signal));
@@ -150,6 +160,7 @@ export async function verifyVisibleCoverage(
             soil: indexed ? soilSummary(item.feature.geometry, { type: "FeatureCollection", features: indexed.filter(entry => boundsIntersect(entry.bounds, bounds)).map(entry => entry.feature) }) : null,
             climate: climate.value ? { ...climate.value, distanceKm: climate.value.grid ? distanceKm(point, climate.value.grid) : null } : null,
             errors,
+            ...(climate.deferred ? { deferred: climate.deferred } : {}),
           };
           item.coverage = coverageFromArea({ ...parcelArea(item.feature), regional: { status: "ready", data } });
           if (!errors.length) rememberRegionalCore(data);

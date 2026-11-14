@@ -79,6 +79,10 @@ export function scoreRegionalArea(
     req = FRUITS[fruit].requirements,
     years = validClimateYears(data);
   const manual = normalizeManualInputs(area.manualInputs);
+  const deferredClimate =
+    data?.deferred && !data.climate && !data.errors.length
+      ? data.deferred
+      : undefined;
   const manualFields = MANUAL_FIELDS.filter(
     ({ key }) => manual?.[key] !== undefined,
   ).map(({ key }) => key);
@@ -214,14 +218,16 @@ export function scoreRegionalArea(
       availability: raw[key] ? "partial" : "missing",
       summary:
         raw[key]?.summary ??
-        (manual
-          ? key === "soil"
-            ? "Chybí nejméně 80 % hodnotitelné BPEJ nebo ručně zadaná reprezentativní HPJ."
-            : `Pro scénář chybí: ${missingClimate(key === "climate" ? ["temperatureMeanC", "springFrostDays", "summerDays"] : ["rainfallMm", "et0Mm"])}. Každý vstup potřebuje vlastní uživatelskou hodnotu nebo nejméně 15 skutečných ročních pozorování.`
-          : (unverifiedSummary ??
-            (key === "soil"
-              ? `BPEJ: ${soil ? fmt(soil.coveragePct) + " % pokrytí" : "nedostupná"}. Pro půdní index je nutné alespoň 80 % platného pokrytí.`
-              : `Klima má ${years.length} úplných let; potřebujeme alespoň 15 z období 2005–2024.`))),
+        (deferredClimate && (key === "climate" || key === "water")
+          ? deferredClimate.message
+          : manual
+            ? key === "soil"
+              ? "Chybí nejméně 80 % hodnotitelné BPEJ nebo ručně zadaná reprezentativní HPJ."
+              : `Pro scénář chybí: ${missingClimate(key === "climate" ? ["temperatureMeanC", "springFrostDays", "summerDays"] : ["rainfallMm", "et0Mm"])}. Každý vstup potřebuje vlastní uživatelskou hodnotu nebo nejméně 15 skutečných ročních pozorování.`
+            : (unverifiedSummary ??
+              (key === "soil"
+                ? `BPEJ: ${soil ? fmt(soil.coveragePct) + " % pokrytí" : "nedostupná"}. Pro půdní index je nutné alespoň 80 % platného pokrytí.`
+                : `Klima má ${years.length} úplných let; potřebujeme alespoň 15 z období 2005–2024.`))),
     }));
   const available = categories.filter((c) => c.score !== null),
     availableWeight = available.reduce((s, c) => s + c.weight, 0);
@@ -257,24 +263,29 @@ export function scoreRegionalArea(
             !data ||
             ((!data.soil || !data.climate) && data.errors.length > 0)
           ? "error"
-          : "insufficient";
-  const dataMessage = manual
-    ? enough
-      ? `${inputOrigin === "mixed" ? "Smíšený" : "Ruční"} uživatelský scénář má všechny vstupy pro výpočet. Ruční údaje nejsou otevřená data ani ověřená klimatická historie.`
-      : dataStatus === "loading"
-        ? "Doplňuji otevřená data ke zadaným ručním hodnotám. Scénář zatím nemá všechny vstupy."
-        : dataStatus === "error"
-          ? "Zbývající otevřené podklady se nepodařilo ověřit. Doplňte chybějící vstupy ručně, nebo načtení zopakujte."
-          : "Uživatelskému scénáři zatím chybí některé vstupy; podrobnosti jsou v kategoriích hodnocení."
-    : dataStatus === "ready"
-      ? "Dostatek podkladů pro výpočet. BPEJ a klimatická řada odpovídají poloze pozemku."
-      : dataStatus === "loading"
-        ? "Načítám půdní a klimatické podklady pro tento pozemek. Výsledek se zobrazí automaticky."
-        : dataStatus === "idle"
-          ? "Podklady pro tento pozemek zatím nebyly ověřeny."
-          : dataStatus === "error"
-            ? "Podklady se nepodařilo načíst nebo ověřit. Zkuste načtení zopakovat v záložce Data."
-            : "Pro souhrnné skóre chybí alespoň 80 % platného pokrytí BPEJ nebo 15 úplných klimatických let.";
+          : deferredClimate
+            ? "deferred"
+            : "insufficient";
+  const dataMessage =
+    dataStatus === "deferred"
+      ? deferredClimate!.message
+      : manual
+        ? enough
+          ? `${inputOrigin === "mixed" ? "Smíšený" : "Ruční"} uživatelský scénář má všechny vstupy pro výpočet. Ruční údaje nejsou otevřená data ani ověřená klimatická historie.`
+          : dataStatus === "loading"
+            ? "Doplňuji otevřená data ke zadaným ručním hodnotám. Scénář zatím nemá všechny vstupy."
+            : dataStatus === "error"
+              ? "Zbývající otevřené podklady se nepodařilo ověřit. Doplňte chybějící vstupy ručně, nebo načtení zopakujte."
+              : "Uživatelskému scénáři zatím chybí některé vstupy; podrobnosti jsou v kategoriích hodnocení."
+        : dataStatus === "ready"
+          ? "Dostatek podkladů pro výpočet. BPEJ a klimatická řada odpovídají poloze pozemku."
+          : dataStatus === "loading"
+            ? "Načítám půdní a klimatické podklady pro tento pozemek. Výsledek se zobrazí automaticky."
+            : dataStatus === "idle"
+              ? "Podklady pro tento pozemek zatím nebyly ověřeny."
+              : dataStatus === "error"
+                ? "Podklady se nepodařilo načíst nebo ověřit. Zkuste načtení zopakovat v záložce Data."
+                : "Pro souhrnné skóre chybí alespoň 80 % platného pokrytí BPEJ nebo 15 úplných klimatických let.";
   const constraints: SuitabilityResult["constraints"] = [];
   const restrictive = [
     "lesní pozemek",
@@ -292,6 +303,7 @@ export function scoreRegionalArea(
           {
             idle: "Dosud neověřeno",
             loading: "Načítám podklady",
+            deferred: "Čeká na klimatická data",
             error: "Chyba načítání",
             insufficient: "Nedostatek dat",
             ready: "Nedostatek dat",

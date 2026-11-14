@@ -54,6 +54,13 @@ export default function ManualInputsPanel({
     ({ key }) => input?.[key] !== undefined,
   ).length;
   const sources = manualFieldSources(area);
+  const waitingForClimate =
+    !!data?.deferred && !data.climate && !data.errors.length;
+  if (waitingForClimate)
+    for (const field of MANUAL_FIELDS) {
+      if (field.key !== "soilHpj" && sources[field.key] === "needed")
+        sources[field.key] = "pending";
+    }
   const needed = MANUAL_FIELDS.filter(
     (field) => sources[field.key] === "needed",
   );
@@ -132,7 +139,9 @@ export default function ManualInputsPanel({
     const observed = regionalClimateValue(data, key);
     return observed
       ? `Regionální podklad: ${observed.value.toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} · ${observed.years} skutečných let.`
-      : "Pro tuto veličinu chybí nejméně 15 úplných ročních hodnot.";
+      : waitingForClimate
+        ? "Na otevřený klimatický podklad čekáme; hodnota zatím není ověřená."
+        : "Pro tuto veličinu chybí nejméně 15 úplných ročních hodnot.";
   };
   const renderField = (field: (typeof MANUAL_FIELDS)[number]) => {
     const missing = sources[field.key] === "needed";
@@ -143,7 +152,9 @@ export default function ManualInputsPanel({
           ? "Z otevřených dat"
           : missing
             ? "Doplňte vlastní údaj"
-            : "Zatím neověřeno";
+            : waitingForClimate && field.key !== "soilHpj"
+              ? "Čeká na klimatický podklad"
+              : "Zatím neověřeno";
     return (
       <div
         className={`manual-input-field${missing ? " is-needed" : ""}`}

@@ -153,7 +153,13 @@ export interface SuitabilityResult {
   inputOrigin: "open-data" | "mixed" | "manual";
   manualFields: string[];
   /** Readiness of the calculation, distinct from quality and actual open-data coverage. */
-  dataStatus: "idle" | "loading" | "ready" | "insufficient" | "error";
+  dataStatus:
+    | "idle"
+    | "loading"
+    | "ready"
+    | "insufficient"
+    | "error"
+    | "deferred";
   dataMessage: string;
   verdict:
     | "Vhodný"
@@ -162,6 +168,7 @@ export interface SuitabilityResult {
     | "Nedostatek dat"
     | "Dosud neověřeno"
     | "Načítám podklady"
+    | "Čeká na klimatická data"
     | "Chyba načítání";
   verdictClass: VerdictClass;
   reasons: string[];

@@ -121,6 +121,10 @@ try {
   assert.equal(paged[0].coverage.state, 'sufficient', 'Duplicate paged BPEJ features cannot double-count area.');
 
   failSoil = true;
+  // Use new geometries: already verified parcels must retain their valid core,
+  // even when a later viewport encounters an unavailable provider.
+  currentFeatures = currentFeatures.map(row => ({ ...row, geometry: { ...row.geometry,
+    coordinates: row.geometry.coordinates.map(ring => ring.map(([lon, lat]) => [lon, lat + .001])) } }));
   const failedBounds = [14.60001, 50.09, 14.62, 50.11];
   const failedQuery = await q.queryCoverageParcels(failedBounds, new AbortController().signal);
   assert(failedQuery.parcels.every(row => row.coverage.state === 'error'));
