@@ -23,7 +23,7 @@ async function acquireLock(): Promise<void> {
     lockTask = worker.navigator.locks.request('sady:sqlite:owner', { ifAvailable: true }, async lock => {
       if (!lock) { reject(new SadyError('DATABASE_BUSY', 'SADY is already open in another tab. Close it and retry.')); return; }
       await new Promise<void>(release => { releaseLock = release; resolve(); });
-    });
+    }).then(() => undefined);
     void lockTask.catch(reject);
   });
 }

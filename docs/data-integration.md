@@ -1,5 +1,24 @@
 # Data integration plan
 
+## Scope after branch integration
+
+This document describes the independent SQLite foundation, not the current React
+map's persistence or suitability engine. The active app is `src/main.tsx`, uses
+polygon-specific data and preserves its localStorage records. The SQLite orchard
+schema contains points and notes; it cannot replace full parcel/category/planting
+state without a separate versioned migration. Its two-variable climate adapter
+does not replace `src/lib/regionalClimate.ts` or its shared quota handling.
+
+The historical standalone shell is archived under `research/sqlite-prototype/`.
+Run commands from the repository root with npm. `npm run build:sqlite-qa` builds
+the independent storage harness; `npm run test:sqlite` runs its browser tests.
+The public map build excludes the harness and unused SQLite/WASM assets.
+
+The provider probes and rollout notes below are historical research from the
+SQLite branch. They do not enable layers or add data to the current model. AOPK
+protected-area and Copernicus imagery entries were retired during integration
+to preserve the application's accepted scope.
+
 ## Architectural decision
 
 Use plain TypeScript and Vite, with the official SQLite WASM package in a dedicated worker, and `opfs-sahpool` for local persistence. This fits a static frontend and keeps SQL off the UI thread. The [SQLite persistence guide](https://sqlite.org/wasm/doc/trunk/persistence.md#vfs-opfs-sahpool) documents SAHPool's lack of COOP/COEP requirements and its single-context limitation. A lifetime Web Lock prevents a second SADY worker from entering the same pool. `preserveOnInitFailure: true` prevents the upstream initialization-failure cleanup from wiping the pool. Unsupported storage fails explicitly instead of silently saving to memory.

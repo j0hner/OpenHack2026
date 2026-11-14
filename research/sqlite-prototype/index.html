@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#244537">
+    <title>SADY</title>
+  </head>
+  <body>
+    <main>
+      <header><p class="eyebrow">SADY</p><h1>A place for your orchards.</h1>
+        <p>Your records stay on this device.</p></header>
+      <p id="status" role="status">Opening your local database…</p>
+      <p id="error" role="alert" hidden></p>
+      <section aria-labelledby="add-title">
+        <h2 id="add-title">Add an orchard</h2>
+        <form id="orchard-form">
+          <fieldset id="fields" disabled>
+            <label>Name <input name="name" required maxlength="200" autocomplete="off"></label>
+            <div class="coordinates">
+              <label>Longitude <input name="longitude" type="number" min="-180" max="180" step="any" required></label>
+              <label>Latitude <input name="latitude" type="number" min="-90" max="90" step="any" required></label>
+            </div>
+            <label>Notes <textarea name="notes" maxlength="10000" rows="2"></textarea></label>
+            <button type="submit">Save orchard</button>
+          </fieldset>
+        </form>
+      </section>
+      <section aria-labelledby="orchards-title"><h2 id="orchards-title">Your orchards</h2><ul id="orchards"></ul></section>
+      <footer>
+        <button id="backup" type="button" disabled>Download database backup</button>
+        <button id="persist" type="button" disabled>Keep data on this device</button>
+        <p>Browser storage can be cleared. Download a backup to keep a separate copy.</p>
+      </footer>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

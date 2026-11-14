@@ -1,6 +1,6 @@
 # Použitá otevřená data
 
-Připraveno 13. 11. 2026. Data jsou v `sady-demo/public/data/`. Aplikace nepotřebuje backend; předzpracování běží lokálně v Node.js a výsledné JSON / GeoJSON soubory hostuje GitHub Pages. Souřadnice geometrií jsou WGS84 / EPSG:4326, mapové dlaždice EPSG:3857.
+Připraveno 13. 11. 2026. Data jsou v `public/data/` v kořeni repozitáře. Aplikace nepotřebuje backend; předzpracování běží lokálně v Node.js a výsledné JSON / GeoJSON soubory hostuje GitHub Pages. Souřadnice geometrií jsou WGS84 / EPSG:4326, mapové dlaždice EPSG:3857.
 
 Rozhraní Moje Sady navíc používá aktuální přibalený seznam **6 254 obcí a měst ČR** pro horní našeptávač. Jde o RÚIAN ČÚZK (vrstva 12, bez vojenských újezdů), s názvy okresů z vrstvy 15. Soubor `municipalities.json` má 564 869 B; při psaní se prohledává lokálně a nevolá externí geokodér. Podrobnosti, schéma, dotazy, datum stažení a SHA-256 jsou v `municipalities-metadata.json`. Souřadnice pro navigaci jsou středem bboxu generalizovaného polygonu obce, nikoli definicí parcely. Výběr použije bbox celého území obce.
 
@@ -46,7 +46,7 @@ Skutečné regionální výřezy kolem pěti lokalit: Bílany / Kroměříž, St
 
 ## Obnovení dat
 
-V `sady-demo/`, Node.js 22+ a nainstalované závislosti:
+V kořeni repozitáře, Node.js 24+ a nainstalované závislosti:
 
 ```sh
 npm run data:download

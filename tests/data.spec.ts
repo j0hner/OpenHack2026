@@ -155,14 +155,28 @@ test('adapter rejects malformed units/columns and failed requests leave existing
   expect(result.series).toHaveLength(1);
 });
 
-test('app shell saves and reloads an orchard through the public API', async ({ page }) => {
+test('React orchard planner is the root application and local municipality search works without live APIs', async ({ page, context }) => {
+  await context.route('https://**/*', route => route.abort());
   await page.goto('/');
-  await expect(page.getByRole('status')).toHaveText('Ready. Changes are saved locally.');
-  await page.getByLabel('Name', { exact: true }).fill('Test orchard');
-  await page.getByLabel('Longitude').fill('16.6');
-  await page.getByLabel('Latitude').fill('48.9');
-  await page.getByRole('button', { name: 'Save orchard' }).click();
-  await expect(page.locator('#orchards')).toContainText('Test orchard');
-  await page.reload();
-  await expect(page.locator('#orchards')).toContainText('Test orchard');
+  await expect(page).toHaveTitle(/Moje Sady/);
+  await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Mapa pozemků', exact: true })).toBeVisible();
+  const municipalities = await page.request.get('/data/municipalities.json');
+  expect(municipalities.ok()).toBe(true);
+  expect(await municipalities.json()).toHaveLength(6254);
+  const search = page.getByRole('combobox', { name: 'Vyhledat obec nebo město v ČR', exact: true });
+  await search.fill('Velké Bílovice');
+  await expect(page.getByRole('option', { name: /Velké Bílovice/ }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Analýzy', exact: true })).toBeVisible();
+  await expect(page.locator('#orchard-form')).toHaveCount(0);
+});
+
+test('visible storage checks exercise the built-in OPFS lifecycle and clean up their fixtures', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Spustit kontrolu SQLite', exact: true }).click();
+  await expect(page.locator('#smoke-summary')).toHaveText('PASS · všech 9 kontrol prošlo včetně úklidu.', { timeout: 30000 });
+  await expect(page.locator('#smoke-results [data-status="pass"]')).toHaveCount(9);
+  await expect(page.locator('#smoke-results [data-status="fail"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.app.orchards.list())).toHaveLength(0);
+  expect(await page.evaluate(() => window.app.imports.list())).toHaveLength(0);
 });

@@ -2,17 +2,18 @@
 
 Tabule: https://excalidraw.com/#room=1e201f6f911c13cabd8d,-7MJLrhy6w7bKVjpEsktng
 
-Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a filtrované vektorové parcely RÚIAN. Oba podklady jsou omezené na ČR. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
+Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v kořeni repozitáře, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a filtrované vektorové parcely RÚIAN. Oba podklady jsou omezené na ČR. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
 
 ## Spuštění
 
 ```sh
-cd sady-demo
 npm ci
 npm run dev
 npm run build
 npm run preview
 npm run data:verify
+npm test
+npm run test:sqlite
 npm run test:regional
 npm run test:regional-status
 npm run test:regional-lifecycle
@@ -24,7 +25,17 @@ npm run test:geometry
 npm run test:localities
 ```
 
-Node.js 20.19+; pro stahovací skripty Node.js 22+. Produkční výstup je `sady-demo/dist/`, relativní `base: './'` funguje i v podadresáři GitHub Pages. Běžný build nepotřebuje obnovovat zdrojová data.
+Použijte Node.js 24+. Produkční výstup je `dist/`, relativní `base: './'` funguje i v podadresáři GitHub Pages. Běžný build nepotřebuje obnovovat zdrojová data. Jediný instalační lockfile je `package-lock.json`; `node_modules` se neverzuje.
+
+`npm test` spustí všechny aplikační testy v Node.js. `npm run test:sqlite` ověřuje SQLite i hlavní rozhraní přes Playwright; před prvním spuštěním nainstalujte prohlížeč příkazem `npx playwright install chromium`.
+
+## Struktura a nasazení
+
+- `src/`, `public/`, `scripts/` a `index.html` jsou přímo v kořeni. Hlavní vstup aplikace je `src/main.tsx`.
+- `.github/workflows/deploy.yml` při změně `master` ověří testy, data a build a nasadí pouze `dist/` na GitHub Pages. Nastavení Pages používá zdroj **GitHub Actions**. Pull requesty procházejí kontrolami bez nasazení.
+- Nezávislá SQLite datová vrstva je v `src/data/`, její rozhraní v `src/data/index.ts`. Zachovává OPFS úložiště, importy a export databáze. Současné parcely, kategorie, ruční vstupy a výsadbové plány nadále používají původní localStorage; nepřepisují se do staršího bodového schématu. [Rozsah vrstvy a omezení](docs/data-integration.md).
+- `npm run build:sqlite-qa` vytvoří oddělený `dist-sqlite-qa/` pro ověření SQLite Workeru a WASM. Stránka `/tests/harness.html` obsahuje ovládání testů. Tento výstup se na veřejný web nenasazuje a SQLite nezvětšuje hlavní mapový bundle.
+- Starý samostatný SQLite prototyp je archivovaný v `research/sqlite-prototype/`; není hlavním vstupem ani součástí produkčního výstupu.
 
 ## Výběr a přidání pozemku
 

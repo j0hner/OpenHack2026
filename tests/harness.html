@@ -1,3 +1,57 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><title>Storage test harness</title></head>
-<body><script type="module" src="./harness.ts"></script></body></html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moje Sady – kontrola SQLite</title>
+    <style>
+      :root { font: 15px/1.6 system-ui, sans-serif; color: #203626; background: #f3f6ef; color-scheme: light dark; --surface: #fff; --line: #d4decf; --muted: #52604e; --success: #276543; --failure: #9d392f; }
+      * { box-sizing: border-box; }
+      body { max-width: 900px; margin: auto; padding: 30px 20px 50px; }
+      h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.3; }
+      h2 { font-size: 18px; margin: 0 0 12px; }
+      p { margin: 8px 0; }
+      .eyebrow { color: var(--muted); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+      .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+      .notice { color: var(--muted); max-width: 78ch; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+      button { min-height: 44px; padding: 9px 15px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; background: var(--surface); color: inherit; }
+      #run-smoke { background: #376f41; color: white; border-color: #376f41; }
+      button:disabled { opacity: .6; cursor: wait; }
+      button:focus-visible { outline: 3px solid #7bab67; outline-offset: 3px; }
+      #boot-state, #smoke-summary { font-weight: 600; overflow-wrap: anywhere; }
+      ol { margin: 0; padding-left: 25px; }
+      li { padding: 9px 0; border-bottom: 1px solid var(--line); }
+      li:last-child { border-bottom: 0; }
+      li strong, li span { display: block; }
+      li span { color: var(--muted); font-size: 13px; }
+      li.pass strong, .pass { color: var(--success); }
+      li.fail strong, .fail { color: var(--failure); }
+      code { font-size: .9em; }
+      @media (prefers-color-scheme: dark) { :root { color: #e2eadd; background: #172019; --surface: #223027; --line: #455340; --muted: #b2c1aa; --success: #aad69d; --failure: #f2afa3; } }
+      @media (max-width: 520px) { body { padding: 20px 12px; } h1 { font-size: 23px; } .card { padding: 14px; } .actions > button { width: 100%; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Moje Sady · samostatná testovací stránka</p>
+      <h1>Kontrola místní SQLite databáze</h1>
+      <p class="notice">Kontrola používá skutečný SQLite/WASM, Web Worker a úložiště OPFS v tomto prohlížeči. Zkušební údaje jsou syntetické a nejsou součástí aplikace ani otevřených dat. Test nenačítá žádné externí datové zdroje.</p>
+      <p class="notice">Vytváří pouze vlastní záznamy označené náhodným UUID a po kontrole je odstraní. Ostatní uložené údaje nemění. Zavření a nové otevření databáze ověřuje skutečnou persistenci.</p>
+      <section class="card" aria-labelledby="storage-heading">
+        <h2 id="storage-heading">Stav databáze</h2>
+        <p id="boot-state" role="status" aria-live="polite">Otevírám SQLite…</p>
+        <div class="actions">
+          <button id="run-smoke" type="button" disabled>Spustit kontrolu SQLite</button>
+          <button id="reopen-db" type="button" disabled>Znovu otevřít databázi</button>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="results-heading">
+        <h2 id="results-heading">Výsledky kontrol</h2>
+        <p id="smoke-summary" role="status" aria-live="polite">Kontrola zatím nebyla spuštěna.</p>
+        <ol id="smoke-results" aria-live="polite"></ol>
+      </section>
+    </main>
+    <script type="module" src="./harness.ts"></script>
+  </body>
+</html>
