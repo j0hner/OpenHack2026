@@ -1,5 +1,7 @@
 import type { AnalysisArea } from "./types";
 import type { PersistedState, SplitRecord } from "./storage";
+import { normalizeCategoryState } from "./parcelCategories";
+import { normalizeManualInputs } from "./manualInputs";
 
 const legacySampleId = (id: string) => /^demo(?:-|$)/i.test(id);
 const roots = (area: AnalysisArea) => [
@@ -79,10 +81,23 @@ export function migrateState(
   );
   if (state.drawnGeometry) allowedIds.add("custom");
   const select = (ids: string[]) => ids.filter((id) => allowedIds.has(id));
+  const categoryState = normalizeCategoryState(
+    { categories: state.parcelCategories, assignments: state.categoryByArea },
+    allowedIds,
+  );
   const recordMap = (record: SplitRecord): SplitRecord => ({
     ...record,
     source: clean(record.source),
     selectedIds: select(record.selectedIds),
+    categoryBefore: record.categoryBefore
+      ? normalizeCategoryState(
+          {
+            categories: categoryState.categories,
+            assignments: record.categoryBefore,
+          },
+          [...allowedIds, record.source.id],
+        ).assignments
+      : undefined,
   });
   const result = {
     ...state,
@@ -103,9 +118,17 @@ export function migrateState(
         allowedIds.has(id),
       ),
     ),
+    manualByArea: Object.fromEntries(
+      Object.entries(state.manualByArea ?? {})
+        .filter(([id]) => allowedIds.has(id))
+        .map(([id, value]) => [id, normalizeManualInputs(value)])
+        .filter(([, value]) => value !== undefined),
+    ),
+    parcelCategories: categoryState.categories,
+    categoryByArea: categoryState.assignments,
     layers: Object.fromEntries(
       Object.entries(state.layers ?? {}).filter(([id]) =>
-        ["bpej", "protected", "suitability", "coverage"].includes(id),
+        ["bpej", "suitability", "coverage"].includes(id),
       ),
     ),
     splitHistory: history

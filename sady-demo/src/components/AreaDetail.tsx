@@ -1,4 +1,6 @@
 import OpenDataPanel from "./OpenDataPanel";
+import ManualInputsPanel from "./ManualInputsPanel";
+import type { ManualInputs } from "../lib/manualInputs";
 import {
   IconAlertTriangle,
   IconExternalLink,
@@ -19,12 +21,20 @@ import type {
 } from "../lib/types";
 import EconomicsPanel from "./EconomicsPanel";
 import RecommendationPanel from "./RecommendationPanel";
-import { AnalysisDataStatus, Meter, ScoreGauge, Toggle, VerdictBadge, severityIcon } from "./ui";
+import {
+  AnalysisDataStatus,
+  Meter,
+  ScoreGauge,
+  Toggle,
+  VerdictBadge,
+  severityIcon,
+} from "./ui";
 
 export type DetailTab = "prehled" | "doporuceni" | "ekonomika" | "data";
 
 interface Props {
   onRetryData: () => void;
+  onManualChange: (value: ManualInputs | undefined) => void;
   area: AnalysisArea;
   score: SuitabilityResult;
   ranking: Record<FruitKey, SuitabilityResult>;
@@ -68,8 +78,14 @@ export default function AreaDetail(props: Props) {
       <div className="area-header full-analysis-header">
         <div className="eyebrow">
           Detailní analýza
-          <span className="badge q-real">
-            {score.dataStatus==='ready' ? "Skutečná data a orientační model" : score.verdict}
+          <span
+            className={`badge ${score.inputOrigin === "open-data" ? "q-real" : "q-assumption"}`}
+          >
+            {score.inputOrigin !== "open-data"
+              ? "Uživatelské vstupy a orientační model"
+              : score.dataStatus === "ready"
+                ? "Skutečná data a orientační model"
+                : score.verdict}
           </span>
         </div>
         <h2 className="area-title">{area.name}</h2>
@@ -195,7 +211,7 @@ export default function AreaDetail(props: Props) {
         </div>
       </div>
 
-      <AnalysisDataStatus score={score} protectionPending={area.regional?.data?.protectionPending} />
+      <AnalysisDataStatus score={score} />
 
       <div style={{ marginTop: 9 }}>
         <Toggle
@@ -229,12 +245,15 @@ export default function AreaDetail(props: Props) {
 
       <div style={{ marginTop: 12 }}>
         {tab === "data" && (
-          <OpenDataPanel
-            area={area}
-            fruit={fruit}
-            onEconomicsChange={props.onEconomicsChange}
-            onRetry={props.onRetryData}
-          />
+          <>
+            <ManualInputsPanel area={area} onChange={props.onManualChange} />
+            <OpenDataPanel
+              area={area}
+              fruit={fruit}
+              onEconomicsChange={props.onEconomicsChange}
+              onRetry={props.onRetryData}
+            />
+          </>
         )}
         {tab === "prehled" && <Overview score={score} area={area} />}
         {tab === "doporuceni" && (
@@ -384,11 +403,8 @@ function Overview({
           </ul>
         ) : (
           <div className="notice info">
-            {area.regional?.data?.protectionPending
-              ? "Doplňuji kontrolu územních omezení AOPK…"
-              : area.regional?.data?.protected === null || !area.regional?.data
-              ? "Ochrana přírody pro tuto plochu není ověřená."
-              : "Ve čtyřech připojených kategoriích AOPK nebyl nalezen průnik. Záplavy Q100 a další právní omezení zůstávají neověřené."}
+            Právní podmínky, záplavy a možnost výsadby je nutné ověřit
+            samostatně.
           </div>
         )}
         {constraint?.note && (
@@ -421,7 +437,10 @@ function Overview({
                   {category.score != null ? `${category.score}/100` : "—"}
                   {category.availability !== "complete" && (
                     <span className="badge nodata" style={{ marginLeft: 5 }}>
-                      {category.score===null && ['idle','loading','error'].includes(score.dataStatus) ? score.verdict : AVAILABILITY_LABEL[category.availability]}
+                      {category.score === null &&
+                      ["idle", "loading", "error"].includes(score.dataStatus)
+                        ? score.verdict
+                        : AVAILABILITY_LABEL[category.availability]}
                     </span>
                   )}
                 </span>
@@ -444,7 +463,7 @@ function Overview({
             </div>
           );
         })}
-        {score.missing.length > 0 && score.dataStatus==='insufficient' && (
+        {score.missing.length > 0 && score.dataStatus === "insufficient" && (
           <div className="notice warn" style={{ marginTop: 10 }}>
             <strong>Chybí podklady:</strong> {score.missing.join(", ")}.
             Chybějící údaje nejsou nahrazené nulou ani nízkým rizikem.
@@ -495,7 +514,7 @@ function DataTab({
         {score.categories
           .map(
             (category) =>
-              `${category.label}: ${category.score === null ? (score.dataStatus==='insufficient'?'nedostupné':score.verdict) : category.score + "/100 (částečné podklady)"}`,
+              `${category.label}: ${category.score === null ? (score.dataStatus === "insufficient" ? "nedostupné" : score.verdict) : category.score + "/100 (částečné podklady)"}`,
           )
           .join(" · ")}
       </p>

@@ -45,12 +45,6 @@ export const PROVENANCE: ProvenanceRow[] = [
     ),
     period: "2005–2024",
   },
-  spatial(
-    "Průniky s ochranou přírody",
-    "AOPK ČR – otevřené vrstvy 0, 2, 6, 7",
-    "ZCHÚ, EVL a ptačí oblasti",
-    "Plošný průnik skutečných hranic. Nejde o úplné posouzení všech právních omezení ani ochranných pásem.",
-  ),
   {
     indicator: "Sklizeň a referenční ceny ovoce",
     source: "ČSÚ ZEM03D / CEN0203B",
@@ -62,12 +56,12 @@ export const PROVENANCE: ProvenanceRow[] = [
   },
   {
     indicator: "Mapové podklady",
-    source: "OpenStreetMap, ČÚZK Ortofoto, AOPK WMS",
+    source: "OpenStreetMap, ČÚZK Ortofoto",
     period: "dle poskytovatele",
-    resolution: "mapové dlaždice / WMS",
+    resolution: "mapové dlaždice XYZ",
     quality: "real",
     connected: "Online mapové podklady",
-    note: "Dva podklady s maskou ČR a trvalá ochrana přírody. Parcelní hranice tvoří filtrovaný RÚIAN GeoJSON. Výpadek podkladu není nedostatkem agronomických dat.",
+    note: "Dva podklady s maskou ČR. Parcelní hranice tvoří filtrovaný RÚIAN GeoJSON. Výpadek podkladu není nedostatkem agronomických dat.",
   },
   {
     indicator: "Hranice České republiky",

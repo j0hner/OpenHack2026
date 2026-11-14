@@ -191,7 +191,6 @@ export function coverageFromSnapshot(
           distanceKm: null,
         }
       : null,
-    protected: null,
     errors: [],
   };
   return coverageFromData(geometry, data, "snapshot");

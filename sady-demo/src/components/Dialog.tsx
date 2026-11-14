@@ -57,18 +57,20 @@ export default function Dialog({
         aria-modal="true"
         aria-label={title}
       >
-        <header>
-          <h2>{title}</h2>
-          <button
-            className="icon-button"
-            type="button"
-            onClick={onClose}
-            aria-label="Zavřít dialog"
-          >
-            <IconX size={20} />
-          </button>
-        </header>
-        {children}
+        <div className="dialog-scroll">
+          <header>
+            <h2>{title}</h2>
+            <button
+              className="icon-button"
+              type="button"
+              onClick={onClose}
+              aria-label="Zavřít dialog"
+            >
+              <IconX size={20} />
+            </button>
+          </header>
+          {children}
+        </div>
       </div>
     </div>
   );

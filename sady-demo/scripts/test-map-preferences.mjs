@@ -7,10 +7,10 @@ try {
   const old = { layers: { coverage: false, protected: false, bpej: true }, parcels: [{ id: 'preserved' }] };
   const before = JSON.stringify(old);
   const migrated = initialMapLayers(old);
-  assert(migrated.coverage && migrated.protected && migrated.bpej);
+  assert(migrated.coverage && !('protected' in migrated) && migrated.bpej);
   assert.equal(JSON.stringify(old), before, 'Upgrading map defaults must not change saved parcels or inputs.');
   const explicitOff = initialMapLayers({ ...old, layerSettingsVersion: LAYER_SETTINGS_VERSION });
   assert.equal(explicitOff.coverage, false, 'A deliberate toggle after upgrade must survive reload.');
-  assert.equal(explicitOff.protected, true, 'Protected areas are a permanent overlay.');
-  console.log(JSON.stringify({ checks: 'OK', automaticCoverageOnUpgrade: true, subsequentPreferenceRetained: true, protectedAlwaysOn: true, savedDataPreserved: true }));
+  assert.equal('protected' in explicitOff, false, 'Removed protection setting must not survive upgrade.');
+  console.log(JSON.stringify({ checks: 'OK', automaticCoverageOnUpgrade: true, subsequentPreferenceRetained: true, removedLayerPruned: true, savedDataPreserved: true }));
 } finally { await server.close(); }

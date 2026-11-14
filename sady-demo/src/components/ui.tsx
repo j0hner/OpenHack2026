@@ -1,16 +1,14 @@
 import {useId,type ReactNode} from 'react';
 import {IconAlertCircle,IconAlertTriangle,IconCheck,IconDatabaseOff,IconInfoCircle} from '@tabler/icons-react';
-import { QUALITY_LABELS } from '../data/provenance';
+import DataQualityBadge from './DataQualityBadge';
 import type { DataQuality, SuitabilityResult, VerdictClass } from '../lib/types';
 
 const verdictClassOf = (verdictClass: VerdictClass): string => verdictClass;
 
 export function AnalysisDataStatus({
   score,
-  protectionPending = false,
 }: {
   score: SuitabilityResult;
-  protectionPending?: boolean;
 }) {
   const Icon = score.dataStatus === 'ready' ? IconCheck : IconInfoCircle;
   return (
@@ -18,11 +16,6 @@ export function AnalysisDataStatus({
       <Icon size={16} aria-hidden="true" />
       <div>
         <span>{score.dataMessage}</span>
-        {protectionPending && (
-          <small>
-            Doplňuji územní omezení AOPK. Výsledek zatím nezahrnuje jejich kontrolu.
-          </small>
-        )}
       </div>
     </div>
   );
@@ -34,13 +27,7 @@ export function VerdictBadge({ verdictClass, verdict }: { verdictClass: VerdictC
 }
 
 export function QualityBadge({ quality }: { quality: DataQuality }) {
-  const meta = QUALITY_LABELS[quality];
-  return (
-    <details className="quality-disclosure">
-      <summary className={`badge ${meta.className}`}>{meta.label}<IconInfoCircle size={14} aria-hidden="true" /><span className="sr-only"> – vysvětlení zdroje</span></summary>
-      <div className="quality-disclosure-content">{meta.hint}</div>
-    </details>
-  );
+  return <DataQualityBadge quality={quality} />;
 }
 
 export function ScoreGauge({

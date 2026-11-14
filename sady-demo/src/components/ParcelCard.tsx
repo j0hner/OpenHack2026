@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import {
   IconAlertTriangle,
   IconArrowRight,
@@ -24,6 +24,12 @@ import type {
   SuitabilityResult,
 } from "../lib/types";
 import OpenDataPanel from "./OpenDataPanel";
+import ManualInputsPanel from "./ManualInputsPanel";
+import type { ManualInputs } from "../lib/manualInputs";
+import {
+  officialParcelNumber,
+  showOfficialParcelNumber,
+} from "../lib/parcelCategories";
 import { AnalysisDataStatus } from "./ui";
 
 export interface ParcelCardProps {
@@ -38,6 +44,7 @@ export interface ParcelCardProps {
   onAnalysis: () => void;
   onRetryData: () => void;
   onEconomicsChange: (value: Partial<EconomicsInputs>) => void;
+  onManualChange: (value: ManualInputs | undefined) => void;
 }
 type Tab = "overview" | "soil" | "climate" | "planting" | "data";
 const TABS: { id: Tab; label: string }[] = [
@@ -91,7 +98,11 @@ export default function ParcelCard(props: ParcelCardProps) {
   } = props;
   const [tab, setTab] = useState<Tab>("overview"),
     id = useId();
+  const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => setTab("overview"), [area.id]);
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [area.id, tab]);
   const profile = FRUITS[fruit],
     data = area.regional?.data,
     years = validClimateYears(data);
@@ -164,7 +175,15 @@ export default function ParcelCard(props: ParcelCardProps) {
       <header className="parcel-card-header">
         <div className="parcel-card-title">
           <IconLayersIntersect size={19} aria-hidden="true" />
-          <h2>{area.name}</h2>
+          <h2>
+            {area.name}
+            {showOfficialParcelNumber(area) && (
+              <span className="parcel-official-number">
+                {" "}
+                · parc. {officialParcelNumber(area)}
+              </span>
+            )}
+          </h2>
         </div>
         <button
           type="button"
@@ -206,6 +225,7 @@ export default function ParcelCard(props: ParcelCardProps) {
         ))}
       </nav>
       <div
+        ref={bodyRef}
         className="parcel-card-body"
         id={`${id}-panel`}
         role="tabpanel"
@@ -266,25 +286,29 @@ export default function ParcelCard(props: ParcelCardProps) {
               }
             />
             <p className="parcel-score-caption">
-              Pro {profile.name.toLocaleLowerCase("cs-CZ")} · regionální index
+              Pro {profile.name.toLocaleLowerCase("cs-CZ")} ·{" "}
+              {score.inputOrigin === "open-data"
+                ? "regionální index"
+                : "uživatelský scénář"}
             </p>
-            <AnalysisDataStatus score={score} protectionPending={data?.protectionPending} />
-            {score.overall !== null && (mainRisk ? (
-              <div className={`parcel-risk ${mainRisk.severity}`}>
-                <IconAlertTriangle size={18} aria-hidden="true" />
-                <div>
-                  <strong>{mainRisk.label}</strong>
-                  <p>{shortText(mainRisk.detail)}</p>
+            <AnalysisDataStatus score={score} />
+            {score.overall !== null &&
+              (mainRisk ? (
+                <div className={`parcel-risk ${mainRisk.severity}`}>
+                  <IconAlertTriangle size={18} aria-hidden="true" />
+                  <div>
+                    <strong>{mainRisk.label}</strong>
+                    <p>{shortText(mainRisk.detail)}</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="parcel-recommendation">
-                {shortText(
-                  score.nextSteps[0] ??
-                    "Před výsadbou ověřte podmínky přímo na místě.",
-                )}
-              </p>
-            ))}
+              ) : (
+                <p className="parcel-recommendation">
+                  {shortText(
+                    score.nextSteps[0] ??
+                      "Před výsadbou ověřte podmínky přímo na místě.",
+                  )}
+                </p>
+              ))}
             <div className="parcel-stats">
               <div>
                 <span>Pokrytí BPEJ</span>
@@ -303,6 +327,13 @@ export default function ParcelCard(props: ParcelCardProps) {
                 </strong>
               </div>
             </div>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setTab("data")}
+            >
+              Doplnit nebo přepsat vstupy
+            </button>
           </>
         )}
         {tab === "soil" && (
@@ -408,6 +439,7 @@ export default function ParcelCard(props: ParcelCardProps) {
         )}
         {tab === "data" && (
           <>
+            <ManualInputsPanel area={area} onChange={props.onManualChange} />
             <p className="parcel-note">{area.sourceNote}</p>
             {area.derivedFrom && (
               <p className="parcel-note">

@@ -5,6 +5,7 @@ import '@fontsource-variable/inter';
 import './styles.css';
 import './redesign.css';
 import './dark-mode.css';
+import './interface-polish.css';
 import App from './App';
 import { applyTheme, readTheme } from './lib/theme';
 

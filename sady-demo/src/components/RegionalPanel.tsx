@@ -45,7 +45,7 @@ export default function RegionalPanel({
   return (
     <details className="card open-data-card" open>
       <summary>
-        <strong>Podklady skutečně použité ve výpočtu</strong>
+        <strong>Otevřená data pro tento pozemek</strong>
       </summary>
       <p className="small" role="status">
         {observation.status === "idle"
@@ -58,6 +58,13 @@ export default function RegionalPanel({
                 ? `${d.source === "snapshot" ? "Připravený prostorový výřez" : "Živé otevřené zdroje"} · zpracováno ${new Date(d.fetchedAt).toLocaleDateString("cs-CZ")}`
                 : "Podklady nejsou dostupné."}
       </p>
+      {area.manualInputs && (
+        <p className="notice warn">
+          Výpočet používá také vlastní vstupy zadané výše. Ty mají přednost před
+          odpovídajícími otevřenými údaji. Tento přehled ukazuje původní
+          otevřená data.
+        </p>
+      )}
       {d && (
         <>
           <p className="tiny">
@@ -106,19 +113,6 @@ export default function RegionalPanel({
                 </dd>
               </>
             )}
-            <dt>AOPK – průnik s polygonem</dt>
-            <dd>
-              {d.protectionPending
-                ? "Probíhá ověřování územních omezení."
-                : d.protected === null
-                ? "Neověřeno – zdroj není dostupný."
-                : d.protected.length
-                  ? d.protected
-                      .map((p) => `${p.name}: ${fmt(p.percent)} %`)
-                      .join("; ")
-                  : "Bez průniku ve čtyřech sledovaných kategoriích."}{" "}
-              Q100 a další právní omezení nejsou ověřené.
-            </dd>
           </dl>
           {d.errors.length > 0 && (
             <ul className="plain-list">
@@ -131,14 +125,15 @@ export default function RegionalPanel({
           )}
         </>
       )}
-      {observation.status !== "loading" && (!d?.protectionPending || d.errors.length>0) && (
+      {observation.status !== "loading" && (
         <button type="button" className="btn small" onClick={onRetry}>
           Znovu načíst podklady této plochy
         </button>
       )}
       <p className="tiny">
-        Souhrnný index vyžaduje alespoň 80 % platného pokrytí BPEJ a 15 úplných
-        klimatických let. Váhy a převod dat na body jsou orientační pravidla
+        Index z otevřených dat vyžaduje alespoň 80 % platného pokrytí BPEJ a 15
+        úplných klimatických let. Ruční vstupy vytvářejí samostatně označený
+        uživatelský scénář. Váhy a převod dat na body jsou orientační pravidla
         Moje Sady; výsledek není pravděpodobnost úspěchu ani předpověď sklizně.
       </p>
       {reference && (

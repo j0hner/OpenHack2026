@@ -192,7 +192,7 @@ export async function verifyVisibleCoverage(
             key: geometryKey(item.feature.geometry), fetchedAt: new Date().toISOString(), point, source: "live",
             soil: indexed ? soilSummary(item.feature.geometry, { type: "FeatureCollection", features: indexed.filter(entry => boundsIntersect(entry.bounds, bounds)).map(entry => entry.feature) }) : null,
             climate: climate.value ? { ...climate.value, distanceKm: climate.value.grid ? distanceKm(point, climate.value.grid) : null } : null,
-            protected: null, errors,
+            errors,
           };
           item.coverage = coverageFromArea({ ...parcelArea(item.feature), regional: { status: "ready", data } });
           if (!errors.length) rememberRegionalCore(data);

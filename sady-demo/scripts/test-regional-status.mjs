@@ -58,12 +58,6 @@ try {
   assert.equal(pear.score.overall, 75);
   assert.equal(pear.score.dataStatus, 'ready');
 
-  const core = { ...actual, protected: null, protectionPending: true };
-  const pendingProtection = render({ status: 'ready', data: core });
-  assert.equal(pendingProtection.score.overall, ready.score.overall);
-  for (const html of [pendingProtection.card, pendingProtection.detail]) assert(html.includes('Doplňuji územní omezení AOPK.'));
-  assert(!pendingProtection.detail.includes('nebyl nalezen průnik'));
-
   const noSoil = { ...actual, soil: { ...actual.soil, coveragePct: 79 }, errors: [] };
   const shortClimate = { ...actual, climate: { ...actual.climate, years: actual.climate.years.slice(0, 14) }, errors: [] };
   for (const data of [noSoil, shortClimate]) {
@@ -76,16 +70,13 @@ try {
   const failed = render({ status: 'ready', data: { ...actual, soil: null, errors: ['BPEJ: HTTP 503'] } });
   assert.equal(failed.score.dataStatus, 'error');
   assert.equal(failed.score.overall, null);
-  const optionalFailure = render({ status: 'ready', data: { ...actual, protected: null, errors: ['AOPK: HTTP 503'] } });
-  assert.equal(optionalFailure.score.dataStatus, 'ready');
-  assert.equal(optionalFailure.score.overall, ready.score.overall);
   const wrongGeometry = structuredClone(actual);
   wrongGeometry.key = geometryKey({ type: 'Polygon', coordinates: [[[14, 50], [14.001, 50], [14.001, 50.001], [14, 50.001], [14, 50]]] });
   const mismatched = render({ status: 'ready', data: wrongGeometry });
   assert.equal(mismatched.score.overall, null);
   assert.equal(mismatched.score.dataStatus, 'error');
   assert(mismatched.score.categories.every(category => category.score === null));
-  console.log(JSON.stringify({ checks: 'OK', sharedCardAndDetailStates: true, noFalseInsufficiency: true, actualApple: ready.score.overall, actualPear: pear.score.overall, independentProtection: true, trueInsufficiency: true, geometryGuard: true }));
+  console.log(JSON.stringify({ checks: 'OK', sharedCardAndDetailStates: true, noFalseInsufficiency: true, actualApple: ready.score.overall, actualPear: pear.score.overall, coreOnlyAnalysis: true, trueInsufficiency: true, geometryGuard: true }));
 } finally {
   globalThis.fetch = originalFetch;
   await server.close();

@@ -3,7 +3,6 @@ html[data-theme="dark"] { --map-outside-color: #17251b; }
 .map-layer-check.is-unavailable { cursor: default; }
 .map-layer-check.is-unavailable input { opacity: .6; }
 .map-layer-check.is-unavailable small { color: var(--ink-soft); }
-.protection-always-visible { margin-top: 10px; }
 html[data-theme="dark"] .map-layer-note { color: var(--ink-soft); background: #2a382c; }
 .map-stage:has(.map-layer-popover) .map-welcome { display: none; }
 @media (max-width: 900px) {

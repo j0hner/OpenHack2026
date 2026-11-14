@@ -2,7 +2,7 @@
 
 final result: passed
 
-Nejnovější ověření větve `codex/parcel-map-filtering` je v [protokolu filtrované mapy a automatických dat](docs/qa/parcel-map-filtering.md). Níže je zachované ověření předchozích úprav.
+Nejnovější ověření větve `codex/categories-data-cleanup` je v [protokolu kategorií, ručních vstupů a úklidu dat](docs/qa/categories-manual-inputs.md). Předchozí ověření filtrované mapy je v [samostatném protokolu](docs/qa/parcel-map-filtering.md). Níže je zachované historické ověření starších úprav včetně již odstraněných funkcí AOPK a Nastavení.
 
 ## Oprava stavů analýzy a následné úpravy vzhledu
 

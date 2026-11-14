@@ -3,15 +3,12 @@ import type {FeatureCollection,Polygon,MultiPolygon} from 'geojson';
 import {containsPoint,geometryBounds,inBounds,locationFor,overlaps} from './openData';
 import type {AreaGeometry} from './types';
 
-export const REGIONAL_VERSION='geo-2';
+export const REGIONAL_VERSION='geo-3';
 export interface ClimateYear {year:number;temperatureMeanC:number|null;rainfallMm:number|null;et0Mm:number|null;springFrostDays:number|null;summerDays:number|null}
 export interface RegionalData {
  key:string; fetchedAt:string; point:[number,number]; source:'snapshot'|'live';
  soil:{parts:{name:string;percent:number}[];coveragePct:number;valid:boolean}|null;
  climate:{years:ClimateYear[];period:string;model:string;resolution:string;grid:[number,number]|null;distanceKm:number|null;rainfallGrid?:[number,number]}|null;
- protected:{name:string;percent:number}[]|null;
- /** Core soil/climate can be used while the independent protection lookup finishes. */
- protectionPending?:boolean;
  errors:string[];
 }
 export const distanceKm=(a:number[],b:number[])=>{
@@ -41,17 +38,14 @@ export function representativePoint(g:AreaGeometry):[number,number]{
  }
  throw Error('Pro geometrii nelze najít vnitřní bod. Zkontrolujte kresbu.');
 }
-export type RegionalProgress = (data:RegionalData)=>void;
-interface RegionalRequest {
- promise:Promise<RegionalData>;
- latest:RegionalData|null;
- listeners:Set<RegionalProgress>;
-}
+interface RegionalRequest { promise:Promise<RegionalData>; }
 const memory=new Map<string,RegionalRequest>();
-const CACHE='sady-regional-geo2';
+const CACHE='sady-regional-geo3';
 const TTL=7*86400000;
+// Remove only obsolete analysis caches; saved parcels and user settings stay intact.
+try{localStorage.removeItem('sady-regional-geo1');localStorage.removeItem('sady-regional-geo2');}catch{/* Storage is optional. */}
 // Automatic map verification can hand its exact core data to a later detailed
-// analysis. It is never persisted as a completed AOPK-checked result.
+// analysis. Only complete, error-free core data enters persistent cache.
 const verifiedCore=new Map<string,RegionalData>();
 export function rememberRegionalCore(data:RegionalData){
  if(data.errors.length||!data.soil||!data.climate)return;
@@ -65,12 +59,13 @@ function existingCore(key:string){
 function cached(key:string):RegionalData|null{
  try{
   localStorage.removeItem('sady-regional-geo1');
+  localStorage.removeItem('sady-regional-geo2');
   const list:RegionalData[]=JSON.parse(localStorage.getItem(CACHE)??'[]');
-  return list.find(d=>d.key===key&&!d.protectionPending&&Date.now()-Date.parse(d.fetchedAt)<TTL)??null;
+  return list.find(d=>d.key===key&&Date.now()-Date.parse(d.fetchedAt)<TTL)??null;
  }catch{return null;}
 }
 function save(data:RegionalData){
- if(data.errors.length||data.protectionPending)return;
+ if(data.errors.length)return;
  try{
   const list:RegionalData[]=JSON.parse(localStorage.getItem(CACHE)??'[]');
   localStorage.setItem(CACHE,JSON.stringify([data,...list.filter(d=>d.key!==data.key)].slice(0,30)));
@@ -133,9 +128,9 @@ async function weather(point:[number,number],signal:AbortSignal,refresh=false){
  const result=await weatherMemory.get(key)!;
  return {...result,distanceKm:result.grid?distanceKm(point,result.grid):null};
 }
-async function load(g:AreaGeometry,signal:AbortSignal,onProgress:RegionalProgress,refresh=false):Promise<RegionalData>{
+async function load(g:AreaGeometry,signal:AbortSignal,refresh=false):Promise<RegionalData>{
  const point=representativePoint(g),bounds=geometryBounds(g);
- const data:RegionalData={key:geometryKey(g),fetchedAt:new Date().toISOString(),point,source:'live',soil:null,climate:null,protected:null,errors:[]};
+ const data:RegionalData={key:geometryKey(g),fetchedAt:new Date().toISOString(),point,source:'live',soil:null,climate:null,errors:[]};
  if(!inBounds([bounds[0],bounds[1]],[12,48.5,18.9,51.2])||!inBounds([bounds[2],bounds[3]],[12,48.5,18.9,51.2])){
   data.errors.push('Vyhodnocujeme území ČR. Vyberte pozemek v České republice.');return data;
  }
@@ -145,7 +140,7 @@ async function load(g:AreaGeometry,signal:AbortSignal,onProgress:RegionalProgres
  const snapshot=await locationFor(g).catch(()=>null);
  if(snapshot){
   data.source='snapshot';
-  try{data.soil=soilSummary(g,snapshot.layers.bpej);data.protected=['protected','protectedSmall','natura','birds'].flatMap(k=>overlaps(g,snapshot.layers[k]));}catch{data.errors.push('Nepodařil se průnik připravených geometrií.');}
+  try{data.soil=soilSummary(g,snapshot.layers.bpej);}catch{data.errors.push('Nepodařil se průnik připravených geometrií.');}
   if(snapshot.climate){const grid=snapshot.climate.grid??null;data.climate={...snapshot.climate,grid,distanceKm:grid?distanceKm(point,grid):null};}
   return data;
  }
@@ -153,46 +148,25 @@ async function load(g:AreaGeometry,signal:AbortSignal,onProgress:RegionalProgres
  const attempt=async<T>(label:string,task:()=>Promise<T>):Promise<Result<T>>=>{
   try{return {value:await task(),errors:[]};}catch(e){return {value:null,errors:[`${label}: ${e instanceof Error?e.message:'zdroj nedostupný'}`]};}
  };
- let protectionSettled=false;
- const protection=attempt('AOPK',async()=>{
-  const parts=[];
-  for(const id of [0,2,6,7])parts.push(...overlaps(g,await features('https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/'+id,g,signal)));
-  return parts;
- }).then(result=>{protectionSettled=true;return result;});
  const known=refresh?null:existingCore(data.key);
  const [soil,climate]=await Promise.all([
   attempt('BPEJ',async()=>known?.soil??soilSummary(g,await features('https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28',g,signal,'kod,nazev'))),
   attempt('Klima',async()=>known?.climate??weather(point,signal,refresh)),
  ]);
- const core:RegionalData={...data,soil:soil.value,climate:climate.value,errors:[...soil.errors,...climate.errors]};
- // Never mutate this published snapshot: AOPK is independently appended later.
- if(!protectionSettled)onProgress({...core,protectionPending:true});
- const restrictions=await protection;
- return {...core,protected:restrictions.value,errors:[...core.errors,...restrictions.errors],protectionPending:false};
+ return {...data,soil:soil.value,climate:climate.value,errors:[...soil.errors,...climate.errors]};
 }
 
-function publish(request:RegionalRequest,data:RegionalData){
- request.latest=data;
- for(const listener of request.listeners){
-  try{listener(data);}catch{/* One subscriber cannot interrupt other consumers. */}
- }
-}
 /** A caller can detach without cancelling the shared geometry request. */
-function subscribe(request:RegionalRequest,signal:AbortSignal,onProgress?:RegionalProgress):Promise<RegionalData>{
+function subscribe(request:RegionalRequest,signal:AbortSignal):Promise<RegionalData>{
  return new Promise((resolve,reject)=>{
   let settled=false;
-  const progress:RegionalProgress=data=>{if(!settled&&!signal.aborted)onProgress?.(data);};
-  const cleanup=()=>{request.listeners.delete(progress);signal.removeEventListener('abort',aborted);};
+  const cleanup=()=>{signal.removeEventListener('abort',aborted);};
   const aborted=()=>{
    if(settled)return;
    settled=true;cleanup();reject(new DOMException('Aborted','AbortError'));
   };
   signal.addEventListener('abort',aborted,{once:true});
-  if(onProgress)request.listeners.add(progress);
   if(signal.aborted){aborted();return;}
-  if(request.latest?.protectionPending){
-   try{progress(request.latest);}catch{/* See publish: callbacks are isolated. */}
-  }
   request.promise.then(data=>{
    if(settled)return;
    settled=true;cleanup();resolve(data);
@@ -202,21 +176,20 @@ function subscribe(request:RegionalRequest,signal:AbortSignal,onProgress?:Region
   });
  });
 }
-export function loadRegionalData(g:AreaGeometry,signal:AbortSignal,refresh=false,onProgress?:RegionalProgress):Promise<RegionalData>{
+export function loadRegionalData(g:AreaGeometry,signal:AbortSignal,refresh=false):Promise<RegionalData>{
  const key=geometryKey(g);
  if(signal.aborted)return Promise.reject(new DOMException('Aborted','AbortError'));
  if(refresh)memory.delete(key);
  if(!memory.has(key)){
   const stored=refresh?null:cached(key);
-  const request:RegionalRequest={promise:Promise.resolve(null as unknown as RegionalData),latest:stored,listeners:new Set()};
+  const request:RegionalRequest={promise:Promise.resolve(null as unknown as RegionalData)};
   // Shared requests have their own lifetime. Selection changes detach subscribers.
-  request.promise=stored?Promise.resolve(stored):load(g,AbortSignal.timeout(60000),data=>publish(request,data),refresh).then(data=>{
-   request.latest=data;
+  request.promise=stored?Promise.resolve(stored):load(g,AbortSignal.timeout(60000),refresh).then(data=>{
    // A superseded refresh must not overwrite the newer result in persistent cache.
    if(memory.get(key)===request)save(data);
    return data;
   }).catch(error=>{if(memory.get(key)===request)memory.delete(key);throw error;});
   memory.set(key,request);
  }
- return subscribe(memory.get(key)!,signal,onProgress);
+ return subscribe(memory.get(key)!,signal);
 }

@@ -20,7 +20,7 @@ try {
    const coverage=c.coverageFromSnapshot(feature.geometry,snapshot);
    if(coverage.state==='unknown')continue;
    const area=parcelArea(feature);
-   const data={key:geometryKey(feature.geometry),fetchedAt:new Date().toISOString(),point:[0,0],source:'snapshot',soil:soilSummary(feature.geometry,snapshot.layers.bpej),climate:snapshot.climate,protected:[],errors:[]};
+   const data={key:geometryKey(feature.geometry),fetchedAt:new Date().toISOString(),point:[0,0],source:'snapshot',soil:soilSummary(feature.geometry,snapshot.layers.bpej),climate:snapshot.climate,errors:[]};
    area.regional={status:'ready',data};
    assert.equal(coverage.state==='sufficient',scoreRegionalArea(area,'apple').overall!==null,'Vrstva a regionální model se musí shodovat na podkladech.');
    assert.equal(c.coverageFromArea(area).state,coverage.state);
@@ -30,7 +30,7 @@ try {
  assert(checked>40,'Test musí ověřit skutečné geometrie více lokalit.');
  const geometry={type:'Polygon',coordinates:[[[14.5,50],[14.501,50],[14.501,50.001],[14.5,50.001],[14.5,50]]]};
  const years=Array.from({length:20},(_,i)=>({year:2005+i,temperatureMeanC:10,rainfallMm:600,et0Mm:700,springFrostDays:10,summerDays:40}));
- const data={key:geometryKey(geometry),fetchedAt:'',point:[14.5,50],source:'live',soil:{parts:[{name:'00110',percent:100}],coveragePct:100,valid:true},climate:{years,period:'2005–2024',model:'ERA5',resolution:'0.25°',grid:[14.5,50],distanceKm:0},protected:null,errors:[]};
+ const data={key:geometryKey(geometry),fetchedAt:'',point:[14.5,50],source:'live',soil:{parts:[{name:'00110',percent:100}],coveragePct:100,valid:true},climate:{years,period:'2005–2024',model:'ERA5',resolution:'0.25°',grid:[14.5,50],distanceKm:0},errors:[]};
  const area={...parcelArea({type:'Feature',properties:{id:123,cisloparcely:'1',druhpozemkukod:2,katastralniuzemi:123456},geometry}),regional:{status:'ready',data}};
  assert.equal(c.coverageFromData(geometry,data).state,'sufficient');
  assert.equal(c.coverageFromData(geometry,data).availableCategories,3);
@@ -49,7 +49,6 @@ try {
  assert.equal(c.coverageFromData(geometry,{...data,climate:{...data.climate,years:years.slice(0,15)}}).state,'sufficient');
  assert.equal(c.coverageFromData(geometry,{...data,climate:{...data.climate,years:years.slice(0,15).map((y,i)=>i?y:{...y,rainfallMm:null})}}).state,'insufficient');
  assert.equal(c.coverageFromArea({...area,regional:{status:'ready',data:{...soilMissing,errors:['BPEJ: HTTP 503']}}}).state,'error','Selhání API neznamená potvrzenou absenci dat.');
- assert.equal(c.coverageFromArea({...area,regional:{status:'ready',data:{...data,errors:['AOPK: HTTP 503']}}}).state,'sufficient','AOPK nepatří do minimálního základního indexu.');
  const huge={type:'Polygon',coordinates:[[[14,50],[14.1,50],[14.1,50.1],[14,50.1],[14,50]]]};
  assert.equal(c.coverageFromData(huge,{...data,key:geometryKey(huge)}).state,'insufficient');
  assert.equal(c.coverageFromArea({...area,geometry:huge,regional:{status:'ready',data:{...data,key:geometryKey(huge),soil:null,climate:null,errors:['Plocha je příliš rozsáhlá.']}}}).state,'insufficient','Známý limit modelu je překážka indexu, nikoli síťová chyba.');

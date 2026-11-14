@@ -94,14 +94,14 @@ try {
   assert(events.at(-1).parcels.every(row => row.coverage.state === 'sufficient'));
   assert.equal(soilCalls, 1, '200 parcels share one viewport BPEJ query.');
   assert.equal(climateCalls, 1, '200 nearby parcels share one actual ERA5 cell.');
-  assert.equal(protectionCalls, 0, 'Availability never starts per-parcel AOPK requests.');
+  assert.equal(protectionCalls, 0, 'Availability never calls the removed protection source.');
   assert(verified.parcels.every(row => row.coverage.availableCategories === 3));
   assert.equal((await q.queryCoverageParcels(queryBounds, new AbortController().signal)), verified);
   const detailed = await loadRegionalData(verified.parcels[0].feature.geometry, new AbortController().signal);
   assert.equal(detailed.key, geometryKey(verified.parcels[0].feature.geometry));
   assert.equal(detailed.soil.coveragePct, 100); assert.equal(detailed.climate.years.length, 20);
   assert.equal(soilCalls, 1); assert.equal(climateCalls, 1, 'Adding an automatically verified parcel reuses exact core data.');
-  assert.equal(protectionCalls, 4, 'Detailed analysis still verifies all four AOPK categories.');
+  assert.equal(protectionCalls, 0, 'Detailed analysis only consumes soil and climate; the removed protection source is never called.');
   await loadRegionalData(verified.parcels[0].feature.geometry, new AbortController().signal, true);
   assert.equal(soilCalls, 2); assert.equal(climateCalls, 2, 'Explicit refresh bypasses remembered core data.');
 

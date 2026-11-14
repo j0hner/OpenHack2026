@@ -1,6 +1,6 @@
 # Moje Sady
 
-Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK, filtrované vektorové parcely RÚIAN a trvalý překryv chráněných území AOPK. Oba podklady jsou omezené na ČR. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
+Statická React / TypeScript aplikace pro plánování ovocného sadu z otevřených dat. Zdrojový projekt je v `sady-demo/`, připravený pro GitHub Pages bez serveru a tajných klíčů. Interaktivní mapa používá OpenStreetMap, letecké Ortofoto ČÚZK a filtrované vektorové parcely RÚIAN. Oba podklady jsou omezené na ČR. Logo a favicon jsou transparentní PNG exportované z dodaného PSD.
 
 ## Spuštění
 
@@ -17,6 +17,7 @@ npm run test:regional-lifecycle
 npm run test:theme
 npm run test:automatic-coverage
 npm run test:map-preferences
+npm run test:categories
 npm run test:geometry
 npm run test:localities
 ```
@@ -40,17 +41,17 @@ Aplikace začíná prázdným seznamem. Syntetické plochy, ilustrační vrstvy 
 
 Vrstva zpracovává nejvýše 200 zemědělských parcel od zoomu 14 v pohledu do 8 km úhlopříčky, bez prahu podle výměry. V připravených oblastech využije skutečné místní podklady; jinde sdílí dotaz BPEJ pro celý výřez a klimatické požadavky podle buněk ERA5, nejvýše dva současně. Přesun mapy přeruší zastaralé požadavky. Chyba zdroje má vlastní stav a neznamená potvrzený nedostatek dat. Ověřené podklady lze využít i při následném přidání parcely.
 
-Katastrální hranice se kreslí z filtrovaných polygonů, takže lesy, voda, zastavěné a ostatní plochy nevytvářejí katastrální překryv. Ve Vrstvách lze skrýt zahrady; preference se zachová. Chráněná území jsou zapnutá trvale. Volba **Pouze k pronájmu** je neaktivní, dokud nebude připojen skutečný zdroj nabídek; katastrální parcela sama o sobě není nabídkou pronájmu.
+Katastrální hranice se kreslí z filtrovaných polygonů, takže lesy, voda, zastavěné a ostatní plochy nevytvářejí katastrální překryv. Ve Vrstvách lze skrýt zahrady; preference se zachová. Volba **Pouze k pronájmu** je neaktivní, dokud nebude připojen skutečný zdroj nabídek; katastrální parcela sama o sobě není nabídkou pronájmu.
 
 ## Připravená otevřená data
 
-Pět regionálních výřezů obsahuje 6 538 skutečných parcel, BPEJ, klimatické agregace 2005–2024 a vybrané kategorie ochrany přírody. Celý distribuovaný balík včetně seznamu obcí a metadat má přibližně 6,35 MB; analytika bez parcel přibližně 200 kB. Načítání je dělené podle lokality a účelu.
+Pět regionálních výřezů obsahuje 6 538 skutečných parcel, BPEJ a klimatické agregace 2005–2024. Distribuované ověřované datové soubory mají 6 340 092 B. Načítání je dělené podle lokality a účelu. AOPK a ochrana přírody byly na přání odstraněné z rozhraní, analytiky, síťových dotazů i datových výřezů; právní podmínky výsadby aplikace nepotvrzuje.
 
 Geografické podklady zůstávají skutečnými otevřenými daty i po odstranění demonstračních scénářů. Staré interní názvy souborů `locations/demo-*.json` jsou kompatibilní identifikátory výřezů; jejich obsah je stažená geografie a klimatická reanalýza, nikoli ilustrační modely. Zdroj, licence, velikost a SHA-256 jsou v `public/data/manifest.json` a [úplném seznamu zdrojů](docs/OPEN_DATA.md).
 
-Mimo připravené výřezy se při analýze vybrané plochy BPEJ/AOPK dohledávají prostorově a klima podle souřadnic. ČSÚ poskytuje celostátní statistiky ovoce; referenční cenu lze výslovně převzít v ekonomice.
+Mimo připravené výřezy se při analýze vybrané plochy BPEJ dohledává prostorově a klima podle souřadnic. ČSÚ poskytuje celostátní statistiky ovoce; referenční cenu lze výslovně převzít v ekonomice.
 
-Stručná karta i detailní analýza používají stejný stav a výsledek. Rozlišují dosud neověřeno, načítání, chybu zdroje a potvrzený nedostatek podkladů. Po načtení BPEJ a klimatu se skóre zobrazí automaticky; pomalejší kontrola územních omezení AOPK se označí jako probíhající a následně výsledek doplní. Dostatek základních podkladů neznamená úplné agronomické a právní ověření ani 100% kvalitu dat.
+Stručná karta i detailní analýza používají stejný stav a výsledek. Rozlišují dosud neověřeno, načítání, chybu zdroje a potvrzený nedostatek podkladů. Po načtení BPEJ a klimatu se skóre zobrazí automaticky. Dostatek základních podkladů neznamená úplné agronomické a právní ověření ani 100% kvalitu dat.
 
 ## Pracovní geometrie a uložení
 
@@ -58,9 +59,23 @@ Rozdělení používá přímý segment určený dvěma body přes vybraný poze
 
 Názvy, parcely, pracovní geometrie, druhy ovoce a posledních deset rozdělení jsou uložené v localStorage tohoto prohlížeče. Výsledky prostorové analýzy se cachují podle geometrie, nejvýše 30 záznamů na 7 dní. Nová geometrie získává vlastní podklady, nikoli zkopírované hodnoty rodiče.
 
-V Nastavení lze přepnout světlý a tmavý režim. Volba se ukládá samostatně do `moje-sady-theme`, zachovává uživatelské pozemky a při dalším načtení se použije před vykreslením rozhraní. Detailní analýza se zavírá křížkem, klávesou Escape nebo kliknutím na okolní plochu. Mapa nabízí vrstvy a návrat na celou ČR tlačítkem s jejím obrysem; krajské hranice a tlačítko celé obrazovky jsou odstraněné.
+Světlý a tmavý režim se přepíná tlačítkem slunce/měsíce v hlavičce; samostatná obrazovka Nastavení je odstraněná. Volba se ukládá do `moje-sady-theme`. Detailní analýza se zavírá křížkem, klávesou Escape nebo kliknutím na okolní plochu. Posuvný obsah má odsazení od rámu a datové vysvětlivky se otevírají bez posunu štítků.
+
+## Kategorie a společné scénáře
+
+V seznamu pozemků lze vytvářet, přejmenovávat a mazat vlastní kategorie. Pozemky se přiřazují jednotlivě přes nabídku nebo hromadně pro označený výběr. Filtr kategorií nemění uložené geometrie. Vedle vlastního názvu se nenápadně zachová skutečné parcelní číslo.
+
+Obrazovka **Scénáře** sčítá investice, tržby, náklady, stromy a peněžní toky celé zvolené kategorie podle ovocného druhu a vstupů jednotlivých pozemků. Návratnost se vypočte ze společného toku. Překryv rodiče a jeho částí souhrn zablokuje. Při rozdělení se členství převede na části; vrácení obnoví původní kategorii. Spojení parcel ze stejné kategorie převede členství na novou plochu, původní parcely zůstanou uložené.
+
+**Odstranit vybrané** vyžaduje potvrzení s počtem a názvy a funguje i pro nesousedící pozemky. Odstraní související výběr, přiřazení a neplatnou historii dělení, aniž smaže samotnou kategorii. Kategorie i členství se ukládají v localStorage.
+
+Prověřené návrhy dalšího doplnění dat a způsob jejich napojení jsou v [přehledu DMR 5G, historie ČHMÚ a ALADIN](docs/DATA_CANDIDATES.md); zatím nejsou přidané do modelu.
 
 ## Model a omezení
+
+V detailu pozemku na kartě **Data** (v analýze **Data a nejistoty**) lze doplnit nebo přepsat vstupy vhodnosti: reprezentativní HPJ, průměrnou roční teplotu, srážky, ET0, jarní mrazové dny a letní dny. Prázdné pole používá dostupný otevřený podklad; prázdno nikdy neznamená nulu. Ruční hodnoty vytvářejí označený uživatelský scénář a lze je odstranit pro návrat k otevřeným datům. Nezvyšují dostupnost otevřených dat na mapě a nejsou doplněnou historickou řadou. Platí pro konkrétní uloženou geometrii; nově rozdělené či spojené plochy je automaticky nepřebírají.
+
+Analýzy po otevření navigací čekají na výběr pozemku. Změna pozemku v této obrazovce zachová otevřenou analýzu; výběr jinde otevře mapu. V přehledu Pozemky lze řadit vzestupně i sestupně a kombinovat ovocný druh, výměru, vhodnost a hledání. Nehodnocené pozemky nemají nulové skóre. Celý individuální ekonomický výpočet je sbalený pod **Modelový výsledek pro daný ovocný druh**; vysvětlivka na stránce Scénáře popisuje význam variant.
 
 Skutečná vstupní data se kombinují s explicitními orientačními pěstitelskými pravidly: půda 35 %, klima 40 %, vláha 25 %. Skóre není validovaná pravděpodobnost úspěchu ani předpověď výnosu. Chybějící povinné podklady znamenají **Nedostatek dat**, nikoli příznivý výsledek. Klima patří regionálnímu gridu; pH, humus, mikroklima, Q100 a právní přístup nejsou ověřené.
 

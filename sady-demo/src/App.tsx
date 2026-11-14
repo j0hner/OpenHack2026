@@ -14,7 +14,18 @@ import ParcelList from "./components/ParcelList";
 import ParcelCard from "./components/ParcelCard";
 import LocationSearch from "./components/LocationSearch";
 import Dialog from "./components/Dialog";
-import ThemeSettings from "./components/ThemeSettings";
+import ThemeToggle from "./components/ThemeToggle";
+import CategoryScenarios from "./components/CategoryScenarios";
+import ParcelOverview from "./components/ParcelOverview";
+import { normalizeManualInputs, type ManualInputs } from "./lib/manualInputs";
+import {
+  normalizeCategoryState,
+  createCategory,
+  renameCategory,
+  deleteCategory,
+  assignCategory,
+  officialParcelNumber,
+} from "./lib/parcelCategories";
 import { useTheme } from "./lib/theme";
 import AnalysisBackdrop from "./components/AnalysisBackdrop";
 import ParcelPreview from "./components/ParcelPreview";
@@ -23,7 +34,7 @@ import AreaDetail, { type DetailTab } from "./components/AreaDetail";
 import EconomicsPanel from "./components/EconomicsPanel";
 import ProvenancePanel from "./components/ProvenancePanel";
 import MapView from "./map/MapView";
-import { FRUITS, FRUIT_ORDER, economicsForFruit } from "./data/fruitProfiles";
+import { FRUIT_ORDER, economicsForFruit } from "./data/fruitProfiles";
 import { initialMapLayers, LAYER_SETTINGS_VERSION } from "./lib/mapPreferences";
 import { parcelArea, type ParcelFeature } from "./lib/openData";
 import { lookupCadastralParcel, AdapterError } from "./lib/adapters";
@@ -33,6 +44,7 @@ import {
   splitGeometryByLine,
 } from "./lib/geometryOperations";
 import { useRegionalData } from "./lib/useRegionalData";
+import { geometryKey } from "./lib/regionalData";
 import { scoreRegionalArea } from "./lib/regionalScoring";
 import { areaHa, bboxOf } from "./lib/geo";
 import { fmtHa } from "./lib/format";
@@ -63,7 +75,6 @@ const titles: Record<AppView, string> = {
   pozemky: "Přehled pozemků",
   scenare: "Ekonomické scénáře",
   data: "Otevřená data a podklady",
-  nastaveni: "Nastavení aplikace",
 };
 const defaults = () =>
   Object.fromEntries(
@@ -109,8 +120,9 @@ function restoreWorking(boot: Partial<PersistedState> | null): AnalysisArea[] {
   ];
 }
 const rawSource = (source: AnalysisArea): AnalysisArea => {
-  const { regional, ...rest } = source;
+  const { regional, manualInputs, ...rest } = source;
   void regional;
+  void manualInputs;
   return rest;
 };
 
@@ -125,9 +137,18 @@ export default function App() {
   const [workingAreas, setWorkingAreas] = useState<AnalysisArea[]>(() =>
     restoreWorking(boot),
   );
+  const [categoryState, setCategoryState] = useState(() =>
+    normalizeCategoryState(
+      { categories: boot?.parcelCategories, assignments: boot?.categoryByArea },
+      [...parcels, ...workingAreas].map((area) => area.id),
+    ),
+  );
   const [names, setNames] = useState<Record<string, string>>(
     boot?.areaNames ?? {},
   );
+  const [manualByArea, setManualByArea] = useState<
+    Record<string, ManualInputs>
+  >(boot?.manualByArea ?? {});
   const [selectedIds, setSelectedIds] = useState<string[]>(
     boot?.selectedIds ?? [],
   );
@@ -172,9 +193,16 @@ export default function App() {
     () =>
       [...parcels, ...workingAreas].map((a) => ({
         ...a,
+        cadastral: a.cadastral
+          ? {
+              ...a.cadastral,
+              parcelNumber: officialParcelNumber(a) ?? undefined,
+            }
+          : undefined,
         name: names[a.id] ?? a.name,
+        manualInputs: manualByArea[a.id],
       })),
-    [parcels, workingAreas, names],
+    [parcels, workingAreas, names, manualByArea],
   );
   const { areas, retry } = useRegionalData(sourceAreas, [
     ...new Set([...selectedIds, ...(activeId ? [activeId] : [])]),
@@ -237,6 +265,9 @@ export default function App() {
     saveState({
       modelVersion: "moje-sady-2",
       layerSettingsVersion: LAYER_SETTINGS_VERSION,
+      parcelCategories: categoryState.categories,
+      categoryByArea: categoryState.assignments,
+      manualByArea,
       fruit,
       fruitByArea,
       irrigation,
@@ -263,6 +294,8 @@ export default function App() {
     workingAreas,
     names,
     history,
+    categoryState,
+    manualByArea,
   ]);
   useEffect(() => {
     if (!toast) return;
@@ -316,7 +349,7 @@ export default function App() {
     setSelectedIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
     setActiveId(id);
     setDetailOpen(true);
-    setView("mapa");
+    if (view !== "analyzy") setView("mapa");
     setMobileList(false);
     setFocus({ bbox: bboxOf(a.geometry), nonce: Date.now() });
   };
@@ -327,9 +360,24 @@ export default function App() {
       return false;
     }
     const a = parcelArea(feature);
-    setParcels((previous) =>
-      [...previous.filter((p) => p.id !== a.id), a].slice(-50),
-    );
+    const existing = parcels.find((parcel) => parcel.id === a.id);
+    if (!existing && parcels.length >= 50) {
+      setToast(
+        "Lze uložit nejvýše 50 katastrálních parcel. Nejdříve odstraňte nepotřebný pozemek.",
+      );
+      return false;
+    }
+    if (
+      existing &&
+      geometryKey(existing.geometry) !== geometryKey(a.geometry)
+    ) {
+      setManualByArea((previous) => {
+        const next = { ...previous };
+        delete next[a.id];
+        return next;
+      });
+    }
+    setParcels((previous) => [...previous.filter((p) => p.id !== a.id), a]);
     setSelectedIds((ids) => [...new Set([...ids, a.id])]);
     setActiveId(a.id);
     setDetailOpen(true);
@@ -342,37 +390,69 @@ export default function App() {
   const onFruitChange = (f: FruitKey) => {
     if (active) setFruitByArea((previous) => ({ ...previous, [active.id]: f }));
   };
+  const onManualChange = (value: ManualInputs | undefined) => {
+    if (!active) return;
+    setManualByArea((previous) => {
+      const next = { ...previous };
+      const normalized = normalizeManualInputs(value);
+      if (normalized) next[active.id] = normalized;
+      else delete next[active.id];
+      return next;
+    });
+  };
   const onEconomicsChange = (patch: Partial<EconomicsInputs>) =>
     setEconomics((previous) => ({
       ...previous,
       [currentFruit]: { ...previous[currentFruit], ...patch },
     }));
-  const deleteArea = (id: string) => {
-    const a = areaIndex.get(id);
-    if (!a) return;
-    if (a.kind === "parcel")
-      setParcels((items) => items.filter((p) => p.id !== id));
-    else setWorkingAreas((items) => items.filter((p) => p.id !== id));
-    {
-      setNames((previous) => {
-        const next = { ...previous };
-        delete next[id];
-        return next;
-      });
-      setFruitByArea((previous) => {
-        const next = { ...previous };
-        delete next[id];
-        return next;
-      });
-    }
-    setSelectedIds((ids) => ids.filter((x) => x !== id));
-    if (activeId === id) {
+  const deleteAreas = (ids: string[]) => {
+    const removed = new Set(ids.filter((id) => areaIndex.has(id)));
+    if (!removed.size) return;
+    setParcels((items) => items.filter((area) => !removed.has(area.id)));
+    setWorkingAreas((items) => items.filter((area) => !removed.has(area.id)));
+    setNames((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) => !removed.has(id)),
+      ),
+    );
+    setFruitByArea((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) => !removed.has(id)),
+      ),
+    );
+    setManualByArea((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) => !removed.has(id)),
+      ),
+    );
+    setCategoryState((previous) => ({
+      ...previous,
+      assignments: Object.fromEntries(
+        Object.entries(previous.assignments).filter(([id]) => !removed.has(id)),
+      ),
+    }));
+    setHistory((items) =>
+      items.filter(
+        (record) =>
+          !removed.has(record.source.id) &&
+          !record.childIds.some((id) => removed.has(id)),
+      ),
+    );
+    setSelectedIds((selected) => selected.filter((id) => !removed.has(id)));
+    if (activeId && removed.has(activeId)) {
       setActiveId(null);
       setDetailOpen(false);
+    }
+    if (splitSourceId && removed.has(splitSourceId)) {
       cancelSplit();
     }
-    setToast("Pozemek byl odstraněn z aplikace. Katastr zůstává beze změny.");
+    setToast(
+      removed.size === 1
+        ? "Pozemek byl odstraněn z aplikace."
+        : `Odstraněno ${removed.size} pozemků z aplikace.`,
+    );
   };
+  const deleteArea = (id: string) => deleteAreas([id]);
   const startSplit = () => {
     if (!active) return;
     setSplitSourceId(active.id);
@@ -404,10 +484,21 @@ export default function App() {
           childIds: created.map((a) => a.id),
           selectedIds: [...selectedIds],
           fruit: areaFruit(splitSource.id),
+          categoryBefore: categoryState.assignments[splitSource.id]
+            ? { [splitSource.id]: categoryState.assignments[splitSource.id] }
+            : {},
         },
       ].slice(-10),
     );
     setWorkingAreas((previous) => [...previous, ...created]);
+    setCategoryState((previous) => {
+      const assignments = { ...previous.assignments };
+      const inherited = assignments[splitSource.id];
+      delete assignments[splitSource.id];
+      if (inherited)
+        for (const child of created) assignments[child.id] = inherited;
+      return { ...previous, assignments };
+    });
     setFruitByArea((previous) => ({
       ...previous,
       ...Object.fromEntries(
@@ -457,6 +548,24 @@ export default function App() {
       for (const id of record.childIds) delete next[id];
       return next;
     });
+    setManualByArea((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(
+          ([id]) => !record.childIds.includes(id),
+        ),
+      ),
+    );
+    setCategoryState((previous) => {
+      const assignments = { ...previous.assignments };
+      for (const id of record.childIds) delete assignments[id];
+      if (record.categoryBefore !== undefined) {
+        delete assignments[source.id];
+        const restored = record.categoryBefore[source.id];
+        if (previous.categories.some((category) => category.id === restored))
+          assignments[source.id] = restored;
+      }
+      return { ...previous, assignments };
+    });
     cancelSplit();
     setDetailOpen(true);
     setView("mapa");
@@ -478,6 +587,28 @@ export default function App() {
         "merge",
       );
       setWorkingAreas((items) => [...items, created]);
+      // A later merge depends on these shapes. Undoing an earlier split would
+      // restore overlapping parents alongside the new merged plan.
+      const consumed = new Set(selected.map((area) => area.id));
+      setHistory((items) =>
+        items.filter(
+          (record) =>
+            !consumed.has(record.source.id) &&
+            !record.childIds.some((id) => consumed.has(id)),
+        ),
+      );
+      setCategoryState((previous) => {
+        const assignments = { ...previous.assignments };
+        const sourceCategory = assignments[selected[0].id];
+        const sameCategory =
+          !!sourceCategory &&
+          selected.every((area) => assignments[area.id] === sourceCategory);
+        if (sameCategory) {
+          for (const source of selected) delete assignments[source.id];
+          assignments[created.id] = sourceCategory;
+        }
+        return { ...previous, assignments };
+      });
       setFruitByArea((previous) => ({
         ...previous,
         [created.id]: currentFruit,
@@ -494,6 +625,10 @@ export default function App() {
   };
   const navigate = (next: AppView) => {
     cancelSplit();
+    if (next === "analyzy" && view !== "analyzy") {
+      setActiveId(null);
+      setDetailTab("prehled");
+    }
     setView(next);
     if (next === "mapa") setMobileList(false);
   };
@@ -521,6 +656,7 @@ export default function App() {
           onOpenProvenance: () => setView("data"),
           onOpenCompare: () => setView("pozemky"),
           onRetryData: () => retry(active),
+          onManualChange,
         }
       : null;
   return (
@@ -549,6 +685,7 @@ export default function App() {
           <kbd>/</kbd>
         </div>
         <div className="header-actions">
+          <ThemeToggle theme={theme} onChange={setTheme} />
           {history.length > 0 && (
             <button
               type="button"
@@ -593,7 +730,24 @@ export default function App() {
           setNames((previous) => ({ ...previous, [id]: name }))
         }
         onDelete={deleteArea}
+        onDeleteSelected={deleteAreas}
         onMerge={mergeSelected}
+        categoryControl={{
+          state: categoryState,
+          onCreate: (name) =>
+            setCategoryState(createCategory(categoryState, name)),
+          onRename: (id, name) =>
+            setCategoryState(renameCategory(categoryState, id, name)),
+          onDelete: (id) => setCategoryState(deleteCategory(categoryState, id)),
+          onAssign: (ids, categoryId) =>
+            setCategoryState(
+              assignCategory(
+                categoryState,
+                ids.filter((id) => areaIndex.has(id)),
+                categoryId,
+              ),
+            ),
+        }}
       />
       <main className="map-stage">
         <MapView
@@ -647,6 +801,7 @@ export default function App() {
                 onSplit={startSplit}
                 onAnalysis={() => setView("analyzy")}
                 onRetryData={() => retry(active)}
+                onManualChange={onManualChange}
                 onEconomicsChange={onEconomicsChange}
               />
             </div>
@@ -741,162 +896,144 @@ export default function App() {
           </div>
         )}
         {view !== "mapa" && (
-          <AnalysisBackdrop enabled={view === "analyzy"} onClose={closeAnalysis}>
-          <section className="workspace-panel" aria-label={titles[view]}>
-            <div className="workspace-panel-heading">
-              <div>
-                <span className="eyebrow">Moje pozemky</span>
-                <h1>{titles[view]}</h1>
-              </div>
-              {view === "analyzy" ? (
-                <button className="icon-button" type="button" onClick={closeAnalysis} aria-label="Zavřít detailní analýzu" title="Zavřít detailní analýzu">
-                  <IconX size={20} />
-                </button>
-              ) : (
-                <button className="btn" type="button" onClick={() => setView("mapa")}>
-                  <IconMap size={17} /> Zpět na mapu
-                </button>
-              )}
-            </div>
-            {view === "analyzy" &&
-              (fullDetailProps ? (
-                <AreaDetail {...fullDetailProps} />
-              ) : (
-                <div className="panel-empty">
-                  <IconInfoCircle size={26} />
-                  <h2>Nejprve vyberte pozemek</h2>
-                  <p>
-                    Vyberte ho v seznamu nebo kliknutím do katastrální mapy.
-                  </p>
-                  <button
-                    className="btn primary"
-                    onClick={() => setView("mapa")}
-                  >
-                    Otevřít mapu
-                  </button>
+          <AnalysisBackdrop
+            enabled={view === "analyzy"}
+            onClose={closeAnalysis}
+          >
+            <section className="workspace-panel" aria-label={titles[view]}>
+              <div className="workspace-panel-scroll">
+                <div className="workspace-panel-heading">
+                  <div>
+                    <span className="eyebrow">Moje pozemky</span>
+                    <h1>{titles[view]}</h1>
+                  </div>
+                  {view === "analyzy" ? (
+                    <button
+                      className="icon-button"
+                      type="button"
+                      onClick={closeAnalysis}
+                      aria-label="Zavřít detailní analýzu"
+                      title="Zavřít detailní analýzu"
+                    >
+                      <IconX size={20} />
+                    </button>
+                  ) : (
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => setView("mapa")}
+                    >
+                      <IconMap size={17} /> Zpět na mapu
+                    </button>
+                  )}
                 </div>
-              ))}
-            {view === "scenare" &&
-              (active ? (
-                <EconomicsPanel
-                  area={active}
-                  areaHa={areaHa(active.geometry)}
-                  fruit={currentFruit}
-                  inputs={inputs}
-                  irrigation={irrigation}
-                  onChange={onEconomicsChange}
-                  onIrrigationChange={setIrrigation}
-                  onReset={() =>
-                    setEconomics((previous) => ({
-                      ...previous,
-                      [currentFruit]: economicsForFruit(currentFruit),
-                    }))
-                  }
-                />
-              ) : (
-                <div className="panel-empty">
-                  <h2>Vyberte pozemek pro ekonomický scénář</h2>
-                  <p>
-                    Náklady a budoucí výnos jsou modelové vstupy, nikoli příslib
-                    výsledku.
-                  </p>
-                </div>
-              ))}
-            {view === "pozemky" && (
-              <>
-                <p className="section-description">
-                  Každý pozemek i jeho části mohou mít vlastní ovocný druh.
-                  Přejmenování a pracovní hranice se ukládají v tomto
-                  prohlížeči.
-                </p>
-                <div className="plot-table-wrap">
-                  <table className="plot-table">
-                    <thead>
-                      <tr>
-                        <th>Pozemek</th>
-                        <th>Výměra</th>
-                        <th>Ovocný druh</th>
-                        <th>Vhodnost</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {areas.map((a) => (
-                        <tr key={a.id}>
-                          <td>
-                            <strong>{a.name}</strong>
-                            <small>
-                              {a.derivedFrom
-                                ? "Uživatelská část"
-                                : a.cadastral
-                                  ? "Katastrální parcela"
-                                  : "Uživatelská plocha"}
-                            </small>
-                          </td>
-                          <td>{fmtHa(areaHa(a.geometry))}</td>
-                          <td>{FRUITS[areaFruit(a.id)].name}</td>
-                          <td>
-                            {scores[a.id].overall === null
-                              ? scores[a.id].verdict
-                              : scores[a.id].overall + "/100"}
-                          </td>
-                          <td>
-                            <button
-                              className="btn small"
-                              onClick={() => selectArea(a.id)}
-                            >
-                              Otevřít
-                            </button>
-                          </td>
-                        </tr>
+                {view === "analyzy" && (
+                  <label className="field analysis-area-picker">
+                    <span className="field-label">Pozemek k analýze</span>
+                    <select
+                      value={activeId ?? ""}
+                      onChange={(event) => {
+                        if (event.target.value) selectArea(event.target.value);
+                        else setActiveId(null);
+                      }}
+                    >
+                      <option value="">Vyberte pozemek…</option>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.id}>
+                          {area.name}
+                        </option>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-            {view === "data" && (
-              <ProvenancePanel onOpenAnalysis={() => setView("mapa")} />
-            )}
-            {view === "nastaveni" && (
-              <div className="settings-grid">
-                <ThemeSettings theme={theme} onChange={setTheme} />
-                <section className="card">
-                  <h2>Podklady hodnocení</h2>
-                  <p>
-                    Hodnocení používá pouze skutečné otevřené podklady přiřazené
-                    geometrií a souřadnicemi pozemku. Chybějící údaje zůstávají
-                    neznámé.
-                  </p>
-                  <p className="small">
-                    Regionální index kombinuje BPEJ a klimatické řady. Není
-                    pravděpodobností úspěchu. Ekonomické vstupy a pěstitelské
-                    nároky jsou označené modelové předpoklady.
-                  </p>
-                </section>
-                <section className="card">
-                  <h2>Vaše data</h2>
-                  <p>
-                    Názvy, ovocné druhy, přidané parcely, uživatelské části a
-                    posledních deset rozdělení se ukládají v tomto prohlížeči.
-                    Kliknutí do mapy otevře náhled; pozemek uloží až tlačítko
-                    Přidat pozemek.
-                  </p>
-                </section>
-                <section className="card">
-                  <h2>Jak přidat pozemek</h2>
-                  <p>
-                    Použijte katastrální mapu nebo vyhledání parcelního čísla.
-                    Nový polygon se nekreslí; čárou můžete dělit již vybranou
-                    plochu.
-                  </p>
-                  <button className="btn" onClick={() => setAddOpen(true)}>
-                    Vyhledat parcelu
-                  </button>
-                </section>
+                    </select>
+                  </label>
+                )}
+                {view === "analyzy" &&
+                  (fullDetailProps ? (
+                    <AreaDetail {...fullDetailProps} />
+                  ) : (
+                    <div className="panel-empty">
+                      <IconInfoCircle size={26} />
+                      <h2>Nejprve vyberte pozemek</h2>
+                      <p>
+                        Vyberte ho v seznamu nebo v poli nad tímto přehledem.
+                        Analýza zůstane při změně pozemku otevřená.
+                      </p>
+                      <button
+                        className="btn primary"
+                        onClick={() => setView("mapa")}
+                      >
+                        Otevřít mapu
+                      </button>
+                    </div>
+                  ))}
+                {view === "scenare" && (
+                  <>
+                    <details className="scenario-explanation">
+                      <summary>
+                        <IconInfoCircle size={17} aria-hidden="true" /> Co jsou
+                        scénáře?
+                      </summary>
+                      <p>
+                        Scénář ukazuje, jak by se při zadaných cenách, nákladech
+                        a výnosech mohla vyvíjet ekonomika sadu. Konzervativní,
+                        základní a příznivá varianta mění tyto předpoklady.
+                        Nejde o předpověď úrody ani zaručený zisk. Pro kategorii
+                        se sčítají peněžní toky jejích pozemků.
+                      </p>
+                    </details>
+                    <CategoryScenarios
+                      areas={areas}
+                      state={categoryState}
+                      fruitByArea={fruitByArea}
+                      defaultFruit={fruit}
+                      economicsByFruit={economics}
+                      irrigation={irrigation}
+                    />
+                    <section className="individual-scenario">
+                      <h2>
+                        Scénář jednotlivého pozemku
+                        {active ? ` · ${active.name}` : ""}
+                      </h2>
+                      {active ? (
+                        <EconomicsPanel
+                          area={active}
+                          areaHa={areaHa(active.geometry)}
+                          fruit={currentFruit}
+                          inputs={inputs}
+                          irrigation={irrigation}
+                          onChange={onEconomicsChange}
+                          onIrrigationChange={setIrrigation}
+                          onReset={() =>
+                            setEconomics((previous) => ({
+                              ...previous,
+                              [currentFruit]: economicsForFruit(currentFruit),
+                            }))
+                          }
+                        />
+                      ) : (
+                        <div className="panel-empty">
+                          <h2>Vyberte pozemek pro ekonomický scénář</h2>
+                          <p>
+                            Náklady a budoucí výnos jsou modelové vstupy, nikoli
+                            příslib výsledku.
+                          </p>
+                        </div>
+                      )}
+                    </section>
+                  </>
+                )}
+                {view === "pozemky" && (
+                  <ParcelOverview
+                    areas={areas}
+                    fruitForArea={(area) => areaFruit(area.id)}
+                    scoreForArea={(area) => scores[area.id]}
+                    onSelect={selectArea}
+                  />
+                )}
+                {view === "data" && (
+                  <ProvenancePanel onOpenAnalysis={() => setView("mapa")} />
+                )}
               </div>
-            )}
-          </section>
+            </section>
           </AnalysisBackdrop>
         )}
       </main>

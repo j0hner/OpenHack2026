@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   IconSearch,
   IconPlus,
@@ -12,6 +12,16 @@ import { areaHa } from "../lib/geo";
 import { fmtHa } from "../lib/format";
 import { FRUITS } from "../data/fruitProfiles";
 import { mergeEligibility } from "../lib/geometryOperations";
+import {
+  ALL_CATEGORIES,
+  UNASSIGNED_CATEGORY,
+  categoryAreas,
+  officialParcelNumber,
+  showOfficialParcelNumber,
+  type CategoryControl,
+} from "../lib/parcelCategories";
+import ParcelCategories from "./ParcelCategories";
+import "./parcel-categories.css";
 import type { AnalysisArea, FruitKey, SuitabilityResult } from "../lib/types";
 interface Props {
   areas: AnalysisArea[];
@@ -26,6 +36,8 @@ interface Props {
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onMerge: (name: string) => void;
+  onDeleteSelected?: (ids: string[]) => void;
+  categoryControl?: CategoryControl;
 }
 export default function ParcelList(p: Props) {
   const mergeDescriptionId = useId();
@@ -36,15 +48,33 @@ export default function ParcelList(p: Props) {
     [error, setError] = useState(""),
     [remove, setRemove] = useState<string | null>(null),
     [merge, setMerge] = useState(false),
-    [mergeName, setMergeName] = useState("Spojený pozemek");
+    [mergeName, setMergeName] = useState("Spojený pozemek"),
+    [category, setCategory] = useState(ALL_CATEGORIES),
+    [deleteSelection, setDeleteSelection] = useState<string[] | null>(null);
+  const selectionSignature = JSON.stringify(p.selectedIds);
+  useEffect(() => setDeleteSelection(null), [selectionSignature]);
+  const scope =
+    category === UNASSIGNED_CATEGORY ||
+    p.categoryControl?.state.categories.some((item) => item.id === category)
+      ? category
+      : ALL_CATEGORIES;
   const shown = useMemo(
     () =>
-      p.areas.filter((a) =>
-        (a.name + " " + a.location.katastr)
+      (p.categoryControl
+        ? categoryAreas(p.areas, p.categoryControl.state, scope)
+        : p.areas
+      ).filter((a) =>
+        (
+          a.name +
+          " " +
+          (officialParcelNumber(a) ?? "") +
+          " " +
+          a.location.katastr
+        )
           .toLocaleLowerCase("cs")
           .includes(query.toLocaleLowerCase("cs")),
       ),
-    [p.areas, query],
+    [p.areas, query, p.categoryControl, scope],
   );
   const mergeStatus = useMemo(
     () =>
@@ -80,6 +110,26 @@ export default function ParcelList(p: Props) {
           aria-label="Hledat v uložených pozemcích"
         />
       </label>
+      {p.categoryControl && (
+        <>
+          <label className="parcel-category-filter">
+            Kategorie pozemků
+            <select
+              value={scope}
+              onChange={(event) => setCategory(event.target.value)}
+            >
+              <option value={ALL_CATEGORIES}>Všechny kategorie</option>
+              <option value={UNASSIGNED_CATEGORY}>Bez kategorie</option>
+              {p.categoryControl.state.categories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ParcelCategories control={p.categoryControl} />
+        </>
+      )}
       <div className="saved-parcels">
         {!shown.length && (
           <div className="list-empty">
@@ -106,10 +156,28 @@ export default function ParcelList(p: Props) {
               >
                 <IconStack2 size={18} stroke={1.65} />
                 <span>
-                  <strong>{a.name}</strong>
+                  <strong>
+                    {a.name}
+                    {showOfficialParcelNumber(a) && (
+                      <span
+                        className="parcel-official-number"
+                        aria-label={`Parcelní číslo ${officialParcelNumber(a)}`}
+                      >
+                        {officialParcelNumber(a)}
+                      </span>
+                    )}
+                  </strong>
                   <small>
                     {fmtHa(areaHa(a.geometry))}
                     {a.derivedFrom ? " · uživatelská část" : ""}
+                    {p.categoryControl?.state.assignments[a.id]
+                      ? " · " +
+                        p.categoryControl.state.categories.find(
+                          (item) =>
+                            item.id ===
+                            p.categoryControl?.state.assignments[a.id],
+                        )?.name
+                      : ""}
                   </small>
                   <em>
                     {FRUITS[p.fruits[a.id] ?? p.defaultFruit].name}
@@ -137,6 +205,28 @@ export default function ParcelList(p: Props) {
             </div>
             {menu === a.id && (
               <div className="parcel-row-menu">
+                {p.categoryControl && (
+                  <label className="parcel-category-assignment">
+                    Kategorie pozemku
+                    <select
+                      aria-label={`Kategorie pozemku ${a.name}`}
+                      value={p.categoryControl.state.assignments[a.id] ?? ""}
+                      onChange={(event) =>
+                        p.categoryControl?.onAssign(
+                          [a.id],
+                          event.target.value || null,
+                        )
+                      }
+                    >
+                      <option value="">Bez kategorie</option>
+                      {p.categoryControl.state.categories.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -226,46 +316,137 @@ export default function ParcelList(p: Props) {
         ))}
       </div>
       <div className="parcel-list-bottom">
-        {p.selectedIds.length >= 2 && (
-          <>
-            <button
-              type="button"
-              className="btn merge-action"
-              onClick={() => setMerge(!merge)}
-              disabled={!mergeStatus.allowed}
-              aria-describedby={mergeDescriptionId}
+        {p.selectedIds.length > 0 && p.categoryControl && (
+          <label className="parcel-category-assignment">
+            Zařadit vybrané ({p.selectedIds.length})
+            <select
+              value="__choose__"
+              aria-label="Kategorie vybraných pozemků"
+              onChange={(event) => {
+                if (event.target.value !== "__choose__")
+                  p.categoryControl?.onAssign(
+                    p.selectedIds,
+                    event.target.value || null,
+                  );
+              }}
             >
-              <IconLayersIntersect size={17} />
-              Spojit vybrané ({p.selectedIds.length})
+              <option value="__choose__" disabled>
+                Vyberte kategorii…
+              </option>
+              <option value="">Bez kategorie</option>
+              {p.categoryControl.state.categories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="parcel-bulk-actions">
+          {p.selectedIds.length >= 2 && (
+            <>
+              <button
+                type="button"
+                className="btn merge-action"
+                onClick={() => setMerge(!merge)}
+                disabled={!mergeStatus.allowed}
+                aria-describedby={mergeDescriptionId}
+              >
+                <IconLayersIntersect size={17} />
+                Spojit vybrané ({p.selectedIds.length})
+              </button>
+              <p
+                id={mergeDescriptionId}
+                className={`merge-eligibility${mergeStatus.allowed ? "" : " is-blocked"}`}
+                role="status"
+              >
+                {!mergeStatus.allowed && <strong>Spojit lze pouze pozemky, které spolu sousedí.</strong>}
+                <span>{mergeStatus.reason}</span>
+              </p>
+              {merge && mergeStatus.allowed && (
+                <form
+                  className="inline-editor"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (mergeStatus.allowed && mergeName.trim()) {
+                      p.onMerge(mergeName.trim());
+                      setMerge(false);
+                    }
+                  }}
+                >
+                  <label>
+                    Název spojené plochy
+                    <input
+                      value={mergeName}
+                      maxLength={100}
+                      onChange={(e) => setMergeName(e.target.value)}
+                    />
+                  </label>
+                  <button className="btn primary small">
+                    Vytvořit spojenou plochu
+                  </button>
+                </form>
+              )}
+            </>
+          )}
+          {p.selectedIds.length > 0 && p.onDeleteSelected && (
+            <button
+              className="btn danger small"
+              type="button"
+              onClick={() => setDeleteSelection([...new Set(p.selectedIds)])}
+            >
+              <IconTrash size={16} />
+              Odstranit vybrané ({p.selectedIds.length})
             </button>
-            <p id={mergeDescriptionId} className="merge-eligibility" role="status">
-              {mergeStatus.reason}
+          )}
+        </div>
+        {deleteSelection && (
+          <div
+            className="bulk-delete-confirmation"
+            role="group"
+            aria-label="Potvrzení odstranění vybraných pozemků"
+          >
+            <p>
+              Odstranit{" "}
+              {
+                deleteSelection.filter((id) =>
+                  p.areas.some((area) => area.id === id),
+                ).length
+              }{" "}
+              vybraných pozemků z aplikace? Katastr zůstane beze změny.
             </p>
-            {merge && mergeStatus.allowed && (
-              <form
-                className="inline-editor"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (mergeStatus.allowed && mergeName.trim()) {
-                    p.onMerge(mergeName.trim());
-                    setMerge(false);
-                  }
+            <ul>
+              {deleteSelection
+                .map((id) => p.areas.find((area) => area.id === id))
+                .filter((area): area is AnalysisArea => !!area)
+                .map((area) => (
+                  <li key={area.id}>{area.name}</li>
+                ))}
+            </ul>
+            <div className="category-inline-actions">
+              <button
+                className="btn danger small"
+                type="button"
+                onClick={() => {
+                  p.onDeleteSelected?.(
+                    deleteSelection.filter((id) =>
+                      p.areas.some((area) => area.id === id),
+                    ),
+                  );
+                  setDeleteSelection(null);
                 }}
               >
-                <label>
-                  Název spojené plochy
-                  <input
-                    value={mergeName}
-                    maxLength={100}
-                    onChange={(e) => setMergeName(e.target.value)}
-                  />
-                </label>
-                <button className="btn primary small">
-                  Vytvořit spojenou plochu
-                </button>
-              </form>
-            )}
-          </>
+                Potvrdit odstranění vybraných
+              </button>
+              <button
+                className="btn small"
+                type="button"
+                onClick={() => setDeleteSelection(null)}
+              >
+                Zrušit
+              </button>
+            </div>
+          </div>
         )}
         <p>
           Vyberte pozemek v mapě nebo v seznamu. Zaškrtnutím označíte více ploch

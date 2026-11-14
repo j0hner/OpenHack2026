@@ -81,7 +81,7 @@ export default function ProvenancePanel({
         <div className="inline-note">
           Regionální index vychází z průniků BPEJ a klimatu ERA5-Land / ERA5. V
           pěti lokalitách používá připravené výřezy, jinde živé dotazy podle
-          geometrie. AOPK vstupuje do samostatných omezení. ČSÚ poskytuje
+          geometrie. ČSÚ poskytuje
           celostátní ekonomickou referenci. Váhy a agronomické převody jsou
           orientačními pravidly Moje Sady.
         </div>
@@ -93,8 +93,7 @@ export default function ProvenancePanel({
           <span className="hint">{rows.length} položek</span>
         </div>
         <div
-          className="segmented"
-          style={{ marginBottom: 10, flexWrap: "wrap" }}
+          className="segmented provenance-filters"
         >
           {QUALITY_FILTERS.map((item) => (
             <button
@@ -102,7 +101,6 @@ export default function ProvenancePanel({
               type="button"
               className={filter === item.key ? "active" : ""}
               onClick={() => setFilter(item.key)}
-              style={{ flex: "1 0 auto" }}
             >
               {item.label}
               {item.key !== "all" && ` (${counts[item.key as DataQuality]})`}
