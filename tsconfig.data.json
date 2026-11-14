@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "src/data/index.ts", "src/data/db/worker.ts", "tests/**/*.ts",
+    "playwright.config.ts", "vite.sqlite-qa.config.ts", "vite.browser-tests.config.ts"
+  ]
+}

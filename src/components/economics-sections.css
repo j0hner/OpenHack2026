@@ -1,0 +1,98 @@
+.economics-workspace {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.economics-workspace > details {
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.economics-workspace > details > .economics-section-summary {
+  position: relative;
+  display: block;
+  min-height: 72px;
+  margin: 0;
+  padding: 16px 42px 16px 16px;
+  border-radius: 10px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.economics-section-summary::-webkit-details-marker {
+  display: none;
+}
+.economics-section-summary::after {
+  content: "";
+  position: absolute;
+  top: 25px;
+  right: 20px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--green-700);
+  border-bottom: 2px solid var(--green-700);
+  transform: rotate(45deg);
+}
+.economics-workspace > details[open] > .economics-section-summary::after {
+  transform: rotate(225deg);
+  top: 29px;
+}
+.economics-workspace > .economics-input-panel > summary {
+  background: var(--green-050);
+}
+.economics-workspace > .economics-output-panel > summary {
+  background: var(--surface);
+}
+.economics-section-summary > span {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.economics-section-summary > small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 400;
+}
+.economics-section-summary:focus-visible {
+  outline: 2px solid var(--green-600);
+  outline-offset: 3px;
+}
+.economics-section-body {
+  min-width: 0;
+  padding: 16px;
+  border-top: 1px solid var(--line);
+}
+.economics-section-body > :first-child {
+  margin-top: 0;
+}
+.economics-input-panel .card-title {
+  margin-top: 12px;
+}
+.economics-output-panel .economics-section-body > .card + .card {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .economics-workspace {
+    gap: 12px;
+  }
+  .economics-workspace > details > .economics-section-summary {
+    padding: 14px 38px 14px 13px;
+  }
+  .economics-section-summary > span {
+    font-size: 13px;
+  }
+  .economics-section-summary::after {
+    right: 17px;
+  }
+  .economics-section-body {
+    padding: 12px;
+  }
+}

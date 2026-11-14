@@ -1,0 +1,26 @@
+:root { font-family: system-ui, sans-serif; color: #23382e; background: #f5f6f0; font-synthesis: none; }
+body { margin: 0; }
+main { max-width: 640px; margin: 64px auto; padding: 0 24px; }
+header { margin-bottom: 32px; }
+h1 { font-size: clamp(2rem, 6vw, 3rem); line-height: 1.12; letter-spacing: -.04em; margin: 12px 0; }
+h2 { font-size: 1.2rem; }
+.eyebrow { font-weight: 750; font-size: .85rem; letter-spacing: .2em; }
+section { border-top: 1px solid #cdd5c9; margin-top: 28px; padding-top: 12px; }
+fieldset { padding: 0; margin: 0; border: 0; }
+label { display: block; font-size: .9rem; font-weight: 600; margin: 14px 0; }
+input, textarea { box-sizing: border-box; display: block; width: 100%; font: inherit; padding: 10px 12px; border: 1px solid #a4b5a9; border-radius: 5px; margin-top: 6px; background: #fff; color: inherit; }
+.coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.coordinates label { margin-top: 0; }
+button { font: inherit; font-weight: 600; padding: 10px 16px; background: #244537; color: white; border: 1px solid #244537; border-radius: 5px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: wait; }
+:focus-visible { outline: 3px solid #a85f27; outline-offset: 3px; }
+ul { list-style: none; padding: 0; }
+li { padding: 16px 0; border-bottom: 1px solid #dce1d8; overflow-wrap: anywhere; }
+li span { display: block; font-size: .9rem; margin-top: 6px; }
+li p:empty { display: none; }
+#status { background: #e4ede1; padding: 12px; border-radius: 5px; }
+#error { background: #fce5da; color: #792d13; padding: 12px; }
+footer { margin-top: 32px; }
+footer button { background: transparent; color: #244537; font-size: .85rem; margin: 0 8px 8px 0; }
+footer p { font-size: .85rem; line-height: 1.5; }
+@media (max-width: 450px) { main { margin-top: 32px; } .coordinates { grid-template-columns: 1fr; gap: 0; } }

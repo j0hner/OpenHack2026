@@ -1,0 +1,228 @@
+.planting-plan-panel {
+  color: var(--ink);
+  margin: 12px 0;
+  min-width: 0;
+}
+.planting-plan-heading {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: space-between;
+}
+.planting-plan-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin: 0;
+}
+.planting-plan-heading h3 svg {
+  color: var(--green-700);
+  flex: 0 0 auto;
+}
+.planting-plan-heading .badge {
+  font-size: 9px;
+}
+.planting-plan-intro {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+.planting-plan-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 11px 0 0;
+}
+.planting-plan-field {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink);
+}
+.planting-plan-field > span:first-child {
+  line-height: 1.5;
+  font-weight: 600;
+}
+.planting-plan-field small {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.planting-plan-field input,
+.planting-plan-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+.planting-plan-field input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+.planting-plan-field input:disabled,
+.planting-plan-field select:disabled {
+  opacity: 0.7;
+}
+.planting-plan-guidance,
+.planting-plan-source p {
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.planting-plan-options {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 12px 0;
+}
+.planting-plan-options > summary,
+.planting-plan-source > summary {
+  min-height: 30px;
+  align-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--green-700);
+  font-weight: 600;
+}
+.planting-plan-options .planting-plan-field {
+  margin-top: 9px;
+}
+.planting-plan-options .planting-plan-fields .planting-plan-field {
+  margin-top: 0;
+}
+.planting-plan-generate {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 42px;
+}
+.planting-plan-field-error {
+  color: var(--red);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 5px 0 0;
+}
+.planting-plan-status {
+  color: var(--ink-soft);
+  margin: 9px 0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.planting-plan-warning,
+.planting-plan-pending {
+  padding: 10px;
+  border: 1px solid var(--amber-line);
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.planting-plan-pending {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+}
+.planting-plan-result {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 14px;
+}
+.planting-plan-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.planting-plan-metrics > div {
+  padding: 9px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--green-050);
+  min-width: 0;
+}
+.planting-plan-metrics span {
+  display: block;
+  font-size: 10px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.planting-plan-metrics strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.planting-plan-visibility {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 12px 0 8px;
+  cursor: pointer;
+}
+.planting-plan-visibility input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  accent-color: var(--green-700);
+}
+.planting-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.planting-plan-actions .btn {
+  flex: 1 1 120px;
+  min-height: 39px;
+  font-size: 11px;
+}
+.planting-plan-clear {
+  font-size: 11px;
+  min-height: 34px;
+  margin-top: 8px;
+}
+.planting-plan-source {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 12px;
+}
+.planting-plan-source a {
+  color: var(--green-700);
+  overflow-wrap: anywhere;
+}
+.planting-plan-source a svg {
+  vertical-align: middle;
+}
+html[data-theme="dark"] .planting-plan-field input,
+html[data-theme="dark"] .planting-plan-field select {
+  background: #17231b;
+  color: var(--ink);
+}
+html[data-theme="dark"] .planting-plan-field input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+.parcel-card .planting-plan-panel .planting-plan-heading h3 {
+  font-size: 12px;
+}
+.parcel-card .planting-plan-fields {
+  gap: 8px;
+}
+.parcel-card .planting-plan-field input,
+.parcel-card .planting-plan-field select {
+  padding-inline: 7px;
+}
+@media (max-width: 350px) {
+  .planting-plan-fields {
+    grid-template-columns: 1fr;
+  }
+}

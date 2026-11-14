@@ -1,0 +1,220 @@
+/* Keep the existing outer frames; their inset children own scrolling. */
+.workspace-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.workspace-panel-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  margin: 10px;
+  padding: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #c8d5bf transparent;
+}
+.individual-scenario {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--surface);
+}
+.individual-scenario > h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.model-result,
+.scenario-explanation {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.scenario-explanation {
+  margin-bottom: 14px;
+}
+.scenario-explanation p {
+  color: var(--ink-soft);
+  line-height: 1.6;
+  margin: 8px 0 0;
+  max-width: 80ch;
+}
+.scenario-explanation summary > svg {
+  vertical-align: middle;
+  margin-inline-end: 4px;
+}
+.model-result > summary,
+.scenario-explanation > summary {
+  cursor: pointer;
+  min-height: 34px;
+  align-content: center;
+  font-weight: 600;
+}
+.model-result[open] > summary {
+  margin-bottom: 12px;
+}
+.analysis-area-picker {
+  max-width: 460px;
+  margin-bottom: 16px;
+}
+.dialog {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.dialog-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 8px;
+  padding: 16px;
+  overflow: auto;
+}
+.dialog-scroll > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.parcel-card-body {
+  margin-block: 6px;
+  padding-block: 6px 8px;
+}
+.parcel-preview-body {
+  margin-block: 6px;
+  padding-block: 4px;
+  padding-inline-end: 8px;
+}
+:is(
+  .workspace-panel-scroll,
+  .dialog-scroll,
+  .parcel-card-body,
+  .parcel-preview-body,
+  .saved-parcels,
+  .map-layer-popover
+) {
+  overscroll-behavior: contain;
+  scroll-padding: 12px;
+  scrollbar-gutter: stable;
+}
+.saved-parcels {
+  padding-block: 5px;
+}
+.theme-toggle {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border: 1px solid var(--line);
+  background: #f6f9f1;
+  color: #527344;
+}
+html[data-theme="dark"] .theme-toggle {
+  background: #2b392c;
+  color: #e4ece0;
+  border-color: var(--line);
+}
+.quality-disclosure {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  vertical-align: middle;
+}
+.quality-disclosure-trigger {
+  min-height: 28px;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 10px;
+}
+.quality-popover {
+  position: fixed;
+  z-index: 5000;
+  max-width: none;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+.quality-popover-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ink);
+}
+.quality-popover-heading > strong {
+  padding-top: 5px;
+}
+.quality-popover .icon-button {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+}
+.quality-popover p {
+  margin: 7px 0 0;
+}
+.provenance-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+.provenance-filters > button {
+  min-width: 0;
+  min-height: 38px;
+}
+.prov-head > :first-child {
+  min-width: 0;
+}
+@media (max-width: 1200px) and (min-width: 901px) {
+  .workspace-panel-scroll {
+    margin: 8px;
+    padding: 10px;
+  }
+}
+@media (max-width: 900px) {
+  .workspace-panel,
+  .dialog {
+    padding: 0;
+  }
+  .workspace-panel-scroll {
+    margin: 8px;
+    padding: 8px;
+  }
+  .dialog-scroll {
+    padding: 12px;
+  }
+  .parcel-card-body {
+    padding-block: 5px 7px;
+  }
+  .parcel-card-location {
+    padding-inline-end: 38px;
+  }
+  .main-nav nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .main-nav .nav-bottom {
+    display: none;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .theme-toggle {
+    width: 36px;
+    height: 39px;
+    min-width: 36px;
+  }
+}
+@media (max-width: 620px) {
+  .provenance-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

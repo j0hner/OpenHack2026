@@ -1,0 +1,186 @@
+import { intersect } from "@turf/intersect";
+import type { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type { CoverageParcel } from "./parcelCoverage";
+import {
+  boundsIntersect,
+  coverageFromArea,
+  geometryHasRegionalSupport,
+  unknownCoverage,
+} from "./parcelCoverage";
+import { geometryBounds, parcelArea } from "./openData";
+import {
+  distanceKm,
+  existingRegionalCore,
+  geometryKey,
+  rememberRegionalCore,
+  representativePoint,
+  soilSummary,
+  type RegionalData,
+} from "./regionalData";
+import { climateCellKey, loadRegionalClimate } from "./regionalClimate";
+import { climatePause, type ClimatePause } from './climateLimit';
+
+type SoilCollection = FeatureCollection<Polygon | MultiPolygon>;
+export const COVERAGE_CLIMATE_CONCURRENCY = 2;
+const checkAbort = (signal: AbortSignal) => {
+  if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+};
+async function json(url: string, signal: AbortSignal) {
+  const response = await fetch(url, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
+  });
+  checkAbort(signal);
+  if (!response.ok) throw Error(`HTTP ${response.status}`);
+  const value = await response.json();
+  if (value.error) throw Error(value.reason ?? value.error.message ?? "Chyba poskytovatele");
+  return value;
+}
+
+/** Exact clipping, not simplification: all parcel-local boundaries and holes
+ * remain unchanged, while distant vertices no longer enter each intersection. */
+export function clipCoverageSoil(collection: SoilCollection, extent: number[], signal?: AbortSignal): SoilCollection {
+  const [west, south, east, north] = extent;
+  const boundary: Feature<Polygon> = { type: "Feature", properties: {}, geometry: {
+    type: "Polygon", coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+  } };
+  const result: SoilCollection = { type: "FeatureCollection", features: [] };
+  for (const feature of collection.features) {
+    if (signal) checkAbort(signal);
+    const clipped = intersect({ type: "FeatureCollection", features: [boundary, feature] });
+    if (clipped) result.features.push({ ...feature, geometry: clipped.geometry });
+  }
+  return result;
+}
+
+/** One bounded soil query covers the complete geometries, including parcel edges
+ * outside the viewport. A truncated response is never treated as absent soil. */
+async function viewportSoil(parcels: CoverageParcel[], signal: AbortSignal): Promise<SoilCollection> {
+  const bounds = parcels.map(({ feature }) => geometryBounds(feature.geometry));
+  const extent = [Math.min(...bounds.map(b => b[0])), Math.min(...bounds.map(b => b[1])), Math.max(...bounds.map(b => b[2])), Math.max(...bounds.map(b => b[3]))];
+  const collection: SoilCollection = { type: "FeatureCollection", features: [] };
+  for (let offset = 0; offset < 2000; offset += 500) {
+    checkAbort(signal);
+    const params = new URLSearchParams({
+      where: "1=1", geometry: extent.join(","), geometryType: "esriGeometryEnvelope",
+      inSR: "4326", outSR: "4326", spatialRel: "esriSpatialRelIntersects",
+      outFields: "kod,nazev", f: "geojson", resultRecordCount: "500", resultOffset: String(offset),
+    });
+    const value = await json(`https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28/query?${params}`, signal);
+    if (!Array.isArray(value.features)) throw Error("BPEJ neobsahuje geometrie.");
+    if (!value.features.every((feature: { geometry?: { type?: string } }) => feature.geometry && ["Polygon", "MultiPolygon"].includes(feature.geometry.type ?? "")))
+      throw Error("BPEJ obsahuje neplatnou geometrii.");
+    // ArcGIS returns complete BPEJ units, which can contain tens of thousands of
+    // vertices far outside this viewport. Clip each unit once, exactly, instead
+    // of reprocessing its remote boundary for every one of the 200 parcels.
+    // This preserves all boundaries/holes inside the complete parcel extent.
+    let yieldedAt = performance.now();
+    for (const feature of value.features as SoilCollection["features"]) {
+      collection.features.push(...clipCoverageSoil({ type: "FeatureCollection", features: [feature] }, extent, signal).features);
+      if (performance.now() - yieldedAt >= 12) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        yieldedAt = performance.now();
+      }
+    }
+    if (!value.exceededTransferLimit) return collection;
+  }
+  throw Error("Výřez BPEJ překročil limit 2 000 jednotek. Přibližte mapu.");
+}
+
+/** Verify only core availability. No protection lookup, saved parcel, or synthetic
+ * regional profile is needed. Soil is shared per viewport, climate per real cell. */
+export async function verifyVisibleCoverage(
+  input: CoverageParcel[],
+  signal: AbortSignal,
+  onProgress: (parcels: CoverageParcel[]) => void,
+): Promise<CoverageParcel[]> {
+  checkAbort(signal);
+  const parcels = input.map(item => ({ ...item }));
+  // Changing the viewport (including fitting a planting plan) must not discard
+  // an already verified observation of this exact geometry.
+  for (const item of parcels) {
+    if (item.coverage.state !== 'unknown') continue;
+    const data = existingRegionalCore(geometryKey(item.feature.geometry));
+    if (data?.soil && data.climate && !data.errors.length && !data.deferred)
+      item.coverage = coverageFromArea({ ...parcelArea(item.feature), regional: { status: 'ready', data } });
+  }
+  const pending = parcels.filter(item => item.coverage.state === "unknown");
+  if (!pending.length) return parcels;
+  const supported: CoverageParcel[] = [];
+  for (const item of pending) {
+    if (!geometryHasRegionalSupport(item.feature.geometry)) {
+      item.coverage = {
+        ...unknownCoverage("Geometrie přesahuje limit regionálního modelu (100 ha nebo 3 km úhlopříčky)."),
+        state: "insufficient", geometrySupported: false, availableCategories: 0,
+      };
+    } else {
+      supported.push(item);
+      item.coverage = { ...unknownCoverage("Probíhá automatické ověření půdy a klimatu."), state: "loading" };
+    }
+  }
+  const publish = () => { checkAbort(signal); onProgress(parcels.map(item => ({ ...item }))); };
+  publish();
+  if (!supported.length) return parcels;
+  const cells = new Map<string, { cell: [number, number]; parcels: CoverageParcel[] }>();
+  const points = new Map<CoverageParcel, [number, number]>();
+  for (const item of supported) {
+    try {
+      const point = representativePoint(item.feature.geometry), cell = point, key = climateCellKey(point);
+      points.set(item, point);
+      if (!cells.has(key)) cells.set(key, { cell, parcels: [] });
+      cells.get(key)!.parcels.push(item);
+    } catch {
+      item.coverage = { ...unknownCoverage("Nelze určit vnitřní bod platné geometrie."), state: "error" };
+    }
+  }
+  if (!cells.size) { publish(); return parcels; }
+  type Result<T> = { value: T | null; error: string | null; deferred?: ClimatePause };
+  const attempt = async <T>(task: () => Promise<T>): Promise<Result<T>> => {
+    try { return { value: await task(), error: null }; }
+    catch (error) { checkAbort(signal); const deferred = climatePause(error); return deferred ? { value: null, error: null, deferred } : { value: null, error: error instanceof Error ? error.message : "Zdroj nedostupný." }; }
+  };
+  // Start the single soil job alongside climate jobs, never once per parcel.
+  const soilPromise = attempt(() => viewportSoil(supported, signal));
+  const queue = [...cells.values()];
+  const worker = async () => {
+    let yieldedAt = performance.now(), publishedAt = yieldedAt;
+    while (queue.length) {
+      checkAbort(signal);
+      const group = queue.shift()!;
+      const [soil, climate] = await Promise.all([soilPromise, attempt(() => loadRegionalClimate(group.cell, signal))]);
+      checkAbort(signal);
+      const indexed = soil.value?.features.map(feature => ({ feature, bounds: geometryBounds(feature.geometry) }));
+      for (const item of group.parcels) {
+        checkAbort(signal);
+        const point = points.get(item)!;
+        const errors = [soil.error ? `BPEJ: ${soil.error}` : null, climate.error ? `Klima: ${climate.error}` : null].filter((value): value is string => !!value);
+        try {
+          const bounds = geometryBounds(item.feature.geometry);
+          const data: RegionalData = {
+            key: geometryKey(item.feature.geometry), fetchedAt: new Date().toISOString(), point, source: "live",
+            soil: indexed ? soilSummary(item.feature.geometry, { type: "FeatureCollection", features: indexed.filter(entry => boundsIntersect(entry.bounds, bounds)).map(entry => entry.feature) }) : null,
+            climate: climate.value ? { ...climate.value, distanceKm: climate.value.grid ? distanceKm(point, climate.value.grid) : null } : null,
+            errors,
+            ...(climate.deferred ? { deferred: climate.deferred } : {}),
+          };
+          item.coverage = coverageFromArea({ ...parcelArea(item.feature), regional: { status: "ready", data } });
+          if (!errors.length) rememberRegionalCore(data);
+        } catch (error) {
+          item.coverage = { ...unknownCoverage(error instanceof Error ? error.message : "Prostorový průnik se nepodařil."), state: "error" };
+        }
+        // Time budgeting keeps movement/abort responsive even when a few parcels
+        // have more vertices. Publishing is less frequent than yielding so Leaflet
+        // does not redraw 200 polygons for every individual intersection.
+        const now = performance.now();
+        if (now - yieldedAt >= 12) {
+          if (now - publishedAt >= 100) { publish(); publishedAt = now; }
+          await new Promise(resolve => setTimeout(resolve, 0));
+          yieldedAt = performance.now();
+        }
+      }
+      publish();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(COVERAGE_CLIMATE_CONCURRENCY, cells.size) }, worker));
+  checkAbort(signal);
+  return parcels;
+}

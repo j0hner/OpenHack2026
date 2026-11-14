@@ -1,0 +1,40 @@
+.planting-map-key {
+  position: absolute;
+  right: 18px;
+  top: 68px;
+  z-index: 450;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11px;
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+.planting-map-tree {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #318b40;
+  border: 1px solid #fff;
+  box-shadow: 0 0 0 1px #318b40;
+}
+.planting-map-row {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  background: #c59c29;
+  margin-left: 6px;
+}
+@media (max-width: 900px) {
+  .planting-map-key {
+    top: 64px;
+    right: 12px;
+    font-size: 10px;
+    padding: 7px 9px;
+  }
+}

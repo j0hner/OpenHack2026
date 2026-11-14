@@ -1,0 +1,23 @@
+.coverage-filter-info {
+  margin: 0 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 10px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.coverage-filter-info summary {
+  min-height: 30px;
+  align-content: center;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--green-700);
+}
+.coverage-filter-info p { margin: 8px 0 0; }
+.coverage-filter-key { padding: 0; margin: 9px 0; list-style: none; display: grid; gap: 6px; }
+.coverage-filter-key li { display: flex; align-items: center; gap: 7px; }
+.coverage-filter-key strong { margin-left: auto; font-variant-numeric: tabular-nums; }
+.coverage-dot { display: inline-block; flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; }
+.coverage-filter-status { font-weight: 600; }
+.coverage-filter-status.is-error { color: var(--red); }

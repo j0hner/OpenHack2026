@@ -2,6 +2,8 @@
 
 final result: passed
 
+Nejnovější ověření větve `codex/orchard-planting` je v [protokolu výsadby a následných úprav rozhraní](docs/qa/planting-planner.md). Předchozí výsledky jsou v [protokolu kategorií a dat](docs/qa/categories-manual-inputs.md) a [filtrované mapy](docs/qa/parcel-map-filtering.md). Níže je zachované historické ověření starších úprav včetně již odstraněných funkcí AOPK, Nastavení a potvrzování mazání.
+
 ## Oprava stavů analýzy a následné úpravy vzhledu
 
 Ověřeno 14. 11. 2026 na stejné větvi. Stručná karta, přehled pozemků, mapa i detailní analýza nyní používají společný výsledek a stav podkladů. „Nedostatek dat“ se zobrazuje až po skutečném potvrzení nedostatečného pokrytí. Neověřený pozemek, probíhající načítání a chyba poskytovatele mají vlastní označení. Dostatek základních vstupů se výslovně ukazuje i při konzervativní kvalitě podkladů 60 %.
