@@ -13,6 +13,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/leaflet/')) return 'map';
+          if (/node_modules\/(?:@turf|polygon-clipping|polyclip-ts|splaytree|sweepline-intersections)\//.test(id)) return 'geometry';
+        },
+      },
+    },
   },
   server: {
     host: '0.0.0.0',

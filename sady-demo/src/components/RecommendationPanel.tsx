@@ -1,4 +1,5 @@
 import { FRUITS, FRUIT_ORDER } from '../data/fruitProfiles';
+import {IconAlertTriangle,IconCheck,IconPlant2} from '@tabler/icons-react';
 import { fmtHa, fmtInt } from '../lib/format';
 import { computeTreeCount } from '../lib/economics';
 import type { AnalysisArea, EconomicsInputs, FruitKey, SuitabilityResult } from '../lib/types';
@@ -35,27 +36,27 @@ export default function RecommendationPanel({
   });
 
   return (
-    <div>
+    <div className="recommendation-panel analysis-section-content">
       <div className="card">
         <div className="card-title">
           <span>Pořadí druhů pro tuto plochu</span>
           <span className="hint">model 0–100</span>
         </div>
-        <div className="fruit-row">
+        <div className="fruit-ranking">
           {ordered.map((key, index) => {
             const item = ranking[key];
             return (
               <button
                 key={key}
                 type="button"
-                className={`fruit-chip${fruit === key ? ' active' : ''}`}
+                className={`fruit-ranking-row${fruit === key ? ' active' : ''}`}
                 onClick={() => onFruitChange(key)}
-                title={`${FRUITS[key].name}: ${item.verdict}`}
+                aria-pressed={fruit===key}
               >
-                <span aria-hidden="true">{FRUITS[key].emoji}</span>
-                {FRUITS[key].name}
+                <span className="fruit-ranking-name">{FRUITS[key].name}</span>
+                <span className="fruit-ranking-bar" aria-hidden="true"><span style={{width:`${item.overall??0}%`}} /></span>
                 <span className="rank">
-                  {index + 1}. {item.overall != null ? `${item.overall}` : '–'}
+                  {item.overall != null ? `${index+1}. · ${item.overall}/100` : 'Bez podkladů'}
                 </span>
               </button>
             );
@@ -70,7 +71,7 @@ export default function RecommendationPanel({
       <div className="card">
         <div className="card-title">
           <span>
-            {profile.emoji} {profile.name} – co očekávat
+            <IconPlant2 size={19} aria-hidden="true" />{profile.name} – plán výsadby
           </span>
           <span className={`badge ${ranking[fruit].verdictClass}`}>{ranking[fruit].verdict}</span>
         </div>
@@ -180,7 +181,7 @@ export default function RecommendationPanel({
             <ul className="plain-list">
               {profile.advantages.map((item) => (
                 <li key={item} className="small" style={{ color: 'var(--ink-soft)' }}>
-                  + {item}
+                  <IconCheck size={15} aria-hidden="true" /> {item}
                 </li>
               ))}
             </ul>
@@ -192,7 +193,7 @@ export default function RecommendationPanel({
             <ul className="plain-list">
               {profile.risks.map((item) => (
                 <li key={item} className="small" style={{ color: 'var(--ink-soft)' }}>
-                  – {item}
+                  <IconAlertTriangle size={15} aria-hidden="true" /> {item}
                 </li>
               ))}
             </ul>

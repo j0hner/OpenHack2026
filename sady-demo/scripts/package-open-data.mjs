@@ -72,18 +72,19 @@ for(const [fruit,tree,product]of [['apple','901','2011'],['pear','913','2020'],[
 }
 }
 await save('economics.json',references);
-for(const name of ['economics.json','locations-index.json']){
+for(const name of ['economics.json','locations-index.json','municipalities.json','municipalities-metadata.json']){
  const bytes=await readFile(new URL(name,root));
  files.push({file:name,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});
 }
 const datasets=[
  {id:'ruian-parcels',name:'ČÚZK / RÚIAN – parcely',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/5',use:'GeoJSON výřezy a živý výběr parcely'},
+ {id:'ruian-municipalities',name:'ČÚZK / RÚIAN – obce a města ČR',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/12',use:'Úplný místní našeptávač obcí; okresy z vrstvy 15, podrobnosti v municipalities-metadata.json'},
  {id:'ruian-bpej',name:'ČÚZK / RÚIAN – BPEJ (agendový zdroj SPÚ)',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28',use:'Skutečné půdní polygony a plošné podíly; bez domyšleného pH'},
  {id:'era5-land',name:'Copernicus / ECMWF ERA5-Land + ERA5 přes Open-Meteo',license:'CC BY 4.0; bezplatná služba Open-Meteo pouze nekomerčně',url:'https://open-meteo.com/en/docs/historical-weather-api',use:'2005–2024, teplota ERA5-Land ~9 km, srážky a ET0 ERA5 ~25 km; roční agregace'},
  {id:'aopk',name:'AOPK – velkoplošná a maloplošná ZCHÚ, EVL, ptačí oblasti',license:'CC BY 4.0',url:'https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer',use:'Prostorové průniky, vrstvy 0, 2, 6, 7; zjednodušení geometrie 0.00002°'},
  {id:'csu-harvest',name:'ČSÚ – Sklizeň ovoce ZEM03D',license:'Podmínky otevřených dat ČSÚ, bez autorskoprávní ochrany dle metadat',url:'https://data.csu.gov.cz/opendata/sady/ZEM03D/distribuce/json',use:'ČR, pět ovocných druhů, 2021–2025; skutečná sklizeň, chybějící plocha a t/ha zůstávají null'},
  {id:'csu-prices',name:'ČSÚ – Ceny zemědělských výrobků CEN0203B',license:'Podmínky otevřených dat ČSÚ, viz metadata sady',url:'https://data.csu.gov.cz/opendata/sady/CEN0203B/distribuce/json',use:'ČR, roční ceny ovoce 2021–2025; Kč/t převedeno na Kč/kg'},
- {id:'osm',name:'OpenStreetMap / Nominatim',license:'ODbL 1.0',url:'https://www.openstreetmap.org/copyright',use:'Online podklad a vyhledávání; dlaždice se nehromadí v repozitáři'},
+ {id:'osm',name:'OpenStreetMap',license:'ODbL 1.0',url:'https://www.openstreetmap.org/copyright',use:'Online mapový podklad; dlaždice se nehromadí v repozitáři'},
  {id:'orthophoto',name:'ČÚZK – Ortofoto ČR',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer',use:'Online letecký podklad'},
  {id:'cadastral-map',name:'ČÚZK – katastrální mapa',license:'Otevřená prostorová data ČÚZK, CC BY 4.0',url:'https://services.cuzk.gov.cz/wms/local-km-wms.asp',use:'Transparentní online WMS, vrstva KN, od přiblížení 14'},
  {id:'natural-earth',name:'Natural Earth 1:50m',license:'Public domain',url:'https://www.naturalearthdata.com/about/terms-of-use/',use:'Již přítomná záložní hranice ČR'},

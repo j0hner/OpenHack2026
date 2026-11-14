@@ -1,4 +1,5 @@
 import { FRUITS } from '../data/fruitProfiles';
+import {IconArrowLeft,IconArrowsDiff} from '@tabler/icons-react';
 import { computeEconomics, computeTreeCount } from '../lib/economics';
 import { areaHa } from '../lib/geo';
 import { fmtHa, fmtInt, fmtKcShort } from '../lib/format';
@@ -43,7 +44,7 @@ export default function ComparisonPanel({
     return (
       <div className="empty-state">
         <div className="empty-icon" aria-hidden="true">
-          ⚖
+          <IconArrowsDiff size={30} />
         </div>
         <div className="empty-title">Porovnání potřebuje alespoň dvě plochy</div>
         <p className="empty-text">
@@ -66,10 +67,10 @@ export default function ComparisonPanel({
   const shown = areas.slice(0, 4);
 
   return (
-    <div>
-      <div className="area-header" style={{ marginBottom: 12 }}>
+    <div className="comparison-panel analysis-section-content">
+      <div className="area-header secondary-view-header" style={{ marginBottom: 12 }}>
         <div className="eyebrow">
-          Porovnání <span className="badge q-demo">model {profile.nameGenitive}</span>
+          Porovnání <span className={`badge ${shown.every(a=>a.regional)?'q-real':'q-demo'}`}>{shown.every(a=>a.regional)?'Prostorové podklady':'Obsahuje demo scénáře'}</span>
         </div>
         <h2 className="area-title">Srovnání {shown.length} ploch</h2>
         <div className="area-loc">
@@ -91,10 +92,10 @@ export default function ComparisonPanel({
         </div>
         <div className="link-row" style={{ marginTop: 9 }}>
           <button type="button" className="link-button" onClick={onOpenAnalysis}>
-            ← Zpět na analýzu
+            <IconArrowLeft size={16} aria-hidden="true" />Zpět na analýzu
           </button>
           <button type="button" className="link-button" onClick={onAddSamples}>
-            Doplňit ukázky A–C
+            Doplnit ukázky A–C
           </button>
           <button type="button" className="link-button" onClick={onClearSelection}>
             Zrušit výběr
@@ -184,7 +185,7 @@ export default function ComparisonPanel({
                       <ul className="plain-list">
                         {top.map((label) => (
                           <li key={label} className="tiny">
-                            • {label}
+                            {label}
                           </li>
                         ))}
                       </ul>
@@ -285,16 +286,16 @@ export default function ComparisonPanel({
         <div className="card-title">Jak číst porovnání</div>
         <ul className="plain-list">
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • Skóre je orientační shoda podmínek s nároky druhu, nikoli pravděpodobnost úspěchu.
+            Skóre je orientační shoda podmínek s nároky druhu, nikoli pravděpodobnost úspěchu.
           </li>
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • Plocha s nedostatkem zásadních dat nemá skóre – v porovnání to není nula, ale „—“.
+            Plocha s nedostatkem zásadních dat nemá skóre – v porovnání to není nula, ale „—“.
           </li>
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • Společná výměra {fmtHa(unionHa)} je počítaná sjednocením geometrií, aby se překryvy nezapočítaly dvakrát.
+            Společná výměra {fmtHa(unionHa)} je počítaná sjednocením geometrií, aby se překryvy nezapočítaly dvakrát.
           </li>
           <li className="small" style={{ color: 'var(--ink-soft)' }}>
-            • Ekonomika používá stejné vstupy a modelové ceny; rozdíly mezi plochami vznikají z výměry a délky
+            Ekonomika používá stejné vstupy a modelové ceny; rozdíly mezi plochami vznikají z výměry a délky
             oplocení, ne z rozdílné kvality půdy.
           </li>
         </ul>

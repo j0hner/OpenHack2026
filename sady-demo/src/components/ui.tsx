@@ -1,19 +1,22 @@
-import type { ReactNode } from 'react';
+import {useId,type ReactNode} from 'react';
+import {IconAlertCircle,IconAlertTriangle,IconCheck,IconDatabaseOff,IconInfoCircle} from '@tabler/icons-react';
 import { QUALITY_LABELS } from '../data/provenance';
 import type { DataQuality, VerdictClass } from '../lib/types';
 
 const verdictClassOf = (verdictClass: VerdictClass): string => verdictClass;
 
 export function VerdictBadge({ verdictClass, verdict }: { verdictClass: VerdictClass; verdict: string }) {
-  return <span className={`badge ${verdictClassOf(verdictClass)}`}>{verdict}</span>;
+  const Icon=verdictClass==='good'?IconCheck:verdictClass==='nodata'?IconDatabaseOff:IconAlertTriangle;
+  return <span className={`badge ${verdictClassOf(verdictClass)}`}><Icon size={14} aria-hidden="true" />{verdict}</span>;
 }
 
 export function QualityBadge({ quality }: { quality: DataQuality }) {
   const meta = QUALITY_LABELS[quality];
   return (
-    <span className={`badge ${meta.className}`} title={meta.hint}>
-      {meta.label}
-    </span>
+    <details className="quality-disclosure">
+      <summary className={`badge ${meta.className}`}>{meta.label}<IconInfoCircle size={14} aria-hidden="true" /><span className="sr-only"> – vysvětlení zdroje</span></summary>
+      <div className="quality-disclosure-content">{meta.hint}</div>
+    </details>
   );
 }
 
@@ -100,8 +103,9 @@ export function NumberField({
   onChange: (value: number) => void;
   title?: string;
 }) {
+  const hintId=useId();
   return (
-    <label className="field" title={title}>
+    <label className="field">
       <span className="field-label">{label}</span>
       <span className="input-unit">
         <input
@@ -110,6 +114,7 @@ export function NumberField({
           min={min}
           max={max}
           step={step}
+          aria-describedby={title?hintId:undefined}
           onChange={(event) => {
             const next = Number(event.target.value);
             onChange(Number.isFinite(next) ? next : 0);
@@ -117,6 +122,7 @@ export function NumberField({
         />
         <span className="unit">{unit}</span>
       </span>
+      {title&&<span className="field-note" id={hintId}>{title}</span>}
     </label>
   );
 }
@@ -159,7 +165,6 @@ export function Info({ children, kind = 'info' }: { children: ReactNode; kind?: 
 }
 
 export function severityIcon(severity: 'high' | 'medium' | 'low') {
-  if (severity === 'high') return '▲';
-  if (severity === 'medium') return '◆';
-  return '●';
+  const Icon=severity==='high'?IconAlertTriangle:severity==='medium'?IconAlertCircle:IconInfoCircle;
+  return <Icon size={18} aria-hidden="true" />;
 }

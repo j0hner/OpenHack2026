@@ -191,7 +191,7 @@ export const MAP_LAYERS: MapLayerDef[] = [
       { color: '#b8432f', label: 'rizikový (< 55)' },
       { color: '#8a8f98', label: 'nedostatek dat' },
     ],
-    source: 'Výpočet demo modelu SADY',
+    source: 'Výpočet demo modelu Moje Sady',
     features: [],
   },
 ];

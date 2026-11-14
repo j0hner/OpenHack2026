@@ -3,6 +3,8 @@ import type { AnalysisArea, EconomicsInputs, FruitKey, PolygonGeometry } from '.
 const KEY = 'sady-demo-v1';
 
 export interface PersistedState {
+  fruitByArea?: Record<string,FruitKey>;
+  splitHistory?: SplitRecord[];
   modelVersion?: string;
   mode: 'demo' | 'custom';
   fruit: FruitKey;
@@ -49,3 +51,4 @@ export function clearState(): void {
 }
 
 export const STORAGE_KEY = KEY;
+export interface SplitRecord {id:string;source:AnalysisArea;childIds:string[];selectedIds:string[];fruit:FruitKey}
