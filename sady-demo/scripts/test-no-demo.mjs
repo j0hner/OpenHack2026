@@ -154,7 +154,6 @@ try {
   assert.deepEqual(Object.keys(next.layers).sort(), [
     "bpej",
     "coverage",
-    "protected",
   ]);
   assert.deepEqual(
     next.splitHistory.map((record) => record.id),

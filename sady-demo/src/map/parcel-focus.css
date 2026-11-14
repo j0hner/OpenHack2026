@@ -1,0 +1,12 @@
+/* A native outline on an SVG path follows its rectangular bounding box. Only
+   parcel shapes replace it; map controls and the map container keep their own
+   visible focus, and the selected parcel keeps its real green boundary. */
+.map-shell path.sady-parcel-path:focus {
+  outline: none;
+}
+
+.map-shell path.sady-parcel-path:focus-visible {
+  stroke-width: 5px;
+  stroke-dasharray: 7 4;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 4px #b8ed84);
+}

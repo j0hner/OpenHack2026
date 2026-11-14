@@ -1,0 +1,57 @@
+.parcel-hover-tooltip {
+  background: var(--surface) !important;
+  opacity: 1 !important;
+  width: 235px;
+  min-width: 210px;
+  max-width: 245px;
+  padding: 9px 11px;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--ink);
+}
+.parcel-tooltip-content {
+  display: grid;
+  gap: 4px;
+}
+.parcel-tooltip-content > strong {
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.parcel-tooltip-meta {
+  color: var(--ink-soft);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.parcel-tooltip-status {
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.parcel-list-bottom .merge-eligibility {
+  width: 100%;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.merge-eligibility > :is(strong, span) {
+  display: block;
+}
+.parcel-list-bottom .merge-eligibility.is-blocked {
+  border: 1px solid var(--amber-line);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+.merge-eligibility.is-blocked > span {
+  margin-top: 5px;
+}

@@ -159,12 +159,12 @@ export const ADAPTER_SUMMARY = [
     note: "Lokální našeptávání z úplného přibaleného seznamu obcí ČR; při psaní se nevolá externí geokodér.",
   },
   {
-    name: "ČÚZK RÚIAN REST + katastrální WMS",
+    name: "ČÚZK RÚIAN REST – vektorové parcely",
     status: "Napojeno",
-    note: "Výběr parcely v celé ČR; lokální výřezy pěti lokalit, jinde online dotaz s timeoutem.",
+    note: "Filtrované zemědělské parcely všech výměr od stejného zoomu; lokální výřezy, jinde omezený online dotaz s timeoutem.",
   },
   {
-    name: "BPEJ, ERA5-Land / ERA5, AOPK",
+    name: "BPEJ, ERA5-Land / ERA5",
     status: "Napojeno",
     note: "Pět připravených výřezů + živé prostorové dotazy podle polygonu a souřadnic. Chybějící údaje zůstávají neznámé.",
   },

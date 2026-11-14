@@ -29,7 +29,7 @@ try{
  const soil=r.soilSummary(geometry,fc('00100'));assert(Math.abs(soil.coveragePct-100)<.01);
  const hole={type:'Polygon',coordinates:[...geometry.coordinates,[[14.0005,50.0005],[14.0015,50.0005],[14.0015,50.0015],[14.0005,50.0015],[14.0005,50.0005]]]};
  const {containsPoint}=await server.ssrLoadModule('/src/lib/openData.ts');assert(containsPoint(hole,r.representativePoint(hole)));
- const d={key:r.geometryKey(geometry),fetchedAt:new Date().toISOString(),point:[14.001,50.001],source:'live',soil,climate:{years:Array.from({length:20},(_,i)=>({year:2005+i,temperatureMeanC:9,rainfallMm:650,et0Mm:600,springFrostDays:12,summerDays:40})),period:'2005–2024',model:'ERA5',resolution:'25 km',grid:[14,50],distanceKm:.1},terrain:{altitudeM:250,slopeDeg:2,point:[14.001,50.001],scope:'parcel',distanceKm:0},protected:[],errors:[]};
+ const d={key:r.geometryKey(geometry),fetchedAt:new Date().toISOString(),point:[14.001,50.001],source:'live',soil,climate:{years:Array.from({length:20},(_,i)=>({year:2005+i,temperatureMeanC:9,rainfallMm:650,et0Mm:600,springFrostDays:12,summerDays:40})),period:'2005–2024',model:'ERA5',resolution:'25 km',grid:[14,50],distanceKm:.1},terrain:{altitudeM:250,slopeDeg:2,point:[14.001,50.001],scope:'parcel',distanceKm:0},errors:[]};
  const area={...referenceAreas[0],kind:'parcel',geometry,regional:{status:'ready',data:d}};
  const normal=scoreRegionalArea(area,'apple');assert(normal.overall!==null);
  const cold=structuredClone(area);cold.regional.data.climate.years.forEach(y=>{y.temperatureMeanC=3;y.springFrostDays=60;y.summerDays=2;});
@@ -58,7 +58,7 @@ try{
  globalThis.fetch=async input=>String(input).startsWith('/data/')?staticFetch(input):new Response('{}',{status:503});
  const failedGeometry={type:'Polygon',coordinates:[[[14.61,50.1],[14.611,50.1],[14.611,50.101],[14.61,50.101],[14.61,50.1]]]};
  const failed=await r.loadRegionalData(failedGeometry,new AbortController().signal,true);
- assert.equal(failed.source,'live');assert.equal(failed.soil,null);assert.equal(failed.climate,null);assert.equal(failed.protected,null);assert.equal(failed.errors.length,3);
+ assert.equal(failed.source,'live');assert.equal(failed.soil,null);assert.equal(failed.climate,null);assert.equal('protected' in failed,false);assert.equal(failed.errors.length,2);
  assert.equal(scoreRegionalArea({...area,geometry:failedGeometry,regional:{status:'ready',data:failed}},'apple').overall,null);
  globalThis.fetch=staticFetch;
  const tooLarge={type:'Polygon',coordinates:[[[14,50],[14.1,50],[14.1,50.1],[14,50.1],[14,50]]]};

@@ -17,7 +17,7 @@ const locations=await cached('locations.json').catch(async()=>{
 await mkdir(new URL('locations/',root),{recursive:true});
 const index=[]; const files=[];
 for(const [id,data]of Object.entries(locations)){
- delete data.layers.flood;
+ for(const key of ['flood','protected','protectedSmall','natura','birds'])delete data.layers[key];
  delete data.terrain;
  const [w,s,e,n]=data.bounds;
  const clip={type:'Feature',properties:{},geometry:{type:'Polygon',coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}};
@@ -81,16 +81,14 @@ const datasets=[
  {id:'ruian-municipalities',name:'ČÚZK / RÚIAN – obce a města ČR',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/12',use:'Úplný místní našeptávač obcí; okresy z vrstvy 15, podrobnosti v municipalities-metadata.json'},
  {id:'ruian-bpej',name:'ČÚZK / RÚIAN – BPEJ (agendový zdroj SPÚ)',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28',use:'Skutečné půdní polygony a plošné podíly; bez domyšleného pH'},
  {id:'era5-land',name:'Copernicus / ECMWF ERA5-Land + ERA5 přes Open-Meteo',license:'CC BY 4.0; bezplatná služba Open-Meteo pouze nekomerčně',url:'https://open-meteo.com/en/docs/historical-weather-api',use:'2005–2024, teplota ERA5-Land ~9 km, srážky a ET0 ERA5 ~25 km; roční agregace'},
- {id:'aopk',name:'AOPK – velkoplošná a maloplošná ZCHÚ, EVL, ptačí oblasti',license:'CC BY 4.0',url:'https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer',use:'Prostorové průniky, vrstvy 0, 2, 6, 7; zjednodušení geometrie 0.00002°'},
  {id:'csu-harvest',name:'ČSÚ – Sklizeň ovoce ZEM03D',license:'Podmínky otevřených dat ČSÚ, bez autorskoprávní ochrany dle metadat',url:'https://data.csu.gov.cz/opendata/sady/ZEM03D/distribuce/json',use:'ČR, pět ovocných druhů, 2021–2025; skutečná sklizeň, chybějící plocha a t/ha zůstávají null'},
  {id:'csu-prices',name:'ČSÚ – Ceny zemědělských výrobků CEN0203B',license:'Podmínky otevřených dat ČSÚ, viz metadata sady',url:'https://data.csu.gov.cz/opendata/sady/CEN0203B/distribuce/json',use:'ČR, roční ceny ovoce 2021–2025; Kč/t převedeno na Kč/kg'},
  {id:'osm',name:'OpenStreetMap',license:'ODbL 1.0',url:'https://www.openstreetmap.org/copyright',use:'Online mapový podklad; dlaždice se nehromadí v repozitáři'},
  {id:'orthophoto',name:'ČÚZK – Ortofoto ČR',license:'CC BY 4.0',url:'https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer',use:'Online letecký podklad'},
- {id:'cadastral-map',name:'ČÚZK – katastrální mapa',license:'Otevřená prostorová data ČÚZK, CC BY 4.0',url:'https://services.cuzk.gov.cz/wms/local-km-wms.asp',use:'Transparentní online WMS, vrstva KN, od přiblížení 14'},
- {id:'natural-earth',name:'Natural Earth 1:50m',license:'Public domain',url:'https://www.naturalearthdata.com/about/terms-of-use/',use:'Již přítomná záložní hranice ČR'},
+ {id:'natural-earth',name:'Natural Earth 1:50m',license:'Public domain',url:'https://www.naturalearthdata.com/about/terms-of-use/',use:'Generalizovaný obrys ČR pro masku okolních států a ikonu návratu'},
 ];
 await save('manifest.json',{preparedAt:new Date().toISOString(),scope:'Pět regionálních výřezů skutečných otevřených dat; nejde o celorepublikovou offline databázi',datasets,files,notes:['Modelové pěstitelské profily a náklady nejsou otevřenými měřenými daty.','Chybějící hodnoty zůstávají null.','Podklady se načítají po jednotlivých lokalitách.']});
 const receipts=await cached('downloads.json').catch(()=>read('downloads.json')).catch(()=>null);
-if(receipts){receipts.receipts=receipts.receipts.filter(r=>!r.url.includes('vuv.cz')&&!/dmr5g|terrascope|worldcover|sentinel/i.test(r.url));receipts.note='Částečný protokol posledního běhu stahování; úplné dotazy jsou reprodukovatelné skripty. Nejde o úplný audit všech stažení.';await save('downloads.json',receipts);}
+if(receipts){receipts.receipts=receipts.receipts.filter(r=>!r.url.includes('vuv.cz')&&!r.url.includes('gis.nature.cz')&&!/dmr5g|terrascope|worldcover|sentinel/i.test(r.url));receipts.note='Částečný protokol posledního běhu stahování; úplné dotazy jsou reprodukovatelné skripty. Nejde o úplný audit všech stažení.';await save('downloads.json',receipts);}
 // Raw nationwide tables remain in the ignored .data-cache directory.
 console.log(JSON.stringify({locations:index.length,files:files.map(({file,bytes})=>({file,bytes}))},null,2));

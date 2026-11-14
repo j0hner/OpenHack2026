@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AnalysisArea } from "./types";
 import { geometryKey } from "./regionalData";
+import { coverageBoundsKey } from "./mapViewport";
 import {
   coverageExtentMessage,
   COVERAGE_MIN_ZOOM,
@@ -35,49 +36,86 @@ interface Props {
   bounds: CoverageBounds | null;
   zoom: number;
   areas: AnalysisArea[];
+  checkData?: boolean;
+  excludeGardens?: boolean;
 }
 export function useParcelCoverage({
   enabled,
   bounds,
   zoom,
   areas,
+  checkData = true,
+  excludeGardens = false,
 }: Props): ParcelCoverageLayer {
+  const [resume, setResume] = useState(0);
   const [query, setQuery] = useState<{
     key: string;
     result: CoverageQuery | null;
     error: string;
-  }>({ key: "", result: null, error: "" });
-  const key = bounds?.join(",") ?? "";
+    waiting: boolean;
+  }>({ key: "", result: null, error: "", waiting: false });
+  const key = `${coverageBoundsKey(bounds)}|gardens:${!excludeGardens}|data:${checkData}`;
   const extentMessage = coverageExtentMessage(bounds, zoom);
   const canLoad = enabled && !!bounds && !extentMessage;
   useEffect(() => {
     if (!canLoad || !bounds) return;
     const controller = new AbortController();
-    setQuery({ key, result: null, error: "" });
+    // Keep already verified geometry visible during panning and the next request.
+    // Fresh discovery replaces it atomically; no old value is assigned to a new parcel.
+    setQuery((previous) => ({ ...previous, error: "", waiting: true }));
     const timer = setTimeout(() => {
-      queryCoverageParcels(bounds, controller.signal)
+      queryCoverageParcels(bounds, controller.signal, {
+        checkData,
+        excludeGardens,
+        onProgress: (result) => {
+          if (!controller.signal.aborted)
+            setQuery({ key, result, error: "", waiting: false });
+        },
+      })
         .then((result) => {
-          if (!controller.signal.aborted) setQuery({ key, result, error: "" });
+          if (!controller.signal.aborted)
+            setQuery({ key, result, error: "", waiting: false });
         })
         .catch((error) => {
           if (!controller.signal.aborted)
-            setQuery({
+            setQuery((previous) => ({
               key,
-              result: null,
+              result: previous.result,
+              waiting: false,
               error:
                 error instanceof Error
                   ? error.message
                   : "Vrstva se nepodařila načíst.",
-            });
+            }));
         });
     }, 450);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-    // Cadastral fetch depends on viewport only, not asynchronously updated selected-area data.
+    // Discovery and automatic core checks depend on viewport/filter state only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canLoad, key]);
+  }, [canLoad, key, resume]);
+  useEffect(() => {
+    if (
+      !canLoad ||
+      query.key !== key ||
+      query.waiting ||
+      query.result?.checking
+    )
+      return;
+    const retryAt = Math.min(
+      ...(query.result?.parcels ?? [])
+        .filter((item) => item.coverage.state === "deferred")
+        .map((item) => item.coverage.retryAt ?? Infinity),
+    );
+    if (!Number.isFinite(retryAt)) return;
+    const timer = setTimeout(
+      () => setResume((value) => value + 1),
+      Math.max(1000, Math.min(2147483647, retryAt - Date.now())),
+    );
+    return () => clearTimeout(timer);
+  }, [canLoad, key, query]);
   return useMemo(() => {
     const counts = emptyCoverageCounts();
     if (!enabled)
@@ -89,9 +127,8 @@ export function useParcelCoverage({
         truncated: false,
         source: null,
       };
-    if (!bounds && zoom >= COVERAGE_MIN_ZOOM)
-      return {parcels: [], counts, status: 'loading', message: 'Čekám na ustálení mapy…', truncated: false, source: null};
-    if (extentMessage)
+    const moving = !bounds && zoom >= COVERAGE_MIN_ZOOM;
+    if (extentMessage && !moving)
       return {
         parcels: [],
         counts,
@@ -100,7 +137,7 @@ export function useParcelCoverage({
         truncated: false,
         source: null,
       };
-    if (query.key !== key || !query.result)
+    if (!query.result)
       return {
         parcels: [],
         counts,
@@ -115,29 +152,62 @@ export function useParcelCoverage({
     const known = new Map(
       areas.map((area) => [geometryKey(area.geometry), area]),
     );
-    const parcels = query.result.parcels.map((item) => {
-      const match = known.get(geometryKey(item.feature.geometry));
-      const saved = match ? coverageFromArea(match) : null;
-      // In-flight analysis must not hide already verified factual snapshot coverage.
-      const coverage =
-        saved &&
-        ((saved.state !== "loading" && saved.state !== "unknown") ||
-          item.coverage.state === "unknown")
-          ? saved
-          : item.coverage;
-      counts[coverage.state]++;
-      return { ...item, coverage };
-    });
+    const parcels = query.result.parcels
+      .filter(
+        (item) =>
+          !excludeGardens ||
+          String(item.feature.properties.druhpozemkukod) !== "5",
+      )
+      .map((item) => {
+        const match = known.get(geometryKey(item.feature.geometry));
+        const saved = match ? coverageFromArea(match) : null;
+        // In-flight analysis must not hide already verified factual snapshot coverage.
+        const coverage =
+          saved &&
+          (saved.state === "sufficient" ||
+            saved.state === "insufficient" ||
+            (["unknown", "loading"].includes(item.coverage.state) &&
+              saved.state !== "unknown"))
+            ? saved
+            : item.coverage;
+        counts[coverage.state]++;
+        return { ...item, coverage };
+      });
     const scope = query.result.truncated
       ? "Zobrazeno nejvýše 200 parcel; přibližte mapu pro úplnější výřez."
       : `${parcels.length} zemědělských parcel v aktuálním výřezu.`;
+    const checking =
+      query.waiting || query.key !== key || !!query.result.checking;
+    const verificationError =
+      !checking && counts.error > 0
+        ? `${counts.error} parcel se nepodařilo ověřit. ${parcels.find((item) => item.coverage.state === "error")?.coverage.reason ?? ""}`
+        : "";
+    const deferredMessage =
+      !checking && counts.deferred > 0
+        ? `${counts.deferred} parcel čeká na klimatická data. ${parcels.find((item) => item.coverage.state === "deferred")?.coverage.reason ?? ""}`
+        : "";
     return {
       parcels,
       counts,
-      status: "ready",
-      message: query.result.warning || scope,
+      status: query.error
+        ? "error"
+        : moving || checking
+          ? "loading"
+          : verificationError
+            ? "error"
+            : "ready",
+      message: query.error
+        ? `${query.error} Zůstává poslední načtený výřez. Pro opakování vrstvu vypněte a zapněte.`
+        : moving
+          ? "Čekám na ustálení mapy…"
+          : query.waiting || query.key !== key
+            ? "Načítám nový výřez; dosavadní ověřené parcely zůstávají zobrazené."
+            : query.result.checking
+              ? `Automaticky ověřuji podklady viditelných parcel (${counts.sufficient + counts.insufficient} z ${parcels.length}).`
+              : query.result.warning ||
+                `${scope}${verificationError ? ` ${verificationError}` : ""}${deferredMessage ? ` ${deferredMessage}` : ""}`,
       truncated: query.result.truncated,
       source: query.result.source,
     };
-  }, [enabled, extentMessage, zoom, key, query, areas, bounds]);
+  }, [enabled, extentMessage, zoom, key, query, areas, bounds, excludeGardens]);
 }

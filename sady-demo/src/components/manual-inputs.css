@@ -1,0 +1,213 @@
+.manual-inputs-panel {
+  margin-top: 12px;
+}
+.manual-inputs-panel > summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  min-height: 38px;
+}
+.manual-inputs-panel > summary::before {
+  content: "▸";
+  color: var(--green-700);
+}
+.manual-inputs-panel[open] > summary::before {
+  content: "▾";
+}
+.manual-inputs-panel > summary strong {
+  flex: 1;
+  font-size: 12px;
+}
+.manual-inputs-count {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.manual-inputs-explanation,
+.manual-inputs-soil-note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 10px 0 0;
+}
+.manual-inputs-soil-note {
+  padding: 9px;
+  border: 1px solid var(--amber-line);
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-radius: 7px;
+}
+.manual-inputs-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 13px;
+  margin-top: 15px;
+}
+.manual-input-field label,
+.manual-input-note {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.manual-input-field label > span,
+.manual-input-note > span {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.manual-input-field input,
+.manual-input-note textarea {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  padding: 9px 10px;
+  min-height: 40px;
+  color: var(--ink);
+  background: var(--surface);
+}
+.manual-input-field small {
+  display: block;
+  margin: 5px 0 0;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.manual-input-field input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+.manual-input-error {
+  display: block;
+  margin-top: 4px;
+  color: var(--red);
+  font-size: 11px;
+}
+.manual-input-note {
+  margin-top: 13px;
+}
+.manual-input-note textarea {
+  resize: vertical;
+  min-height: 65px;
+  max-height: 160px;
+}
+.manual-input-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+.manual-input-actions .btn {
+  flex: 1 1 135px;
+}
+.manual-input-feedback {
+  min-height: 0;
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.manual-input-feedback:empty {
+  display: none;
+}
+.manual-input-feedback.is-error {
+  color: var(--red);
+}
+html[data-theme="dark"] .manual-inputs-panel {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+html[data-theme="dark"] .manual-input-field input,
+html[data-theme="dark"] .manual-input-note textarea {
+  background: #17231b;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.parcel-card .manual-inputs-panel {
+  padding: 10px;
+}
+.parcel-card .manual-inputs-panel > summary strong {
+  font-size: 11px;
+}
+.analysis-data-status.needs-input,
+html[data-theme="dark"] .analysis-data-status.needs-input {
+  border: 2px solid var(--amber-line);
+  background: var(--amber-bg);
+  color: var(--ink);
+  padding: 12px;
+}
+.analysis-data-status.needs-input > svg {
+  color: var(--amber);
+  flex-shrink: 0;
+}
+.analysis-data-status.needs-input strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 13px;
+}
+.analysis-data-status.needs-input span {
+  display: block;
+  line-height: 1.5;
+}
+.analysis-data-status.needs-input p {
+  margin: 7px 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.analysis-data-status.needs-input .btn {
+  min-height: 40px;
+  white-space: normal;
+  margin: 6px 0 9px;
+}
+.manual-inputs-panel.needs-input {
+  border: 2px solid var(--amber-line);
+}
+.manual-inputs-priority {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 10px 0;
+}
+.manual-input-field.is-needed {
+  border: 1px solid var(--amber-line);
+  background: var(--amber-bg);
+  border-radius: 8px;
+  padding: 10px;
+}
+.manual-input-field-heading {
+  display: grid;
+  gap: 4px;
+}
+.manual-input-origin {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.manual-input-origin.needed {
+  color: var(--amber);
+  font-weight: 600;
+}
+.manual-input-origin.manual {
+  color: var(--green-700);
+}
+.manual-input-help {
+  font-style: normal;
+}
+.manual-other-fields {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 8px;
+}
+.manual-other-fields > summary {
+  font-size: 11px;
+  cursor: pointer;
+  min-height: 34px;
+  align-content: center;
+  color: var(--green-700);
+}

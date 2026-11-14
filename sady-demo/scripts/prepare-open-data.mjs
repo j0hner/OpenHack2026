@@ -20,12 +20,10 @@ async function save(name,value){await writeFile(new URL(name,out),JSON.stringify
 const sources={
  parcels:['https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/5','id,cisloparcely,vymeraparcely,druhpozemkukod,katastralniuzemi'],
  bpej:['https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28','kod,nazev,platiod,platido'],
- protected:['https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/0','*'],
- protectedSmall:['https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/2','*'],
- natura:['https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/6','*'],
- birds:['https://gis.nature.cz/arcgis/rest/services/Aplikace/Opendata/MapServer/7','*'],
 };
 const bundle=await readFile(new URL('locations.json',out),'utf8').then(JSON.parse).catch(()=>({}));
+for(const entry of Object.values(bundle))for(const key of ['protected','protectedSmall','natura','birds'])delete entry.layers[key];
+await save('locations.json',bundle);
 for(const [id,lon,lat] of areas){
  if(bundle[id]?.climate){console.log(id,'already saved');continue;}
  const bounds=[lon-.006,lat-.004,lon+.006,lat+.004];
@@ -34,7 +32,6 @@ for(const [id,lon,lat] of areas){
   const features=[];
   for(let offset=0;offset<10000;offset+=500){
    const p=new URLSearchParams({where:'1=1',geometry:bounds.join(','),geometryType:'esriGeometryEnvelope',inSR:'4326',outSR:'4326',spatialRel:'esriSpatialRelIntersects',outFields:fields,f:'geojson',resultRecordCount:'500',resultOffset:String(offset)});
-   if(!['parcels','bpej'].includes(key))p.set('maxAllowableOffset','0.00002');
    const data=await json(`${base}/query?${p}`);
    if(!Array.isArray(data.features))throw Error(`Missing features: ${key}`);
    features.push(...data.features);

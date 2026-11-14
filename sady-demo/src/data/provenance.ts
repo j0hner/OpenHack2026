@@ -26,7 +26,7 @@ export const PROVENANCE: ProvenanceRow[] = [
   },
   spatial(
     "Katastrální parcely",
-    "ČÚZK / RÚIAN REST a katastrální WMS",
+    "ČÚZK / RÚIAN REST – filtrované vektorové parcely",
     "parcela",
     "Kliknutí ukáže náhled skutečné parcely; uloží ji až Přidat pozemek. Katastrální druh slouží k vyloučení nezemědělských ploch. Druh pozemku nepotvrzuje povolení výsadby.",
   ),
@@ -45,12 +45,6 @@ export const PROVENANCE: ProvenanceRow[] = [
     ),
     period: "2005–2024",
   },
-  spatial(
-    "Průniky s ochranou přírody",
-    "AOPK ČR – otevřené vrstvy 0, 2, 6, 7",
-    "ZCHÚ, EVL a ptačí oblasti",
-    "Plošný průnik skutečných hranic. Nejde o úplné posouzení všech právních omezení ani ochranných pásem.",
-  ),
   {
     indicator: "Sklizeň a referenční ceny ovoce",
     source: "ČSÚ ZEM03D / CEN0203B",
@@ -62,12 +56,12 @@ export const PROVENANCE: ProvenanceRow[] = [
   },
   {
     indicator: "Mapové podklady",
-    source: "OpenStreetMap, ČÚZK Ortofoto a katastrální mapa",
+    source: "OpenStreetMap, ČÚZK Ortofoto",
     period: "dle poskytovatele",
-    resolution: "mapové dlaždice / WMS",
+    resolution: "mapové dlaždice XYZ",
     quality: "real",
     connected: "Online mapové podklady",
-    note: "Dva podklady a katastrální překryv bez klíče. Výpadek podkladu není nedostatkem agronomických dat.",
+    note: "Dva podklady s maskou ČR. Parcelní hranice tvoří filtrovaný RÚIAN GeoJSON. Výpadek podkladu není nedostatkem agronomických dat.",
   },
   {
     indicator: "Hranice České republiky",
@@ -86,6 +80,16 @@ export const PROVENANCE: ProvenanceRow[] = [
     quality: "assumption",
     connected: "Vstupy orientačního regionálního indexu",
     note: "Váhy půda 35 / klima 40 / vláha 25 a převod podmínek na body nejsou odborně validovanou pravděpodobností. Výsadba, spon a péče vyžadují místní odborné ověření.",
+  },
+  {
+    indicator: "Rozmístění stromů a rozestupy",
+    source:
+      "MENDELU – Výsadbový plán ovocného sadu; geometrická pravidla Moje Sady",
+    period: "odborný podklad ověřen 14. 11. 2026",
+    resolution: "typ výsadby × přesná pracovní geometrie",
+    quality: "assumption",
+    connected: "Volba sponu, porovnání řad a poloh stromů uvnitř pozemku",
+    note: "Odborné rozsahy rozestupů jsou podkladem nastavitelných profilů. Nejde o měřený otevřený dataset ani záruku agronomického optima. Model respektuje otvory a provozní odstupy; sklon, konkrétní podnož a překážky se neověřují.",
   },
   {
     indicator: "Ekonomické vstupy a případná podpora",

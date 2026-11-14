@@ -7,6 +7,7 @@ export function useRegionalData(areas: AnalysisArea[], wantedIds: string[]) {
     Record<string, AnalysisArea["regional"]>
   >({});
   const [retry, setRetry] = useState({ key: "", seq: 0 });
+  const [resume, setResume] = useState(0);
   const lastRetry = useRef(0);
   const wanted = areas.filter((area) => wantedIds.includes(area.id));
   const signature = wanted
@@ -25,31 +26,25 @@ export function useRegionalData(areas: AnalysisArea[], wantedIds: string[]) {
     ].filter(
       (area) =>
         records[geometryKey(area.geometry)]?.status !== "ready" ||
-        records[geometryKey(area.geometry)]?.data?.protectionPending ||
+        (records[geometryKey(area.geometry)]?.data?.deferred?.retryAt ??
+          Infinity) <= Date.now() ||
         forceKey === geometryKey(area.geometry),
     );
     const worker = async () => {
       while (active && todo.length) {
         const area = todo.shift()!,
           key = geometryKey(area.geometry);
-        // Reattaching a partially completed shared request keeps the usable core
-        // visible; selection changes must not turn a computed index back to loading.
-        if(records[key]?.status!=="ready"||forceKey===key)
-          setRecords((previous) => ({
-            ...previous,
-            [key]: { status: "loading", data: null },
-          }));
+        setRecords((previous) => ({
+          ...previous,
+          [key]: { status: "loading", data: previous[key]?.data ?? null },
+        }));
         try {
           const data = await loadRegionalData(
             area.geometry,
             controller.signal,
             forceKey === key,
-            (data) => {
-              if(active&&data.key===key)
-                setRecords(previous=>({...previous,[key]:{status:"ready",data}}));
-            },
           );
-          if (active&&data.key===key)
+          if (active && data.key === key)
             setRecords((previous) => ({
               ...previous,
               [key]: { status: "ready", data },
@@ -78,7 +73,25 @@ export function useRegionalData(areas: AnalysisArea[], wantedIds: string[]) {
     };
     // Data is keyed by geometry, never by the parcel name or selected fruit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, retry.seq]);
+  }, [signature, retry.seq, resume]);
+  useEffect(() => {
+    const retryAt = Math.min(
+      ...wanted.map((area) => {
+        const record = records[geometryKey(area.geometry)];
+        return record?.status === "ready"
+          ? (record.data?.deferred?.retryAt ?? Infinity)
+          : Infinity;
+      }),
+    );
+    if (!Number.isFinite(retryAt)) return;
+    const timer = setTimeout(
+      () => setResume((value) => value + 1),
+      Math.max(1000, Math.min(2147483647, retryAt - Date.now())),
+    );
+    return () => clearTimeout(timer);
+    // Only geometry and completed observation changes affect this deadline.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, records]);
   const evaluated = useMemo<AnalysisArea[]>(
     () =>
       areas.map((area) => ({

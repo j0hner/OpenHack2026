@@ -4,7 +4,6 @@ import {
   IconLayersIntersect,
   IconAdjustmentsHorizontal,
   IconDatabase,
-  IconSettings,
 } from "@tabler/icons-react";
 import logo from "../assets/moje-sady-logo.png";
 export type AppView =
@@ -12,8 +11,7 @@ export type AppView =
   | "analyzy"
   | "pozemky"
   | "scenare"
-  | "data"
-  | "nastaveni";
+  | "data";
 const items = [
   ["mapa", "Mapa", IconMap],
   ["analyzy", "Analýzy", IconChartBar],
@@ -62,14 +60,6 @@ export default function SideNav({
       </nav>
       <div className="nav-bottom">
         <span className="nav-local">Váš prostor pro zdravý sad</span>
-        <button
-          type="button"
-          className={view === "nastaveni" ? "active" : ""}
-          onClick={() => onChange("nastaveni")}
-        >
-          <IconSettings size={19} stroke={1.7} />
-          <span>Nastavení</span>
-        </button>
         <small>Uloženo v tomto prohlížeči</small>
       </div>
     </aside>

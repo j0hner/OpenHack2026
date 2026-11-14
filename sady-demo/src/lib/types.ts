@@ -53,7 +53,6 @@ export interface AccessAttributes {
 }
 
 export interface ConstraintAttributes {
-  protectedArea: string | null;
   floodZone: string | null;
   note?: string;
 }
@@ -83,6 +82,9 @@ export interface AreaLocation {
 }
 
 export interface AnalysisArea {
+  plantingPlan?: import("./plantingPlan").AppliedPlantingPlan;
+  /** Unverified user inputs for a planning scenario; never open-data observations. */
+  manualInputs?: ManualInputs;
   regional?: {
     status: "idle" | "loading" | "ready" | "error";
     data: import("./regionalData").RegionalData | null;
@@ -105,7 +107,11 @@ export interface AnalysisArea {
   kind: AreaKind;
   landUse: string;
   geometry: AreaGeometry;
-  cadastral?: { id: string; officialAreaM2: number | null };
+  cadastral?: {
+    id: string;
+    officialAreaM2: number | null;
+    parcelNumber?: string;
+  };
   location: AreaLocation;
   attributes: AreaAttributes;
   availability: AvailabilityMap;
@@ -131,11 +137,29 @@ export interface RiskItem {
   severity: "high" | "medium" | "low";
 }
 
+export interface ManualInputs {
+  soilHpj?: number;
+  temperatureMeanC?: number;
+  rainfallMm?: number;
+  et0Mm?: number;
+  springFrostDays?: number;
+  summerDays?: number;
+  note?: string;
+}
+
 export interface SuitabilityResult {
   fruit: FruitKey;
   overall: number | null;
-  /** Availability of the mandatory soil and climate inputs, distinct from quality. */
-  dataStatus: "idle" | "loading" | "ready" | "insufficient" | "error";
+  inputOrigin: "open-data" | "mixed" | "manual";
+  manualFields: string[];
+  /** Readiness of the calculation, distinct from quality and actual open-data coverage. */
+  dataStatus:
+    | "idle"
+    | "loading"
+    | "ready"
+    | "insufficient"
+    | "error"
+    | "deferred";
   dataMessage: string;
   verdict:
     | "Vhodný"
@@ -144,6 +168,7 @@ export interface SuitabilityResult {
     | "Nedostatek dat"
     | "Dosud neověřeno"
     | "Načítám podklady"
+    | "Čeká na klimatická data"
     | "Chyba načítání";
   verdictClass: VerdictClass;
   reasons: string[];

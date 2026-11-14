@@ -1,4 +1,5 @@
-import { areaHa as geometryAreaHa, perimeterM } from './geo';
+import { areaHa as geometryAreaHa, perimeterM } from "./geo";
+import { matchingPlantingPlan } from "./plantingPlan";
 import type {
   AnalysisArea,
   CashFlowYear,
@@ -6,40 +7,41 @@ import type {
   EconomicsResult,
   EconomicsScenarioKey,
   FruitKey,
-} from './types';
+} from "./types";
 
 /**
  * EKONOMICKÝ SCÉNÁŘ
  *
- * Všechny výpočty vycházejí výhradně ze vstupů v panelu Ekonomika.
+ * Výpočty vycházejí ze vstupů ekonomického scénáře. Platný geometrický plán
+ * může nahradit plošný odhad počtu stromů, nikoli předpoklad výnosu v t/ha.
  * Ceny, výnosy a náklady jsou modelové předpoklady, nikoli nabídky dodavatelů
  * ani zaručené výsledky. Podpora je modelová částka vyžadující ověření podmínek.
  */
 
 export const SCENARIOS: EconomicsScenarioKey[] = [
   {
-    key: 'conservative',
-    label: 'Konzervativní',
+    key: "conservative",
+    label: "Konzervativní",
     yieldFactor: 0.75,
     priceFactor: 0.85,
     costFactor: 1.1,
-    note: 'nižší výnos, nižší cena, vyšší náklady',
+    note: "nižší výnos, nižší cena, vyšší náklady",
   },
   {
-    key: 'base',
-    label: 'Základní',
+    key: "base",
+    label: "Základní",
     yieldFactor: 1,
     priceFactor: 1,
     costFactor: 1,
-    note: 'vstupní hodnoty bez úprav',
+    note: "vstupní hodnoty bez úprav",
   },
   {
-    key: 'favorable',
-    label: 'Příznivý',
+    key: "favorable",
+    label: "Příznivý",
     yieldFactor: 1.15,
     priceFactor: 1.1,
     costFactor: 0.97,
-    note: 'vyšší výnos a cena, mírně nižší náklady',
+    note: "vyšší výnos a cena, mírně nižší náklady",
   },
 ];
 
@@ -64,34 +66,67 @@ interface ComputeOptions {
 
 export function computeEconomics(
   area: AnalysisArea,
-  _fruit: FruitKey,
+  fruit: FruitKey,
   inputs: EconomicsInputs,
   options: ComputeOptions,
 ): EconomicsResult {
   const scenario = options.scenario;
   const areaHa = geometryAreaHa(area.geometry);
   const usableAreaHa = areaHa * (inputs.usefulSharePct / 100);
-  const treeCount = computeTreeCount(areaHa, inputs.usefulSharePct, inputs.rowSpacingM, inputs.treeSpacingM);
+  const plantingPlan = matchingPlantingPlan(area, fruit);
+  const treeCount =
+    plantingPlan?.treeCount ??
+    computeTreeCount(
+      areaHa,
+      inputs.usefulSharePct,
+      inputs.rowSpacingM,
+      inputs.treeSpacingM,
+    );
 
   const fence = Math.round(perimeterM(area.geometry) * inputs.fenceCostPerM);
-  const irrigationInvestment = options.irrigation ? Math.round(inputs.irrigationCostPerHa * areaHa) : 0;
-  const land = inputs.landMode === 'purchase' ? Math.round(inputs.landPricePerHa * areaHa) : 0;
-  const trees = Math.round(treeCount * (inputs.saplingCost + inputs.plantingCost));
+  const irrigationInvestment = options.irrigation
+    ? Math.round(inputs.irrigationCostPerHa * areaHa)
+    : 0;
+  const land =
+    inputs.landMode === "purchase"
+      ? Math.round(inputs.landPricePerHa * areaHa)
+      : 0;
+  const trees = Math.round(
+    treeCount * (inputs.saplingCost + inputs.plantingCost),
+  );
   const total = trees + fence + irrigationInvestment + land;
 
-  const lease = inputs.landMode === 'lease' ? inputs.leasePerHaYear * areaHa : 0;
+  const lease =
+    inputs.landMode === "lease" ? inputs.leasePerHaYear * areaHa : 0;
   const annualCostsMature = Math.round(
-    (areaHa * inputs.annualCostPerHa + treeCount * inputs.annualCostPerTree + lease) * scenario.costFactor +
+    (areaHa * inputs.annualCostPerHa +
+      treeCount * inputs.annualCostPerTree +
+      lease) *
+      scenario.costFactor +
       (options.irrigation ? IRRIGATION_ANNUAL_PER_HA * areaHa : 0),
   );
 
   // Irrigation changes costs only; no yield uplift without measured evidence.
   const irrigationUpliftPct = 0;
 
-  const maturityYield = areaHa * inputs.matureYieldTPerHa * scenario.yieldFactor * (1 + irrigationUpliftPct / 100);
-  const matureRevenue = Math.round(maturityYield * 1000 * inputs.pricePerKg * scenario.priceFactor);
+  // A spatial plan supplies a tree count, not a yield-per-tree prediction.
+  // Preserve the explicit t/ha scenario for nonempty orchards. An empty plan
+  // cannot earn fruit revenue; a separately selected model subsidy stays separate.
+  const fruitProductionFactor = plantingPlan?.treeCount === 0 ? 0 : 1;
 
-  const subsidyTotal = options.subsidy ? Math.round(inputs.subsidyPerHa * areaHa) : 0;
+  const maturityYield =
+    fruitProductionFactor *
+    areaHa *
+    inputs.matureYieldTPerHa *
+    scenario.yieldFactor *
+    (1 + irrigationUpliftPct / 100);
+  const matureRevenue = Math.round(
+    maturityYield * 1000 * inputs.pricePerKg * scenario.priceFactor,
+  );
+
+  const subsidyTotal = options.subsidy
+    ? Math.round(inputs.subsidyPerHa * areaHa)
+    : 0;
   const rate = inputs.discountRatePct / 100;
 
   const flows: CashFlowYear[] = [];
@@ -109,10 +144,20 @@ export function computeEconomics(
   const rampDenominator = Math.max(1, inputs.rampYears);
   for (let year = 1; year <= inputs.horizonYears; year += 1) {
     const yearsBearing = year - inputs.yearsToBearing;
-    const ramp = yearsBearing <= 0 ? 0 : Math.min(1, yearsBearing / rampDenominator);
+    const ramp =
+      yearsBearing <= 0 ? 0 : Math.min(1, yearsBearing / rampDenominator);
     const revenue =
-      Math.round(areaHa * inputs.matureYieldTPerHa * scenario.yieldFactor * (1 + irrigationUpliftPct / 100) * ramp * 1000 * inputs.pricePerKg * scenario.priceFactor) +
-      (options.subsidy && year === 1 ? subsidyTotal : 0);
+      Math.round(
+        fruitProductionFactor *
+          areaHa *
+          inputs.matureYieldTPerHa *
+          scenario.yieldFactor *
+          (1 + irrigationUpliftPct / 100) *
+          ramp *
+          1000 *
+          inputs.pricePerKg *
+          scenario.priceFactor,
+      ) + (options.subsidy && year === 1 ? subsidyTotal : 0);
     const costs = annualCostsMature;
     const net = revenue - costs;
     const discounted = net / (1 + rate) ** year;
@@ -121,7 +166,8 @@ export function computeEconomics(
     flows.push({ year, revenue, costs, net, cumulative, discounted });
   }
 
-  const payback = flows.find((flow) => flow.year > 0 && flow.cumulative >= 0)?.year ?? null;
+  const payback =
+    flows.find((flow) => flow.year > 0 && flow.cumulative >= 0)?.year ?? null;
 
   return {
     treeCount,
@@ -139,6 +185,9 @@ export function computeEconomics(
 
 /** Poměr ročních nákladů k tržbám v plné plodnosti – orientační kontrola rentability. */
 export const costRevenueRatio = (result: EconomicsResult): number | null =>
-  result.matureRevenue > 0 ? result.annualCostsMature / result.matureRevenue : null;
+  result.matureRevenue > 0
+    ? result.annualCostsMature / result.matureRevenue
+    : null;
 
-export const scenarioNote = (key: string) => SCENARIOS.find((scenario) => scenario.key === key)?.note ?? '';
+export const scenarioNote = (key: string) =>
+  SCENARIOS.find((scenario) => scenario.key === key)?.note ?? "";

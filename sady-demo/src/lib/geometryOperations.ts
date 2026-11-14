@@ -328,6 +328,14 @@ export function mergeGeometries(geometries: AreaGeometry[]): AreaGeometry {
   geometries.forEach(validateWorkingGeometry);
   const merged = union(collection(geometries));
   if (!merged) throw Error("Vybrané geometrie se nepodařilo spojit.");
+  // The actual union must be one continuous surface. Shared edges and real
+  // overlaps connect it; a point contact or an isolated island remains a
+  // MultiPolygon. Do not buffer or snap boundaries: even a narrow real gap
+  // (for example a road) must never be silently filled to make a merge valid.
+  if (merged.geometry.type !== "Polygon")
+    throw Error(
+      "Spojit lze pouze sousedící pozemky se společnou hranicí nebo překryvem. Výběr musí tvořit jednu souvislou plochu; dotyk jediným bodem nestačí.",
+    );
   validateWorkingGeometry(merged.geometry);
   const mergedSize = area(merged),
     sum = geometries.reduce((total, g) => total + area(g), 0),
@@ -338,6 +346,28 @@ export function mergeGeometries(geometries: AreaGeometry[]): AreaGeometry {
   )
     throw Error("Výsledek spojení má neplatnou výměru.");
   return merged.geometry;
+}
+
+/** The list and the final merge use exactly the same topology validation. */
+export function mergeEligibility(geometries: AreaGeometry[]): {
+  allowed: boolean;
+  reason: string;
+} {
+  try {
+    mergeGeometries(geometries);
+    return {
+      allowed: true,
+      reason: "Vybrané pozemky tvoří jednu souvislou plochu a lze je spojit.",
+    };
+  } catch (error) {
+    return {
+      allowed: false,
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Sousednost vybraných pozemků se nepodařilo ověřit.",
+    };
+  }
 }
 
 export type WorkingArea = AnalysisArea & {

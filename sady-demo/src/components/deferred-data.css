@@ -1,0 +1,28 @@
+.analysis-data-status.deferred,
+html[data-theme="dark"] .analysis-data-status.deferred,
+.climate-deferred-note {
+  background: var(--blue-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.analysis-data-status.deferred > svg {
+  color: var(--blue);
+}
+.meter.neutral > span {
+  background: var(--gray);
+}
+.climate-deferred-note {
+  border-radius: 7px;
+  padding: 11px 12px;
+  margin-block: 10px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.climate-deferred-note > strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.climate-deferred-note > span {
+  color: var(--ink-soft);
+}

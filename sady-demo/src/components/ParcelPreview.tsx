@@ -58,48 +58,48 @@ export default function ParcelPreview({
         </button>
       </header>
       <div className="parcel-preview-body" tabIndex={0}>
-      <p className="parcel-preview-locality">
-        Katastrální území {String(p.katastralniuzemi ?? "neuvedeno")}
-      </p>
-      <dl>
-        <div>
-          <dt>Druh pozemku</dt>
-          <dd>{eligibility.landUse}</dd>
-        </div>
-        <div>
-          <dt>Výměra</dt>
-          <dd>{area} ha</dd>
-        </div>
-        {Number.isFinite(officialM2) && officialM2 > 0 && (
+        <p className="parcel-preview-locality">
+          Katastrální území {String(p.katastralniuzemi ?? "neuvedeno")}
+        </p>
+        <dl>
           <div>
-            <dt>Evidováno v katastru</dt>
-            <dd>{officialM2.toLocaleString("cs-CZ")} m²</dd>
+            <dt>Druh pozemku</dt>
+            <dd>{eligibility.landUse}</dd>
+          </div>
+          <div>
+            <dt>Výměra</dt>
+            <dd>{area} ha</dd>
+          </div>
+          {Number.isFinite(officialM2) && officialM2 > 0 && (
+            <div>
+              <dt>Evidováno v katastru</dt>
+              <dd>{officialM2.toLocaleString("cs-CZ")} m²</dd>
+            </div>
+          )}
+        </dl>
+        <p
+          className={`parcel-preview-note${eligibility.allowed ? "" : " is-blocked"}`}
+        >
+          {eligibility.allowed
+            ? "Pozemek zatím není ve vašem seznamu. Přidáním si uložíte jeho výsadbu a ekonomické scénáře."
+            : eligibility.reason}
+        </p>
+        {coverage && (
+          <div className="parcel-preview-coverage">
+            <strong style={{ color: COVERAGE_STYLES[coverage.state].color }}>
+              Dostupnost dat
+            </strong>
+            <p>{coverageDescription(coverage)}</p>
           </div>
         )}
-      </dl>
-      <p
-        className={`parcel-preview-note${eligibility.allowed ? "" : " is-blocked"}`}
-      >
-        {eligibility.allowed
-          ? "Pozemek zatím není ve vašem seznamu. Přidejte jej pro vyhodnocení půdy, klimatu a dalších dostupných podkladů."
-          : eligibility.reason}
-      </p>
-      {coverage && (
-        <div className="parcel-preview-coverage">
-          <strong style={{ color: COVERAGE_STYLES[coverage.state].color }}>
-            Dostupnost dat
-          </strong>
-          <p>{coverageDescription(coverage)}</p>
-        </div>
-      )}
-      <a
-        className="parcel-preview-link"
-        href={cadastralUrl(String(p.id))}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Oficiální katastr ČÚZK <IconExternalLink size={14} />
-      </a>
+        <a
+          className="parcel-preview-link"
+          href={cadastralUrl(String(p.id))}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Oficiální katastr ČÚZK <IconExternalLink size={14} />
+        </a>
       </div>
       <div className="parcel-preview-actions">
         <button

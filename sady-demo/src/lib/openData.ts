@@ -222,6 +222,7 @@ export function parcelArea(f: ParcelFeature): AnalysisArea {
     story: "Výběr z katastru. Druh pozemku nepotvrzuje povolení výsadby.",
     cadastral: {
       id,
+      parcelNumber: String(p.cisloparcely),
       officialAreaM2: Number.isFinite(Number(p.vymeraparcely))
         ? Number(p.vymeraparcely)
         : null,

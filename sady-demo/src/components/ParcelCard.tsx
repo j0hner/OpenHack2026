@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import {
   IconAlertTriangle,
   IconArrowRight,
@@ -13,7 +13,6 @@ import {
 import { FRUITS, FRUIT_ORDER } from "../data/fruitProfiles";
 import { areaHa } from "../lib/geo";
 import { fmtHa, fmtInt, fmtNum } from "../lib/format";
-import { computeTreeCount } from "../lib/economics";
 import { cadastralUrl, mean } from "../lib/openData";
 import { validClimateYears } from "../lib/regionalScoring";
 import type {
@@ -24,6 +23,15 @@ import type {
   SuitabilityResult,
 } from "../lib/types";
 import OpenDataPanel from "./OpenDataPanel";
+import ManualInputsPanel from "./ManualInputsPanel";
+import PlantingPlanPanel, {
+  type PlantingPlanPanelProps,
+} from "./PlantingPlanPanel";
+import type { ManualInputs } from "../lib/manualInputs";
+import {
+  officialParcelNumber,
+  showOfficialParcelNumber,
+} from "../lib/parcelCategories";
 import { AnalysisDataStatus } from "./ui";
 
 export interface ParcelCardProps {
@@ -38,6 +46,9 @@ export interface ParcelCardProps {
   onAnalysis: () => void;
   onRetryData: () => void;
   onEconomicsChange: (value: Partial<EconomicsInputs>) => void;
+  onManualChange: (value: ManualInputs | undefined) => void;
+  planting?: PlantingPlanPanelProps;
+  plantingMapNonce?: number;
 }
 type Tab = "overview" | "soil" | "climate" | "planting" | "data";
 const TABS: { id: Tab; label: string }[] = [
@@ -81,7 +92,6 @@ export default function ParcelCard(props: ParcelCardProps) {
     score,
     fruit,
     ranking,
-    economicsInputs,
     onFruitChange,
     onClose,
     onSplit,
@@ -91,7 +101,19 @@ export default function ParcelCard(props: ParcelCardProps) {
   } = props;
   const [tab, setTab] = useState<Tab>("overview"),
     id = useId();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [manualFocus, setManualFocus] = useState(0);
+  const openManualInputs = () => {
+    setTab("data");
+    setManualFocus((value) => value + 1);
+  };
   useEffect(() => setTab("overview"), [area.id]);
+  useEffect(() => {
+    if (props.plantingMapNonce) setTab("planting");
+  }, [props.plantingMapNonce]);
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [area.id, tab]);
   const profile = FRUITS[fruit],
     data = area.regional?.data,
     years = validClimateYears(data);
@@ -164,7 +186,15 @@ export default function ParcelCard(props: ParcelCardProps) {
       <header className="parcel-card-header">
         <div className="parcel-card-title">
           <IconLayersIntersect size={19} aria-hidden="true" />
-          <h2>{area.name}</h2>
+          <h2>
+            {area.name}
+            {showOfficialParcelNumber(area) && (
+              <span className="parcel-official-number">
+                {" "}
+                · parc. {officialParcelNumber(area)}
+              </span>
+            )}
+          </h2>
         </div>
         <button
           type="button"
@@ -206,6 +236,7 @@ export default function ParcelCard(props: ParcelCardProps) {
         ))}
       </nav>
       <div
+        ref={bodyRef}
         className="parcel-card-body"
         id={`${id}-panel`}
         role="tabpanel"
@@ -266,25 +297,29 @@ export default function ParcelCard(props: ParcelCardProps) {
               }
             />
             <p className="parcel-score-caption">
-              Pro {profile.name.toLocaleLowerCase("cs-CZ")} · regionální index
+              Pro {profile.name.toLocaleLowerCase("cs-CZ")} ·{" "}
+              {score.inputOrigin === "open-data"
+                ? "regionální index"
+                : "uživatelský scénář"}
             </p>
-            <AnalysisDataStatus score={score} protectionPending={data?.protectionPending} />
-            {score.overall !== null && (mainRisk ? (
-              <div className={`parcel-risk ${mainRisk.severity}`}>
-                <IconAlertTriangle size={18} aria-hidden="true" />
-                <div>
-                  <strong>{mainRisk.label}</strong>
-                  <p>{shortText(mainRisk.detail)}</p>
+            <AnalysisDataStatus score={score} onComplete={openManualInputs} />
+            {score.overall !== null &&
+              (mainRisk ? (
+                <div className={`parcel-risk ${mainRisk.severity}`}>
+                  <IconAlertTriangle size={18} aria-hidden="true" />
+                  <div>
+                    <strong>{mainRisk.label}</strong>
+                    <p>{shortText(mainRisk.detail)}</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="parcel-recommendation">
-                {shortText(
-                  score.nextSteps[0] ??
-                    "Před výsadbou ověřte podmínky přímo na místě.",
-                )}
-              </p>
-            ))}
+              ) : (
+                <p className="parcel-recommendation">
+                  {shortText(
+                    score.nextSteps[0] ??
+                      "Před výsadbou ověřte podmínky přímo na místě.",
+                  )}
+                </p>
+              ))}
             <div className="parcel-stats">
               <div>
                 <span>Pokrytí BPEJ</span>
@@ -303,6 +338,13 @@ export default function ParcelCard(props: ParcelCardProps) {
                 </strong>
               </div>
             </div>
+            <button
+              type="button"
+              className="link-button"
+              onClick={openManualInputs}
+            >
+              Doplnit nebo přepsat vstupy
+            </button>
           </>
         )}
         {tab === "soil" && (
@@ -341,38 +383,12 @@ export default function ParcelCard(props: ParcelCardProps) {
         )}
         {tab === "planting" && (
           <>
-            <div className="parcel-section-heading">
-              <h3>Výsadba: {profile.name}</h3>
-              <span className="parcel-data-kind assumption">
-                Modelový předpoklad
-              </span>
-            </div>
-            <div className="parcel-stats">
-              <div>
-                <span>Rozestup řad × stromů</span>
-                <strong>
-                  {fmtNum(economicsInputs.rowSpacingM)} ×{" "}
-                  {fmtNum(economicsInputs.treeSpacingM)} m
-                </strong>
-              </div>
-              <div>
-                <span>Orientační počet stromů</span>
-                <strong>
-                  {fmtInt(
-                    computeTreeCount(
-                      areaHa(area.geometry),
-                      economicsInputs.usefulSharePct,
-                      economicsInputs.rowSpacingM,
-                      economicsInputs.treeSpacingM,
-                    ),
-                  )}
-                </strong>
-              </div>
-            </div>
-            <p className="parcel-note">
-              Počet vychází z geometrie a zadaného sponu. Rozmístění, ochranná
-              pásma a podnože je třeba ověřit v terénu.
-            </p>
+            {props.planting && (
+              <PlantingPlanPanel
+                key={`${area.id}:${fruit}`}
+                {...props.planting}
+              />
+            )}
             <h3>Porovnání druhů</h3>
             <div className="parcel-fruit-ranking">
               {ordered.map((key) => (
@@ -408,6 +424,12 @@ export default function ParcelCard(props: ParcelCardProps) {
         )}
         {tab === "data" && (
           <>
+            <ManualInputsPanel
+              area={area}
+              score={score}
+              focusNonce={manualFocus}
+              onChange={props.onManualChange}
+            />
             <p className="parcel-note">{area.sourceNote}</p>
             {area.derivedFrom && (
               <p className="parcel-note">

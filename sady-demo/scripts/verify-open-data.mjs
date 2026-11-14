@@ -7,7 +7,7 @@ const read=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const manifest=await read('manifest.json'),index=await read('locations-index.json');
 assert.equal(index.length,5);
 assert(!manifest.datasets.some(d=>d.id.includes('vuv')),'Neověřená licence nesmí být v distribuovaných datech.');
-const removedSources=/dmr5g|dmr\s*5g|terrascope|worldcover|sentinel/i;
+const removedSources=/aopk|gis\.nature\.cz|"protected(?:Small)?"|"natura"|"birds"|dmr5g|dmr\s*5g|terrascope|worldcover|sentinel/i;
 assert(!removedSources.test(JSON.stringify(manifest)),'Odstraněné podklady nesmí zůstat v manifestu.');
 assert(!removedSources.test(JSON.stringify(await read('downloads.json'))),'Odstraněné podklady nesmí zůstat v distribuovaném protokolu.');
 let parcels=0,bytes=0;
@@ -21,7 +21,7 @@ for(const entry of index){
  }
  assert(!('terrain' in d),'Odstraněné terénní vzorky nesmí být ve výřezu.');
  assert(!removedSources.test(JSON.stringify(d)),'Odstraněné podklady nesmí zůstat ve výřezu.');
- assert(!('flood' in d.layers));
+ assert.deepEqual(Object.keys(d.layers),['bpej'],'Distribuují se pouze skutečně používané půdní vrstvy.');
  assert(p.features.length>0);
  const ids=new Set();
  for(const f of p.features){assert(!ids.has(f.properties.id));ids.add(f.properties.id);assert(area(f)>0);}

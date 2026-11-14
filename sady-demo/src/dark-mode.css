@@ -1,29 +1,5 @@
 /* Theme preference is independent of parcel data and map imagery. */
 :root { color-scheme: light; }
-.theme-options {
-  display: grid;
-  gap: 9px;
-  border: 0;
-  padding: 0;
-  margin: 16px 0 0;
-}
-.theme-options legend { font-size: 11px; color: var(--ink-soft); margin-bottom: 8px; }
-.theme-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 12px;
-}
-.theme-option.active { border-color: var(--green-600); background: var(--green-050); }
-.theme-option:focus-within { outline: 3px solid #90b873; outline-offset: 2px; }
-.theme-option input { width: 17px; height: 17px; margin: 0; flex: 0 0 auto; }
 
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -101,7 +77,6 @@ html[data-theme="dark"] .leaflet-tooltip { background: #223025; border-color: #5
 html[data-theme="dark"] .map-status { background: rgb(30 45 33 / 96%); color: var(--ink-soft); border-color: var(--line); }
 html[data-theme="dark"] .split-map-instruction { background: #2b3c2a; border-color: #607b4e; color: #d4e6c8; }
 html[data-theme="dark"] .dialog-backdrop { background: rgb(0 10 4 / 65%); }
-html[data-theme="dark"] .theme-option.active { background: var(--green-050); border-color: #86b474; }
 html[data-theme="dark"] :is(.parcel-preview-actions, .leaflet-control-zoom, .chart-wrap, .panel-empty, .workspace-panel .empty-state, .settings-card) { background: var(--surface); border-color: var(--line); }
 html[data-theme="dark"] :is(.parcel-fruit-field, .parcel-preview-link, .parcel-cadastre-link, .parcel-info summary, .location-search-clear, .location-search-retry, .top-search-icon, .map-welcome > svg, .item-menu, .parcel-card-title > svg) { color: #b3d79f; }
 html[data-theme="dark"] .parcel-card-footer .parcel-split-button:hover { background: #344b2f !important; }
@@ -130,3 +105,45 @@ html[data-theme="dark"] .leaflet-control-zoom a {
 @media (max-width: 900px) {
   html[data-theme="dark"] .main-nav .app-brand { color: #e4ece0; }
 }
+html[data-theme="dark"] .icon-button[aria-label^="Zavřít"] {
+  background: #35482e;
+  border: 1px solid #617756;
+  color: #e0ecd8;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
+}
+html[data-theme="dark"] .icon-button[aria-label^="Zavřít"]:hover {
+  background: #435b3a;
+  border-color: #88a173;
+}
+
+/* Editing and destructive confirmations must not inherit light panel surfaces. */
+html[data-theme="dark"] :is(.inline-editor, .category-create, .parcel-category-manager) {
+  background: #253329;
+  border-color: var(--line);
+  color: var(--ink);
+}
+html[data-theme="dark"] :is(.inline-editor, .bulk-delete-confirmation, .category-removal) :is(label, p, li, strong) {
+  color: var(--ink);
+}
+html[data-theme="dark"] :is(.bulk-delete-confirmation, .category-removal) {
+  background: var(--red-bg);
+  border-color: var(--red-line);
+  color: var(--ink);
+}
+html[data-theme="dark"] .category-removal { padding: 9px; border: 1px solid var(--red-line); border-radius: 7px; }
+html[data-theme="dark"] :is(.inline-editor, .category-create, .parcel-category-assignment, .parcel-category-filter) :is(input, select) {
+  background: #17231b;
+  border-color: var(--line-strong);
+  color: var(--ink);
+  caret-color: #e4ece0;
+}
+html[data-theme="dark"] :is(.inline-editor, .category-create) input::placeholder { color: var(--muted); opacity: 1; }
+html[data-theme="dark"] :is(.inline-editor, .category-create) p[role="alert"],
+html[data-theme="dark"] .category-error { color: var(--red); }
+html[data-theme="dark"] :is(.inline-editor, .bulk-delete-confirmation, .category-removal, .category-create) .btn:not(.primary):not(.danger) {
+  background: #2b392c;
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+html[data-theme="dark"] .btn.danger:hover { background: #54342e; border-color: #a76657; color: #ffcabd; }
+html[data-theme="dark"] .btn:disabled { color: var(--muted); opacity: .75; }
