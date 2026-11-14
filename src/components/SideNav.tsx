@@ -5,13 +5,8 @@ import {
   IconAdjustmentsHorizontal,
   IconDatabase,
 } from "@tabler/icons-react";
-import logo from "../assets/moje-sady-logo.png";
-export type AppView =
-  | "mapa"
-  | "analyzy"
-  | "pozemky"
-  | "scenare"
-  | "data";
+import logoWhite from "../assets/moje-sady-dark.webp";
+export type AppView = "mapa" | "analyzy" | "pozemky" | "scenare" | "data";
 const items = [
   ["mapa", "Mapa", IconMap],
   ["analyzy", "Analýzy", IconChartBar],
@@ -37,7 +32,9 @@ export default function SideNav({
         }}
         aria-label="Moje Sady – mapa"
       >
-        <img src={logo} alt="" width="40" height="44" />
+        <span className="app-brand-mark" aria-hidden="true">
+          <img src={logoWhite} alt="" width="36" height="42" />
+        </span>
         <span>
           Moje
           <br />

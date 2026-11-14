@@ -3,8 +3,6 @@ import assert from 'node:assert/strict';
 import {area} from '@turf/area';
 import {intersect} from '@turf/intersect';
 import {readFile} from 'node:fs/promises';
-import {createElement} from 'react';
-import {renderToStaticMarkup} from 'react-dom/server';
 const server=await createServer({server:{middlewareMode:true,hmr:false,ws:false},optimizeDeps:{noDiscovery:true,include:[]},appType:'custom'});
 try{
  const {splitGeometry,splitGeometryByLine,mergeGeometries,mergeEligibility,makeWorkingArea}=await server.ssrLoadModule('/src/lib/geometryOperations.ts');
@@ -104,16 +102,7 @@ try{
  const deduplicated=makeWorkingArea(mergeGeometries([child.geometry,grandchild.geometry]),'Stejný původ',[child,grandchild],'merge');assert.deepEqual(deduplicated.derivedFrom.rootSourceIds,['parcel-1']);assert.deepEqual(deduplicated.derivedFrom.rootCadastralIds,['1']);
  const legacyChild={...child,derivedFrom:{operation:'split',sourceIds:['parcel-1'],sourceNames:['Originál']}};
  const migratedChild=makeWorkingArea(child.geometry,'Starší původ',[legacyChild],'split');assert.deepEqual(migratedChild.derivedFrom.rootSourceIds,['parcel-1']);assert.deepEqual(migratedChild.derivedFrom.rootCadastralIds,['1']);
- // The user sees the same validation before submitting a merge, with a readable
- // reason outside the disabled button rather than only in a tooltip.
- const {default:ParcelList}=await server.ssrLoadModule('/src/components/ParcelList.tsx');
- const list=(a,b)=>renderToStaticMarkup(createElement(ParcelList,{areas:[a,b],scores:{},fruits:{},defaultFruit:'apple',selectedIds:[a.id,b.id],activeId:null,onSelect(){},onToggle(){},onAdd(){},onRename(){},onDelete(){},onMerge(){}}));
- const detached={...other,geometry:island};
- const disabled=list(original,detached);
- assert.match(disabled,/<button[^>]*class="btn merge-action"[^>]*disabled=""/);
- assert(disabled.includes('Spojit lze pouze sousedící pozemky'));
- const enabled=list(original,other);
- assert(!/<button[^>]*class="btn merge-action"[^>]*disabled=""/.test(enabled));
- assert(enabled.includes('tvoří jednu souvislou plochu'));
- console.log(JSON.stringify({checks:'OK',splitDirections:2,lineSplitting:true,finiteSegment:true,realParcel:real.properties.id,realAdjacentParcels:['1641','1638'],holes:true,multipolygons:true,adjacentOnly:true,neighbourChains:true,pointTouchRejected:true,gapsPreserved:true,listEligibility:true,overlapsCountedOnce:true,independentAnalyses:true}));
+ // Interaction feedback is covered by tests/interface.spec.ts. The geometry
+ // guard above still rejects detached areas regardless of the calling interface.
+ console.log(JSON.stringify({checks:'OK',splitDirections:2,lineSplitting:true,finiteSegment:true,realParcel:real.properties.id,realAdjacentParcels:['1641','1638'],holes:true,multipolygons:true,adjacentOnly:true,neighbourChains:true,pointTouchRejected:true,gapsPreserved:true,overlapsCountedOnce:true,independentAnalyses:true}));
 }finally{await server.close();}

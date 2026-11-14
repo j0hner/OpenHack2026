@@ -12,6 +12,7 @@ import {
 import SideNav, { type AppView } from "./components/SideNav";
 import ParcelList from "./components/ParcelList";
 import ParcelCard from "./components/ParcelCard";
+import ExpandableParcelDetail from "./components/ExpandableParcelDetail";
 import LocationSearch from "./components/LocationSearch";
 import Dialog from "./components/Dialog";
 import ThemeToggle from "./components/ThemeToggle";
@@ -881,7 +882,7 @@ export default function App() {
           active &&
           !splitSourceId &&
           ranking && (
-            <div className="floating-detail">
+            <ExpandableParcelDetail>
               <ParcelCard
                 area={active}
                 score={scores[active.id]}
@@ -898,7 +899,7 @@ export default function App() {
                 planting={plantingPanelProps}
                 plantingMapNonce={plantingMapNonce}
               />
-            </div>
+            </ExpandableParcelDetail>
           )}
         {view === "mapa" && splitSourceId && splitSource && (
           <section

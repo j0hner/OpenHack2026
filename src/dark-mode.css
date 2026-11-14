@@ -45,7 +45,7 @@ html[data-theme="dark"] :is(input:not([type="checkbox"]):not([type="radio"]), se
 html[data-theme="dark"] .location-search-input,
 html[data-theme="dark"] .saved-search input,
 html[data-theme="dark"] .input-unit input { background: transparent; border-color: transparent; }
-html[data-theme="dark"] :is(.icon-button, .btn, .map-control-button, .leaflet-control-zoom a, .mobile-parcels-toggle, .top-search > kbd, .parcel-row-menu button, .parcel-card-tabs button, .parcel-fruit-ranking button, .segmented, .tabs button, .fruit-chip, .fruit-ranking-row) { background: #2b392c; border-color: var(--line); color: var(--ink); }
+html[data-theme="dark"] :is(.icon-button, .btn, .map-control-button, .leaflet-control-zoom a, .mobile-parcels-toggle, .top-search > kbd, .parcel-row-menu button, .parcel-card-tabs button, .parcel-fruit-ranking button, .segmented, .segmented button, .tabs button, .fruit-chip, .fruit-ranking-row) { background: #2b392c; border-color: var(--line); color: var(--ink); }
 html[data-theme="dark"] :is(.btn.primary, .add-parcel, .parcel-card-tabs button.active, .tabs button.active, .segmented button.active) { background: #466e3e; border-color: #608b54; color: #fff; }
 html[data-theme="dark"] :is(.btn.primary:hover, .add-parcel:hover) { background: #557e48; }
 html[data-theme="dark"] :is(.icon-button:hover, .map-control-button:hover, .map-control-button.active, .parcel-row-menu button:hover, .parcel-list-item:hover, .location-search-option:hover, .location-search-option.active, .parcel-fruit-ranking button.active, .parcel-fruit-ranking button:hover, .fruit-chip.active, .fruit-ranking-row.active, .workspace-panel .segmented button.active) { background: #344b2f; color: #d7eccb; }
@@ -147,3 +147,21 @@ html[data-theme="dark"] :is(.inline-editor, .bulk-delete-confirmation, .category
 }
 html[data-theme="dark"] .btn.danger:hover { background: #54342e; border-color: #a76657; color: #ffcabd; }
 html[data-theme="dark"] .btn:disabled { color: var(--muted); opacity: .75; }
+
+/* These secondary labels previously retained the light theme's low-contrast
+   olive text, and inactive segmented buttons kept a near-white background. */
+html[data-theme="dark"] :is(.workspace-panel-heading p, .workspace-panel .area-loc, .workspace-panel .area-stats, .panel-empty p, .parcel-info > p) {
+  color: var(--ink-soft);
+}
+html[data-theme="dark"] .parcel-info[open] summary {
+  background: var(--green-050);
+  color: var(--green-800);
+}
+html[data-theme="dark"] .split-map-instruction > :is(strong, span) {
+  color: inherit;
+}
+/* The title's inline colour is a map-fill colour, unsuitable for small text on
+   a dark card. Keep the availability description and state unmodified. */
+html[data-theme="dark"] .parcel-preview-coverage > strong {
+  color: var(--ink) !important;
+}
