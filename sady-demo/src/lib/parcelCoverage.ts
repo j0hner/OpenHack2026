@@ -145,7 +145,7 @@ export function coverageFromArea(area: AnalysisArea): ParcelCoverage {
       ...coverage,
       state: "error",
       reason:
-        "Některý podklad se nepodařilo načíst. Dostupnost není úplně ověřena.",
+        `Dostupnost není úplně ověřena. ${regional.data.errors.join(' ')}`,
     };
   }
   return coverage;

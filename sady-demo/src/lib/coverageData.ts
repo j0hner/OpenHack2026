@@ -21,6 +21,7 @@ import {
   type ParcelCoverage,
 } from "./parcelCoverage";
 import { verifyVisibleCoverage } from "./coverageVerification";
+import { coverageBoundsKey } from "./mapViewport";
 
 export type CoverageBounds = [number, number, number, number];
 export const COVERAGE_LIMIT = 200;
@@ -127,9 +128,10 @@ export async function queryCoverageParcels(
   if (extentError) throw Error(extentError);
   const excludeGardens = options.excludeGardens ?? false;
   const checkData = options.checkData ?? true;
-  const key = bounds.map((v) => v.toFixed(6)).join(",") + `|gardens:${!excludeGardens}|data:${checkData}`;
+  const key = coverageBoundsKey(bounds) + `|gardens:${!excludeGardens}|data:${checkData}`;
   const hit = queryCache.get(key);
-  if (hit && Date.now() - hit.at < 120_000) return hit.value;
+  const hitHasError = hit?.value.parcels.some(item => item.coverage.state === 'error');
+  if (hit && Date.now() - hit.at < (hitHasError ? 30_000 : 120_000)) return hit.value;
   let entries: Awaited<ReturnType<typeof locationIndex>> = [];
   let warning = "";
   try {
@@ -251,7 +253,9 @@ export async function queryCoverageParcels(
     checkAbort(signal);
     value = { ...value, parcels: checked, checking: false };
   }
-  if (!warning && !value.parcels.some(item => item.coverage.state === "error" || item.coverage.state === "loading")) {
+  // Failed verification is also a stable result for a short time. Repeated
+  // harmless move/resize events must not flash loading or hammer providers.
+  if (!warning && !value.parcels.some(item => item.coverage.state === "loading")) {
     if (queryCache.size >= 12)
       queryCache.delete(queryCache.keys().next().value!);
     queryCache.set(key, { at: Date.now(), value });

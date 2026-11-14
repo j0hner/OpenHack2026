@@ -41,7 +41,7 @@ globalThis.fetch = async (input, init) => {
       assert.equal(params.get('end_date'), '2024-12-31');
       if (waitClimate) await waitClimate(init.signal);
       else await new Promise(resolve => setTimeout(resolve, 0));
-      if (failClimate) return new Response('{}', { status: 429 });
+      if (failClimate) return new Response('{}', { status: 503 });
       return Response.json({ longitude: Number(params.get('longitude')), latitude: Number(params.get('latitude')), daily });
     } finally { activeClimate--; }
   }
@@ -121,6 +121,14 @@ try {
   assert.equal(paged[0].coverage.state, 'sufficient', 'Duplicate paged BPEJ features cannot double-count area.');
 
   failSoil = true;
+  const failedBounds = [14.60001, 50.09, 14.62, 50.11];
+  const failedQuery = await q.queryCoverageParcels(failedBounds, new AbortController().signal);
+  assert(failedQuery.parcels.every(row => row.coverage.state === 'error'));
+  const beforeRepeatedFailure = soilCalls, repeatedEvents = [];
+  const repeatedFailure = await q.queryCoverageParcels(failedBounds, new AbortController().signal, { onProgress: value => repeatedEvents.push(value) });
+  assert.strictEqual(repeatedFailure, failedQuery, 'Failed verification remains stable during harmless map events.');
+  assert.equal(soilCalls, beforeRepeatedFailure, 'Immediate retries cannot hammer a failing source.');
+  assert.equal(repeatedEvents.length, 0, 'A cached failure cannot flash a new loading state.');
   const failed = await verifyVisibleCoverage(rows([feature(22001, rectangle(14.616, 50.103))]), new AbortController().signal, () => {});
   failSoil = false;
   assert.equal(failed[0].coverage.state, 'error', 'HTTP failure is not confirmed insufficient soil.');

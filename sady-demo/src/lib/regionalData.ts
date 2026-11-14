@@ -2,6 +2,7 @@ import {area} from '@turf/area';
 import type {FeatureCollection,Polygon,MultiPolygon} from 'geojson';
 import {containsPoint,geometryBounds,inBounds,locationFor,overlaps} from './openData';
 import type {AreaGeometry} from './types';
+import {loadRegionalClimate} from './regionalClimate';
 
 export const REGIONAL_VERSION='geo-3';
 export interface ClimateYear {year:number;temperatureMeanC:number|null;rainfallMm:number|null;et0Mm:number|null;springFrostDays:number|null;summerDays:number|null}
@@ -106,28 +107,6 @@ export function aggregateWeather(d:{time:string[];[key:string]:unknown}):Climate
  }
  return years;
 }
-const weatherMemory=new Map<string,Promise<NonNullable<RegionalData['climate']>>>();
-async function weather(point:[number,number],signal:AbortSignal,refresh=false){
- // ERA5's regular 0.25° grid is explicit. Nearby parts sharing this model cell
- // reuse the climate request; parcel soil intersections remain independent.
- const expectedGrid:[number,number]=point.map(v=>Math.round(v*4)/4) as [number,number];
- const key=expectedGrid.join(',');
- if(refresh)weatherMemory.delete(key);
- if(!weatherMemory.has(key)){
- const request=(async()=>{
-  const p=new URLSearchParams({latitude:String(point[1]),longitude:String(point[0]),models:'era5',start_date:'2005-01-01',end_date:'2024-12-31',daily:'temperature_2m_mean,temperature_2m_min,temperature_2m_max,precipitation_sum,et0_fao_evapotranspiration',timezone:'Europe/Prague',cell_selection:'nearest',elevation:'nan'});
-  const d=await json('https://archive-api.open-meteo.com/v1/archive?'+p,signal);
-  if(!d.daily||!Array.isArray(d.daily.time)||!Number.isFinite(d.latitude)||!Number.isFinite(d.longitude))throw Error('Neúplné klimatické souřadnice nebo řada');
-  const grid:[number,number]=[d.longitude,d.latitude],distance=distanceKm(point,grid);
-  if(distance>50)throw Error('Klimatický grid příliš vzdálený od pozemku');
-  if(distanceKm(grid,expectedGrid)>1)throw Error('Odpověď neodpovídá požadovanému gridu ERA5');
-  return {years:aggregateWeather(d.daily),period:'2005–2024',model:'ERA5',resolution:'0.25° (~25 km), nikoli mikroklima parcely',grid,distanceKm:distance};
- })().catch(e=>{if(weatherMemory.get(key)===request)weatherMemory.delete(key);throw e;});
- weatherMemory.set(key,request);
- }
- const result=await weatherMemory.get(key)!;
- return {...result,distanceKm:result.grid?distanceKm(point,result.grid):null};
-}
 async function load(g:AreaGeometry,signal:AbortSignal,refresh=false):Promise<RegionalData>{
  const point=representativePoint(g),bounds=geometryBounds(g);
  const data:RegionalData={key:geometryKey(g),fetchedAt:new Date().toISOString(),point,source:'live',soil:null,climate:null,errors:[]};
@@ -151,7 +130,7 @@ async function load(g:AreaGeometry,signal:AbortSignal,refresh=false):Promise<Reg
  const known=refresh?null:existingCore(data.key);
  const [soil,climate]=await Promise.all([
   attempt('BPEJ',async()=>known?.soil??soilSummary(g,await features('https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/28',g,signal,'kod,nazev'))),
-  attempt('Klima',async()=>known?.climate??weather(point,signal,refresh)),
+  attempt('Klima',async()=>known?.climate??loadRegionalClimate(point,signal,refresh)),
  ]);
  return {...data,soil:soil.value,climate:climate.value,errors:[...soil.errors,...climate.errors]};
 }

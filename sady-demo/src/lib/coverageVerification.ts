@@ -9,7 +9,6 @@ import {
 } from "./parcelCoverage";
 import { geometryBounds, parcelArea } from "./openData";
 import {
-  aggregateWeather,
   distanceKm,
   geometryKey,
   rememberRegionalCore,
@@ -17,12 +16,9 @@ import {
   soilSummary,
   type RegionalData,
 } from "./regionalData";
+import { climateCellKey, loadRegionalClimate } from "./regionalClimate";
 
 type SoilCollection = FeatureCollection<Polygon | MultiPolygon>;
-type Climate = NonNullable<RegionalData["climate"]>;
-const climateCache = new Map<string, { at: number; data: Climate }>();
-const climateFailures = new Map<string, { at: number; message: string }>();
-const CLIMATE_TTL = 7 * 86400000;
 export const COVERAGE_CLIMATE_CONCURRENCY = 2;
 const checkAbort = (signal: AbortSignal) => {
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
@@ -88,45 +84,6 @@ async function viewportSoil(parcels: CoverageParcel[], signal: AbortSignal): Pro
   throw Error("Výřez BPEJ překročil limit 2 000 jednotek. Přibližte mapu.");
 }
 
-function climateCell(point: [number, number]): [number, number] {
-  return point.map(value => Math.round(value * 4) / 4) as [number, number];
-}
-async function climateAt(cell: [number, number], signal: AbortSignal): Promise<Climate> {
-  const key = cell.join(","), cached = climateCache.get(key);
-  if (cached && Date.now() - cached.at < CLIMATE_TTL) return cached.data;
-  const failure = climateFailures.get(key);
-  if (failure && Date.now() - failure.at < 15000)
-    throw Error(`${failure.message} Další automatický pokus nejdříve za 15 sekund.`);
-  const params = new URLSearchParams({
-    latitude: String(cell[1]), longitude: String(cell[0]), models: "era5",
-    start_date: "2005-01-01", end_date: "2024-12-31",
-    daily: "temperature_2m_mean,temperature_2m_min,temperature_2m_max,precipitation_sum,et0_fao_evapotranspiration",
-    timezone: "Europe/Prague", cell_selection: "nearest", elevation: "nan",
-  });
-  let value;
-  try {
-    value = await json(`https://archive-api.open-meteo.com/v1/archive?${params}`, signal);
-  } catch (error) {
-    checkAbort(signal);
-    if (climateFailures.size >= 48) climateFailures.delete(climateFailures.keys().next().value!);
-    climateFailures.set(key, { at: Date.now(), message: error instanceof Error ? error.message : "Klima není dostupné." });
-    throw error;
-  }
-  if (!value.daily || !Array.isArray(value.daily.time) || !Number.isFinite(value.latitude) || !Number.isFinite(value.longitude))
-    throw Error("Neúplné klimatické souřadnice nebo řada.");
-  const grid: [number, number] = [value.longitude, value.latitude];
-  if (distanceKm(grid, cell) > 1) throw Error("Odpověď neodpovídá požadovanému gridu ERA5.");
-  const data: Climate = {
-    years: aggregateWeather(value.daily), period: "2005–2024", model: "ERA5",
-    resolution: "0.25° (~25 km), nikoli mikroklima parcely", grid, distanceKm: null,
-  };
-  checkAbort(signal);
-  if (climateCache.size >= 48) climateCache.delete(climateCache.keys().next().value!);
-  climateCache.set(key, { at: Date.now(), data });
-  climateFailures.delete(key);
-  return data;
-}
-
 /** Verify only core availability. No protection lookup, saved parcel, or synthetic
  * regional profile is needed. Soil is shared per viewport, climate per real cell. */
 export async function verifyVisibleCoverage(
@@ -157,7 +114,7 @@ export async function verifyVisibleCoverage(
   const points = new Map<CoverageParcel, [number, number]>();
   for (const item of supported) {
     try {
-      const point = representativePoint(item.feature.geometry), cell = climateCell(point), key = cell.join(",");
+      const point = representativePoint(item.feature.geometry), cell = point, key = climateCellKey(point);
       points.set(item, point);
       if (!cells.has(key)) cells.set(key, { cell, parcels: [] });
       cells.get(key)!.parcels.push(item);
@@ -179,7 +136,7 @@ export async function verifyVisibleCoverage(
     while (queue.length) {
       checkAbort(signal);
       const group = queue.shift()!;
-      const [soil, climate] = await Promise.all([soilPromise, attempt(() => climateAt(group.cell, signal))]);
+      const [soil, climate] = await Promise.all([soilPromise, attempt(() => loadRegionalClimate(group.cell, signal))]);
       checkAbort(signal);
       const indexed = soil.value?.features.map(feature => ({ feature, bounds: geometryBounds(feature.geometry) }));
       for (const item of group.parcels) {

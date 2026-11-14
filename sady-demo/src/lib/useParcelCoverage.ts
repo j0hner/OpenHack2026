@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AnalysisArea } from "./types";
 import { geometryKey } from "./regionalData";
+import { coverageBoundsKey } from "./mapViewport";
 import {
   coverageExtentMessage,
   COVERAGE_MIN_ZOOM,
@@ -52,7 +53,7 @@ export function useParcelCoverage({
     error: string;
     waiting: boolean;
   }>({ key: "", result: null, error: "", waiting: false });
-  const key = `${bounds?.join(",") ?? ""}|gardens:${!excludeGardens}|data:${checkData}`;
+  const key = `${coverageBoundsKey(bounds)}|gardens:${!excludeGardens}|data:${checkData}`;
   const extentMessage = coverageExtentMessage(bounds, zoom);
   const canLoad = enabled && !!bounds && !extentMessage;
   useEffect(() => {
@@ -142,17 +143,21 @@ export function useParcelCoverage({
     const scope = query.result.truncated
       ? "Zobrazeno nejvýše 200 parcel; přibližte mapu pro úplnější výřez."
       : `${parcels.length} zemědělských parcel v aktuálním výřezu.`;
+    const checking = query.waiting || query.key !== key || !!query.result.checking;
+    const verificationError = !checking && counts.error > 0
+      ? `${counts.error} parcel se nepodařilo ověřit. ${parcels.find(item => item.coverage.state === 'error')?.coverage.reason ?? ''}`
+      : '';
     return {
       parcels,
       counts,
-      status: query.error ? "error" : moving || query.waiting || query.key !== key || query.result.checking ? "loading" : "ready",
+      status: query.error ? "error" : moving || checking ? "loading" : verificationError ? "error" : "ready",
       message: query.error
         ? `${query.error} Zůstává poslední načtený výřez. Pro opakování vrstvu vypněte a zapněte.`
         : moving ? "Čekám na ustálení mapy…"
         : query.waiting || query.key !== key ? "Načítám nový výřez; dosavadní ověřené parcely zůstávají zobrazené."
         : query.result.checking
         ? `Automaticky ověřuji podklady viditelných parcel (${counts.sufficient + counts.insufficient} z ${parcels.length}).`
-        : query.result.warning || scope,
+        : query.result.warning || `${scope}${verificationError ? ` ${verificationError}` : ''}`,
       truncated: query.result.truncated,
       source: query.result.source,
     };

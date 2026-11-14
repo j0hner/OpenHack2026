@@ -31,6 +31,7 @@ import {
   type ParcelCoverage,
 } from "../lib/parcelCoverage";
 import type { CoverageBounds } from "../lib/coverageData";
+import { coverageBoundsKey, hasMapPixelSizeChanged } from "../lib/mapViewport";
 import type { PlantingLayout } from "../lib/plantingGeometry";
 import DataCoverageLegend from "../components/DataCoverageLegend";
 import type {
@@ -349,12 +350,14 @@ export default function MapView(props: MapViewProps) {
     map.on("zoomend", () => setZoom(map.getZoom()));
     const updateBounds = () => {
       const b = map.getBounds();
-      setViewportBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+      const next: CoverageBounds = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+      setViewportBounds(previous => coverageBoundsKey(previous) === coverageBoundsKey(next) ? previous : next);
     };
     map.on("moveend", updateBounds);
     updateBounds();
     map.on("movestart", () => {
-      setViewportBounds(null);
+      // Keep the last settled geometry while moving. Only an actually changed
+      // settled bbox starts/replaces an automatic check; no-op fits do not retry.
       setParcelStatus("");
       setLayersOpen(false);
     });
@@ -366,7 +369,13 @@ export default function MapView(props: MapViewProps) {
       )
         callbacksRef.current.onSplitPoint([event.latlng.lng, event.latlng.lat]);
     });
+    let observedSize = { width: containerRef.current.clientWidth, height: containerRef.current.clientHeight };
     const resize = new ResizeObserver(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const nextSize = { width: container.clientWidth, height: container.clientHeight };
+      if (!hasMapPixelSizeChanged(observedSize, nextSize)) return;
+      observedSize = nextSize;
       map.invalidateSize({ pan: false });
       const current = callbacksRef.current;
       if (pendingParcelRef.current)
